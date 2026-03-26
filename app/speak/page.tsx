@@ -2,8 +2,9 @@
 
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { fetchTtsAudioUrl } from "@/lib/ttsClient";
 import {
   INPUT_LANGUAGES,
   LOADING_MESSAGES,
@@ -16,20 +17,38 @@ import {
   splitTranslationAndDictionary,
 } from "@/lib/streetVibeTheme";
 
-export default function Home() {
+type DuoTurn = "me" | "them";
+
+export default function SpeakPage() {
   const [outputLang, setOutputLang] = useState("Jamaican Patois");
   const [inputLanguage, setInputLanguage] = useState("he-IL");
-  const [inputText, setInputText] = useState("");
+  const [buffers, setBuffers] = useState<{ me: string; them: string }>({ me: "", them: "" });
+  const [activeTurn, setActiveTurn] = useState<DuoTurn>("me");
+  const activeTurnRef = useRef<DuoTurn>("me");
+
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [dictionaryPills, setDictionaryPills] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const [ttsPlaying, setTtsPlaying] = useState(false);
+  const [ttsError, setTtsError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    activeTurnRef.current = activeTurn;
+  }, [activeTurn]);
+
   const selectedInputLang = inputLanguage;
 
   const onFinalSpeech = useCallback((text: string) => {
-    setInputText((prev) => (prev + " " + text).trim());
+    const turn = activeTurnRef.current;
+    setBuffers((prev) => {
+      const key = turn === "me" ? "me" : "them";
+      return { ...prev, [key]: (prev[key] + " " + text).trim() };
+    });
   }, []);
 
   const { isListening, interimText, error: micError, toggle: toggleMic } = useSpeechRecognition({
@@ -38,11 +57,12 @@ export default function Home() {
   });
 
   const inputDisplayValue = useMemo(() => {
+    const base = buffers[activeTurn];
     if (isListening && interimText) {
-      return [inputText.trim(), interimText].filter(Boolean).join(" ");
+      return [base.trim(), interimText].filter(Boolean).join(" ");
     }
-    return inputText;
-  }, [inputText, interimText, isListening]);
+    return base;
+  }, [buffers, activeTurn, interimText, isListening]);
 
   const theme = resolveTheme(outputLang);
 
@@ -100,27 +120,36 @@ export default function Home() {
     void translateText(inputDisplayValue.trim(), outputLang);
   };
 
-  const handleCopy = async () => {
-    const text = translatedText.trim() || originalText.trim();
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      /* ignore */
-    }
-  };
+  const handlePlayTts = async () => {
+    const text = translatedText.trim();
+    if (!text || loading) return;
 
-  const handleShare = async () => {
-    const text = translatedText.trim() || originalText.trim();
-    if (!text) return;
+    setTtsError(null);
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setTtsLoading(true);
+    setTtsPlaying(false);
+
     try {
-      if (navigator.share) {
-        await navigator.share({ text, title: "StreetVibe" });
-      } else {
-        await navigator.clipboard.writeText(text);
-      }
-    } catch {
-      /* ignore */
+      const url = await fetchTtsAudioUrl(text, outputLang);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => {
+        setTtsPlaying(false);
+        audioRef.current = null;
+      };
+      audio.onerror = () => {
+        setTtsError("Playback failed");
+        setTtsPlaying(false);
+        audioRef.current = null;
+      };
+      setTtsPlaying(true);
+      await audio.play();
+    } catch (e) {
+      setTtsError(e instanceof Error ? e.message : "TTS failed");
+      setTtsPlaying(false);
+    } finally {
+      setTtsLoading(false);
     }
   };
 
@@ -130,13 +159,25 @@ export default function Home() {
   const inputLangSelectClass =
     "w-full max-w-[min(100%,280px)] rounded-lg border bg-zinc-950/90 px-2 py-1 text-[11px] leading-tight text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
 
+  const duoBtnClass = (on: boolean) =>
+    `flex-1 rounded-lg border px-2 py-1.5 text-center text-[11px] font-semibold transition-all duration-300 ${
+      on ? "text-black" : "border-white/15 bg-black/20 text-white/75"
+    }`;
+
   return (
     <div
       className="h-[100dvh] max-h-[100dvh] overflow-hidden transition-[background-color] duration-500 ease-in-out"
       style={{ backgroundColor: theme.bg }}
     >
       <div className="mx-auto flex h-full max-h-[100dvh] w-full max-w-[min(100%,390px)] flex-col overflow-hidden px-2.5 pb-1.5 pt-1.5">
-        {/* Top bar */}
+        <Link
+          href="/"
+          className="mb-1.5 inline-flex w-fit shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-[border-color,color] duration-500"
+          style={{ borderColor: `${theme.accent}66`, color: theme.accent }}
+        >
+          Text Mode
+        </Link>
+
         <header className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
           <span className="text-lg font-bold leading-tight tracking-tight text-white transition-colors duration-500">
             StreetVibe
@@ -156,14 +197,13 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Output / dialect dropdown */}
         <div className="mb-1.5 flex shrink-0 flex-col gap-0.5">
-          <label htmlFor="output-lang" className="text-[9px] font-medium uppercase tracking-wide text-white/50">
+          <label htmlFor="speak-output-lang" className="text-[9px] font-medium uppercase tracking-wide text-white/50">
             Output
           </label>
           <div style={{ "--accent": theme.accent } as CSSProperties}>
             <select
-              id="output-lang"
+              id="speak-output-lang"
               value={outputLang}
               onChange={(e) => setOutputLang(e.target.value)}
               className={selectDropdownClass}
@@ -187,10 +227,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Output card — max height + themed scrollbar */}
         <section className="mb-1.5 shrink-0 overflow-hidden">
           <div
-            className="output-card-scroll max-h-[280px] overflow-y-auto overflow-x-hidden rounded-xl border p-2.5 shadow-lg transition-[border-color,background-color] duration-500 ease-in-out"
+            className="output-card-scroll max-h-[240px] overflow-y-auto overflow-x-hidden rounded-xl border p-2.5 shadow-lg transition-[border-color,background-color] duration-500 ease-in-out"
             style={
               {
                 borderColor: `${theme.accent}40`,
@@ -210,7 +249,37 @@ export default function Home() {
               )}
             </p>
 
-            <p className="mb-0.5 text-[9px] font-medium uppercase tracking-wider text-white/40">Street</p>
+            <div className="mb-0.5 flex items-center justify-between gap-2">
+              <p className="text-[9px] font-medium uppercase tracking-wider text-white/40">Street</p>
+              <button
+                type="button"
+                onClick={() => void handlePlayTts()}
+                disabled={loading || !translatedText.trim() || ttsLoading}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-all duration-300 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                style={{
+                  borderColor: `${theme.accent}66`,
+                  backgroundColor: `${theme.accent}22`,
+                  color: theme.accent,
+                }}
+                aria-label={ttsPlaying ? "Playing audio" : "Play translation audio"}
+              >
+                {ttsLoading ? (
+                  <span className="animate-pulse">Loading…</span>
+                ) : ttsPlaying ? (
+                  <>
+                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current" aria-hidden />
+                    Playing
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                    Play
+                  </>
+                )}
+              </button>
+            </div>
             <div className="min-h-0 max-h-none overflow-visible text-sm font-bold leading-snug transition-colors duration-500">
               {loading ? (
                 <p className="animate-pulse text-xs font-semibold leading-tight" style={{ color: theme.accent }}>
@@ -230,15 +299,18 @@ export default function Home() {
                   </p>
                 ) : (
                   <p className="text-[11px] font-normal italic leading-tight text-white/35">
-                    Translation lands here — coming next.
+                    Translation lands here — flip first, then play.
                   </p>
                 )
               ) : (
                 <p className="text-[11px] font-normal italic leading-tight text-white/35">
-                  Flip a line to see the vibe in {theme.city}.
+                  Flip a line to hear the vibe in {theme.city}.
                 </p>
               )}
             </div>
+            {ttsError ? (
+              <p className="mt-1 text-[10px] font-medium leading-tight text-red-400">{ttsError}</p>
+            ) : null}
 
             <div className="mt-1.5 flex max-h-none flex-wrap gap-1 overflow-visible">
               {loading ? (
@@ -264,15 +336,14 @@ export default function Home() {
           </div>
         </section>
 
-        {/* From → input → Flip → mic row */}
         <div className="flex shrink-0 flex-col gap-1.5 pb-0.5">
           <div className="flex flex-col gap-0.5">
-            <label htmlFor="input-lang" className="text-[9px] font-medium uppercase tracking-wide text-white/45">
+            <label htmlFor="speak-input-lang" className="text-[9px] font-medium uppercase tracking-wide text-white/45">
               From
             </label>
             <div style={{ "--accent": theme.accent } as CSSProperties}>
               <select
-                id="input-lang"
+                id="speak-input-lang"
                 value={inputLanguage}
                 onChange={(e) => setInputLanguage(e.target.value)}
                 className={inputLangSelectClass}
@@ -291,7 +362,12 @@ export default function Home() {
               type="text"
               value={inputDisplayValue}
               readOnly={isListening}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={(e) =>
+                setBuffers((prev) => ({
+                  ...prev,
+                  [activeTurn]: e.target.value,
+                }))
+              }
               placeholder="Say it plain…"
               className="w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2 text-xs text-white placeholder:text-white/35 transition-[box-shadow,border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0 read-only:opacity-95"
             />
@@ -309,101 +385,80 @@ export default function Home() {
             {loading ? "Flipping…" : "Flip it"}
           </button>
 
-          {/* Mic centered — grid for even spacing; copy/share 48×48 rounded-xl */}
-          <div className="grid w-full grid-cols-3 items-start gap-1 overflow-visible pt-0.5">
-            <div className="flex justify-center">
+          <div className="rounded-xl border border-white/10 bg-black/20 p-1.5">
+            <p className="mb-1 text-center text-[9px] font-medium uppercase tracking-wide text-white/45">Duo mode</p>
+            <div className="flex gap-1.5">
               <button
                 type="button"
-                onClick={handleCopy}
-                aria-label="Copy"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] text-white/90 transition-opacity duration-200 hover:opacity-90 active:opacity-80"
-              >
-                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex min-w-0 flex-col items-center">
-              <button
-                type="button"
-                onClick={toggleMic}
-                aria-label={isListening ? "Stop listening" : "Tap to speak"}
-                className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
-                  isListening ? "mic-pulse" : ""
-                }`}
+                onClick={() => setActiveTurn("me")}
+                className={duoBtnClass(activeTurn === "me")}
                 style={
-                  isListening
-                    ? {
-                        background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
-                        boxShadow: `0 8px 28px ${theme.accent}55`,
-                      }
-                    : {
-                        background: "#52525b",
-                        boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
-                      }
+                  activeTurn === "me"
+                    ? { backgroundColor: theme.accent, borderColor: theme.accent, boxShadow: `0 2px 12px ${theme.accent}44` }
+                    : { borderColor: `${theme.accent}33` }
                 }
               >
-                <svg
-                  className={`h-8 w-8 ${isListening ? "text-black/90" : "text-white"}`}
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden
-                >
-                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14C5.52 16.16 8.53 19 12 19s6.48-2.84 6.93-6.86c.09-.6-.39-1.14-1-1.14z" />
-                </svg>
+                My Turn
               </button>
-              <span
-                className={`mt-1 text-center text-[10px] transition-colors duration-300 ${isListening ? "" : "text-white/50"}`}
-                style={isListening ? { color: theme.accent } : undefined}
-              >
-                {isListening ? "listening..." : "tap to speak"}
-              </span>
-              {micError ? (
-                <p className="mt-1 max-w-[220px] text-center text-[10px] font-medium leading-tight text-red-400">
-                  {micError}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="flex justify-center">
               <button
                 type="button"
-                onClick={handleShare}
-                aria-label="Share"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] text-white/90 transition-opacity duration-200 hover:opacity-90 active:opacity-80"
+                onClick={() => setActiveTurn("them")}
+                className={duoBtnClass(activeTurn === "them")}
+                style={
+                  activeTurn === "them"
+                    ? { backgroundColor: theme.accent, borderColor: theme.accent, boxShadow: `0 2px 12px ${theme.accent}44` }
+                    : { borderColor: `${theme.accent}33` }
+                }
               >
-                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                  />
-                </svg>
+                Their Turn
               </button>
             </div>
+            <p className="mt-1 text-center text-[10px] text-white/40">
+              Voice goes into {activeTurn === "me" ? "your" : "their"} line.
+            </p>
           </div>
-        </div>
 
-        <div className="mt-auto shrink-0 pt-1">
-          <Link
-            href="/speak"
-            className="flex w-full items-center justify-center rounded-lg border py-2 text-center text-xs font-semibold transition-[background-color,border-color,color] duration-500"
-            style={{
-              borderColor: `${theme.accent}66`,
-              backgroundColor: `${theme.accent}18`,
-              color: theme.accent,
-              boxShadow: `0 2px 12px ${theme.accent}22`,
-            }}
-          >
-            Speak Mode with Audio
-          </Link>
+          <div className="flex flex-col items-center pb-1 pt-1">
+            <button
+              type="button"
+              onClick={toggleMic}
+              aria-label={isListening ? "Stop listening" : "Tap to speak"}
+              className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
+                isListening ? "mic-pulse" : ""
+              }`}
+              style={
+                isListening
+                  ? {
+                      background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
+                      boxShadow: `0 8px 28px ${theme.accent}55`,
+                    }
+                  : {
+                      background: "#52525b",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+                    }
+              }
+            >
+              <svg
+                className={`h-10 w-10 ${isListening ? "text-black/90" : "text-white"}`}
+                fill="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden
+              >
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14C5.52 16.16 8.53 19 12 19s6.48-2.84 6.93-6.86c.09-.6-.39-1.14-1-1.14z" />
+              </svg>
+            </button>
+            <span
+              className={`mt-1.5 text-center text-[10px] transition-colors duration-300 ${isListening ? "" : "text-white/50"}`}
+              style={isListening ? { color: theme.accent } : undefined}
+            >
+              {isListening ? "listening..." : "tap to speak"}
+            </span>
+            {micError ? (
+              <p className="mt-1 max-w-[220px] text-center text-[10px] font-medium leading-tight text-red-400">
+                {micError}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
