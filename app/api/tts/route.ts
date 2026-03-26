@@ -83,21 +83,6 @@ const GOOGLE_VOICE_DEFAULT = {
   speakingRate: 0.9,
 };
 
-function injectAccentHint(text: string, dialect: string): string {
-  const hints: Record<string, string> = {
-    "London Roadman": "[Speak with a British London accent] ",
-    "Jamaican Patois": "[Speak with a Jamaican accent] ",
-    "Paris Banlieue": "[Speak with a French accent] ",
-    "Russian Street": "[Speak with a Russian accent] ",
-    "Israeli Street": "[Speak with an Israeli accent] ",
-    "Mexico City Barrio": "[Speak with a Mexican Spanish accent] ",
-    "Rio Favela": "[Speak with a Brazilian Portuguese accent] ",
-    "Lisbon Street": "[Speak with a Portuguese accent] ",
-  };
-  const hint = hints[dialect] ?? "";
-  return hint + text;
-}
-
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
@@ -199,7 +184,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         version: REPLICATE_MINIMAX_VERSION,
         input: {
-          text: injectAccentHint(text, (dialect as string | undefined) ?? ""),
+          text,
           voice_id: voiceConfig.voice_id,
           speed: (tuning?.speed as number | undefined) ?? voiceConfig.speed,
           pitch: (tuning?.pitch as number | undefined) ?? voiceConfig.pitch,

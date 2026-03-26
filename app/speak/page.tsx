@@ -18,7 +18,6 @@ import {
   THEME_PLAY_BTN,
 } from "@/lib/themeUiClasses";
 import { fetchTtsAudioUrl, speakNativeTts } from "@/lib/ttsClient";
-import { resolveVoiceForDialect } from "@/lib/voices";
 import {
   INPUT_LANGUAGES,
   LOADING_MESSAGES,
@@ -225,9 +224,6 @@ export default function SpeakPage() {
     const text = translatedText.trim();
     if (!text || loading) return;
 
-    const voiceConfig = resolveVoiceForDialect(outputLang);
-    const effectiveEngine = voiceConfig.preferGoogle ? "google" : ttsEngine;
-
     setTtsError(null);
     audioRef.current?.pause();
     audioRef.current = null;
@@ -238,8 +234,8 @@ export default function SpeakPage() {
     setTtsPlaying(false);
 
     try {
-      if (effectiveEngine === "minimax") {
-        const url = await fetchTtsAudioUrl(text, outputLang, effectiveEngine, context);
+      if (ttsEngine === "minimax") {
+        const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context);
         setTtsLoading(false);
         const audio = new Audio(url);
         audioRef.current = audio;
@@ -251,8 +247,8 @@ export default function SpeakPage() {
         });
         setResolvedEngine("minimax");
         setTtsOutcome("success");
-      } else if (effectiveEngine === "google") {
-        const url = await fetchTtsAudioUrl(text, outputLang, effectiveEngine, context);
+      } else if (ttsEngine === "google") {
+        const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context);
         setTtsLoading(false);
         const audio = new Audio(url);
         audioRef.current = audio;
@@ -273,7 +269,7 @@ export default function SpeakPage() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "TTS failed";
       setTtsError(msg);
-      setResolvedEngine(effectiveEngine);
+      setResolvedEngine(ttsEngine);
       setTtsOutcome("failed");
     } finally {
       setTtsLoading(false);

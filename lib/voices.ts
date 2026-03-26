@@ -3,7 +3,6 @@ export type VoiceTuning = {
   speed: number;
   pitch: number;
   emotion: string;
-  preferGoogle?: boolean;
 };
 
 /** MiniMax / Replicate voice mapping by dialect label (matches `tts.js` VOICE_MAP). */
@@ -19,7 +18,6 @@ export const VOICE_MAP: Record<string, VoiceTuning> = {
     speed: 0.9,
     pitch: -1,
     emotion: "neutral",
-    preferGoogle: true,
   },
   "Jamaican Patois": {
     voice_id: "English_PassionateWarrior",
@@ -32,7 +30,6 @@ export const VOICE_MAP: Record<string, VoiceTuning> = {
     speed: 0.95,
     pitch: 1,
     emotion: "happy",
-    preferGoogle: true,
   },
   "Paris Banlieue": {
     voice_id: "English_ReservedYoungMan",
