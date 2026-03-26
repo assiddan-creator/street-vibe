@@ -181,6 +181,7 @@ export default function SpeakPage() {
       const text = await navigator.clipboard.readText();
       if (text) {
         setBuffers((prev) => ({ ...prev, [activeTurn]: text }));
+        setToast("Pasted!");
       }
     } catch {
       /* ignore */
