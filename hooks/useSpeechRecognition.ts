@@ -8,10 +8,21 @@ interface UseSpeechRecognitionProps {
   onFinalResult?: (text: string) => void;
 }
 
+/** Collapse whitespace for display / commits. */
+function normalizeTranscript(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/** Key for duplicate detection — mobile often re-emits with spacing/case differences. */
+function dedupeKey(s: string): string {
+  return s.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
 /**
- * Web Speech API wrapper. Uses non-continuous mode so each utterance yields a single final
- * result (fixes duplicate / runaway transcripts on mobile). Interim text is rebuilt from the
- * full results list each event so it replaces the live line instead of stacking duplicates.
+ * Web Speech API wrapper. Non-continuous mode = one utterance per session.
+ * Mobile WebKit often fires onresult multiple times with the same final phrase — we dedupe
+ * with a normalized key (NFKC, whitespace, case) stored in lastProcessedText.
+ * Final text is committed only once per distinct phrase; interim stays separate state.
  */
 export function useSpeechRecognition({
   lang = "he-IL",
@@ -19,13 +30,15 @@ export function useSpeechRecognition({
   onFinalResult,
 }: UseSpeechRecognitionProps = {}) {
   const [isListening, setIsListening] = useState(false);
+  /** Volatile preview only; never append this into committed app state in the parent. */
   const [interimText, setInterimText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<unknown>(null);
   const onResultRef = useRef(onResult);
   const onFinalResultRef = useRef(onFinalResult);
-  /** Dedupe: some mobile engines emit the same final transcript twice in a row. */
-  const lastFinalEmittedRef = useRef<string | null>(null);
+
+  /** Last committed phrase key (dedupeKey) — blocks identical consecutive finals from mobile. */
+  const lastProcessedText = useRef<string | null>(null);
 
   useEffect(() => {
     onResultRef.current = onResult;
@@ -53,7 +66,7 @@ export function useSpeechRecognition({
       }
     }
 
-    lastFinalEmittedRef.current = null;
+    lastProcessedText.current = null;
 
     const recognition = new SR() as {
       continuous: boolean;
@@ -66,7 +79,6 @@ export function useSpeechRecognition({
       onend: (() => void) | null;
       start: () => void;
     };
-    // One utterance per session — avoids piling the same interim/final on mobile.
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
@@ -76,9 +88,11 @@ export function useSpeechRecognition({
       setIsListening(true);
       setError(null);
       setInterimText("");
+      lastProcessedText.current = null;
     };
 
     recognition.onresult = (event) => {
+      // Interim line: rebuild full non-final snapshot (results are cumulative).
       let interim = "";
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
@@ -87,6 +101,7 @@ export function useSpeechRecognition({
         }
       }
 
+      // New final segments in this event only — always from resultIndex onward.
       let newFinal = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
@@ -98,13 +113,18 @@ export function useSpeechRecognition({
       setInterimText(interim);
       onResultRef.current?.(interim);
 
-      const trimmed = newFinal.trim();
+      const trimmed = normalizeTranscript(newFinal);
       if (!trimmed) return;
 
-      if (trimmed === lastFinalEmittedRef.current) {
+      const key = dedupeKey(trimmed);
+      const prevKey = lastProcessedText.current;
+
+      // Same phrase again (spacing/case-insensitive) — mobile often fires duplicate onresult.
+      if (prevKey !== null && key === prevKey) {
         return;
       }
-      lastFinalEmittedRef.current = trimmed;
+
+      lastProcessedText.current = key;
       setInterimText("");
       onFinalResultRef.current?.(trimmed);
     };
