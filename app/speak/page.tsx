@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Toast } from "@/components/Toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { fetchTtsAudioUrl, speakNativeTts } from "@/lib/ttsClient";
 import {
@@ -55,7 +56,14 @@ export default function SpeakPage() {
   const [ttsEngine, setTtsEngine] = useState<TtsEngine>(readStoredTtsEngine);
   const [resolvedEngine, setResolvedEngine] = useState<TtsEngine | null>(null);
   const [ttsOutcome, setTtsOutcome] = useState<"unset" | "pending" | "success" | "failed">("unset");
+  const [toast, setToast] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     activeTurnRef.current = activeTurn;
@@ -138,6 +146,45 @@ export default function SpeakPage() {
 
   const handleFlipIt = () => {
     void translateText(inputDisplayValue.trim(), outputLang);
+  };
+
+  const iconActionBtnClass =
+    "flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-white/12 bg-zinc-950/90 text-white/90 transition-opacity duration-200 hover:opacity-90 active:opacity-80";
+
+  const handleCopy = async () => {
+    const text = translatedText.trim();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setToast("Copied!");
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setBuffers((prev) => ({ ...prev, [activeTurn]: text }));
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handleShare = async () => {
+    const text = translatedText.trim() || originalText.trim();
+    if (!text) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({ text, title: "StreetVibe" });
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+    } catch {
+      /* ignore */
+    }
   };
 
   const handlePlayTts = async () => {
@@ -232,10 +279,11 @@ export default function SpeakPage() {
 
   return (
     <div
-      className="h-[100dvh] max-h-[100dvh] overflow-hidden transition-[background-color] duration-500 ease-in-out"
+      className="min-h-[100vh] min-h-[100dvh] overflow-y-auto transition-[background-color] duration-500 ease-in-out"
       style={{ backgroundColor: theme.bg }}
     >
-      <div className="mx-auto flex h-full max-h-[100dvh] w-full max-w-[min(100%,390px)] flex-col overflow-hidden px-2.5 pb-1.5 pt-1.5">
+      <Toast message={toast} accent={theme.accent} />
+      <div className="mx-auto flex w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-1.5 pt-1.5">
         <Link
           href="/"
           className="mb-1.5 inline-flex w-fit shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-[border-color,color] duration-500"
@@ -519,46 +567,99 @@ export default function SpeakPage() {
             </p>
           </div>
 
-          <div className="flex flex-col items-center pb-1 pt-1">
-            <button
-              type="button"
-              onClick={toggleMic}
-              aria-label={isListening ? "Stop listening" : "Tap to speak"}
-              className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
-                isListening ? "mic-pulse" : ""
-              }`}
-              style={
-                isListening
-                  ? {
-                      background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
-                      boxShadow: `0 8px 28px ${theme.accent}55`,
-                    }
-                  : {
-                      background: "#52525b",
-                      boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
-                    }
-              }
-            >
-              <svg
-                className={`h-10 w-10 ${isListening ? "text-black/90" : "text-white"}`}
-                fill="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden
+          <div className="grid w-full grid-cols-3 items-start gap-1 overflow-visible pb-1 pt-1">
+            <div className="flex justify-center gap-1">
+              <button
+                type="button"
+                onClick={() => void handleCopy()}
+                aria-label="Copy Street translation"
+                className={iconActionBtnClass}
               >
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14C5.52 16.16 8.53 19 12 19s6.48-2.84 6.93-6.86c.09-.6-.39-1.14-1-1.14z" />
-              </svg>
-            </button>
-            <span
-              className={`mt-1.5 text-center text-[10px] transition-colors duration-300 ${isListening ? "" : "text-white/50"}`}
-              style={isListening ? { color: theme.accent } : undefined}
-            >
-              {isListening ? "listening..." : "tap to speak"}
-            </span>
-            {micError ? (
-              <p className="mt-1 max-w-[220px] text-center text-[10px] font-medium leading-tight text-red-400">
-                {micError}
-              </p>
-            ) : null}
+                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handlePaste()}
+                aria-label="Paste from clipboard"
+                className={iconActionBtnClass}
+              >
+                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex min-w-0 flex-col items-center">
+              <button
+                type="button"
+                onClick={toggleMic}
+                aria-label={isListening ? "Stop listening" : "Tap to speak"}
+                className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
+                  isListening ? "mic-pulse" : ""
+                }`}
+                style={
+                  isListening
+                    ? {
+                        background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
+                        boxShadow: `0 8px 28px ${theme.accent}55`,
+                      }
+                    : {
+                        background: "#52525b",
+                        boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+                      }
+                }
+              >
+                <svg
+                  className={`h-10 w-10 ${isListening ? "text-black/90" : "text-white"}`}
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14C5.52 16.16 8.53 19 12 19s6.48-2.84 6.93-6.86c.09-.6-.39-1.14-1-1.14z" />
+                </svg>
+              </button>
+              <span
+                className={`mt-1.5 text-center text-[10px] transition-colors duration-300 ${isListening ? "" : "text-white/50"}`}
+                style={isListening ? { color: theme.accent } : undefined}
+              >
+                {isListening ? "listening..." : "tap to speak"}
+              </span>
+              {micError ? (
+                <p className="mt-1 max-w-[220px] text-center text-[10px] font-medium leading-tight text-red-400">
+                  {micError}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => void handleShare()}
+                aria-label="Share"
+                className={iconActionBtnClass}
+              >
+                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>

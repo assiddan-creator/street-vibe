@@ -2,7 +2,8 @@
 
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Toast } from "@/components/Toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import {
   INPUT_LANGUAGES,
@@ -25,6 +26,13 @@ export default function Home() {
   const [dictionaryPills, setDictionaryPills] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   const selectedInputLang = inputLanguage;
 
@@ -100,11 +108,24 @@ export default function Home() {
     void translateText(inputDisplayValue.trim(), outputLang);
   };
 
+  const iconActionBtnClass =
+    "flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-white/12 bg-zinc-950/90 text-white/90 transition-opacity duration-200 hover:opacity-90 active:opacity-80";
+
   const handleCopy = async () => {
-    const text = translatedText.trim() || originalText.trim();
+    const text = translatedText.trim();
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
+      setToast("Copied!");
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) setInputText(text);
     } catch {
       /* ignore */
     }
@@ -132,10 +153,11 @@ export default function Home() {
 
   return (
     <div
-      className="h-[100dvh] max-h-[100dvh] overflow-hidden transition-[background-color] duration-500 ease-in-out"
+      className="min-h-[100vh] min-h-[100dvh] overflow-y-auto transition-[background-color] duration-500 ease-in-out"
       style={{ backgroundColor: theme.bg }}
     >
-      <div className="mx-auto flex h-full max-h-[100dvh] w-full max-w-[min(100%,390px)] flex-col overflow-hidden px-2.5 pb-1.5 pt-1.5">
+      <Toast message={toast} accent={theme.accent} />
+      <div className="mx-auto flex w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-1.5 pt-1.5">
         {/* Top bar */}
         <header className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
           <span className="text-lg font-bold leading-tight tracking-tight text-white transition-colors duration-500">
@@ -309,14 +331,14 @@ export default function Home() {
             {loading ? "Flipping…" : "Flip it"}
           </button>
 
-          {/* Mic centered — grid for even spacing; copy/share 48×48 rounded-xl */}
+          {/* Copy / Paste | Mic | Share — 48×48 icon buttons */}
           <div className="grid w-full grid-cols-3 items-start gap-1 overflow-visible pt-0.5">
-            <div className="flex justify-center">
+            <div className="flex justify-center gap-1">
               <button
                 type="button"
-                onClick={handleCopy}
-                aria-label="Copy"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] text-white/90 transition-opacity duration-200 hover:opacity-90 active:opacity-80"
+                onClick={() => void handleCopy()}
+                aria-label="Copy Street translation"
+                className={iconActionBtnClass}
               >
                 <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path
@@ -324,6 +346,21 @@ export default function Home() {
                     strokeLinejoin="round"
                     strokeWidth={2}
                     d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handlePaste()}
+                aria-label="Paste from clipboard"
+                className={iconActionBtnClass}
+              >
+                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
                   />
                 </svg>
               </button>
@@ -376,7 +413,7 @@ export default function Home() {
                 type="button"
                 onClick={handleShare}
                 aria-label="Share"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] text-white/90 transition-opacity duration-200 hover:opacity-90 active:opacity-80"
+                className={iconActionBtnClass}
               >
                 <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path
@@ -391,7 +428,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mt-auto shrink-0 pt-1">
+        <div className="shrink-0 pt-4 pb-2">
           <Link
             href="/speak"
             className="flex w-full items-center justify-center rounded-lg border py-2 text-center text-xs font-semibold transition-[background-color,border-color,color] duration-500"
