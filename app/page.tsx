@@ -108,8 +108,32 @@ function parseDictionaryPills(raw: string): string[] {
     .filter(Boolean);
 }
 
+const DICT_SEPARATOR = "|||";
+
+/** Split API output on the first `|||` only so translated text can contain that sequence. */
+function splitTranslationAndDictionary(fullText: string): { translated: string; dictRaw: string } {
+  const trimmed = fullText.trim();
+  const idx = trimmed.indexOf(DICT_SEPARATOR);
+  if (idx === -1) {
+    return { translated: trimmed, dictRaw: "" };
+  }
+  return {
+    translated: trimmed.slice(0, idx).trim(),
+    dictRaw: trimmed.slice(idx + DICT_SEPARATOR.length).trim(),
+  };
+}
+
+const INPUT_LANGUAGES = [
+  { value: "he-IL", label: "Hebrew" },
+  { value: "en-US", label: "English" },
+  { value: "ru-RU", label: "Russian" },
+  { value: "ar-SA", label: "Arabic" },
+  { value: "es-ES", label: "Spanish" },
+] as const;
+
 export default function Home() {
   const [selectedDialectId, setSelectedDialectId] = useState(DIALECT_THEMES[0].id);
+  const [inputLanguage, setInputLanguage] = useState("he-IL");
   const [inputText, setInputText] = useState("");
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
@@ -152,9 +176,7 @@ export default function Home() {
       }
 
       const fullText = String(data.fullText ?? "").trim();
-      const parts = fullText.split("|||");
-      const translated = parts[0]?.trim() ?? "";
-      const dictRaw = parts.slice(1).join("|||").trim();
+      const { translated, dictRaw } = splitTranslationAndDictionary(fullText);
       const pills = parseDictionaryPills(dictRaw);
 
       setTranslatedText(translated);
@@ -256,16 +278,16 @@ export default function Home() {
         </div>
 
         {/* Output card */}
-        <section className="mb-5 flex-1">
+        <section className="mb-5 min-h-0 flex-1 overflow-visible">
           <div
-            className="rounded-2xl border p-4 shadow-lg transition-[border-color,background-color] duration-500 ease-in-out"
+            className="overflow-visible rounded-2xl border p-4 shadow-lg transition-[border-color,background-color] duration-500 ease-in-out"
             style={{
               borderColor: `${theme.accent}40`,
               backgroundColor: `${theme.accent}0d`,
             }}
           >
             <p className="mb-3 text-xs font-medium uppercase tracking-wider text-white/40">Original</p>
-            <p className="mb-6 min-h-[2.5rem] text-sm leading-relaxed text-white/45 transition-colors duration-500">
+            <p className="mb-6 min-h-[2.5rem] whitespace-pre-wrap break-words text-sm leading-relaxed text-white/45 transition-colors duration-500">
               {loading || originalText.trim() ? (
                 originalText.trim() || "—"
               ) : (
@@ -274,16 +296,18 @@ export default function Home() {
             </p>
 
             <p className="mb-2 text-xs font-medium uppercase tracking-wider text-white/40">Street</p>
-            <div className="min-h-[3rem] text-xl font-bold leading-snug transition-colors duration-500">
+            <div className="min-h-[3rem] overflow-visible text-xl font-bold leading-snug transition-colors duration-500">
               {loading ? (
                 <p className="animate-pulse text-base font-semibold" style={{ color: theme.accent }}>
                   {loadingMessage}
                 </p>
               ) : error ? (
-                <p className="text-base font-normal text-red-400">{error}</p>
+                <p className="whitespace-pre-wrap break-words text-base font-normal text-red-400">{error}</p>
               ) : originalText.trim() ? (
                 translatedText.trim() ? (
-                  <p style={{ color: theme.accent }}>{translatedText}</p>
+                  <p className="whitespace-pre-wrap break-words" style={{ color: theme.accent }}>
+                    {translatedText}
+                  </p>
                 ) : (
                   <p className="text-base font-normal italic text-white/35">
                     Translation lands here — coming next.
@@ -322,6 +346,26 @@ export default function Home() {
 
         {/* Input + Flip */}
         <div className="mb-8 flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="input-lang" className="text-xs font-medium uppercase tracking-wide text-white/45">
+              From
+            </label>
+            <div style={{ "--accent": theme.accent } as CSSProperties}>
+              <select
+                id="input-lang"
+                value={inputLanguage}
+                onChange={(e) => setInputLanguage(e.target.value)}
+                className="w-full max-w-[220px] rounded-lg border bg-black/30 px-3 py-2 text-sm text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0"
+                style={{ borderColor: `${theme.accent}88` }}
+              >
+                {INPUT_LANGUAGES.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <div style={{ "--accent": theme.accent } as CSSProperties}>
             <input
               type="text"
