@@ -6,31 +6,61 @@ export type CityThemeTokens = {
   button: string;
   buttonBorder: string;
   accent: string;
-  bg: string;
+  bg: { wide: string; long: string };
 };
 
-/** All ten `public/images` assets are assigned exactly once to premium dialects below. */
+/** Per-dialect hero images: `wide` (desktop), `long` (phone). Same path in both until split assets exist. */
 const IMG = {
   /** JP Tokyo — White & Crimson Red */
-  tokyo: "/images/Abstract_flat_lay_202603261907.jpeg",
+  tokyo: {
+    wide: "/images/Abstract_flat_lay_202603261907.jpeg",
+    long: "/images/Abstract_flat_lay_202603261907.jpeg",
+  },
   /** RU Moscow — Royal Blue, Crimson Red, White */
-  moscow: "/images/Abstract_flat_lay_202603261911.jpeg",
+  moscow: {
+    wide: "/images/Abstract_flat_lay_202603261911.jpeg",
+    long: "/images/Abstract_flat_lay_202603261911.jpeg",
+  },
   /** MX Mexico City — Emerald Green, White, Crimson Red */
-  mexicoCity: "/images/Abstract_flat_lay_202603261912.jpeg",
+  mexicoCity: {
+    wide: "/images/Abstract_flat_lay_202603261912.jpeg",
+    long: "/images/Abstract_flat_lay_202603261912.jpeg",
+  },
   /** PT Lisbon — Red & Green */
-  lisbon: "/images/Abstract_flat_lay_202603261914.jpeg",
+  lisbon: {
+    wide: "/images/Abstract_flat_lay_202603261914.jpeg",
+    long: "/images/Abstract_flat_lay_202603261914.jpeg",
+  },
   /** BR Rio — Emerald Green, Gold Yellow, Royal Blue */
-  rio: "/images/Abstract_flat_lay_202603261915.jpeg",
+  rio: {
+    wide: "/images/Abstract_flat_lay_202603261915.jpeg",
+    long: "/images/Abstract_flat_lay_202603261915.jpeg",
+  },
   /** JM Kingston — Lime Green & Gold */
-  kingston: "/images/Black_objects_with_202603261852.jpeg",
+  kingston: {
+    wide: "/images/kingston wide.jpeg",
+    long: "/images/kingston long.jpeg",
+  },
   /** US Brooklyn — Royal Blue, Crimson Red, White */
-  brooklyn: "/images/DJ_headphones_with_202603261904.jpeg",
+  brooklyn: {
+    wide: "/images/brooklyn wide.jpeg",
+    long: "/images/brooklyn long.jpeg",
+  },
   /** FR Paris — Tricolour Blue, White, Crimson Red */
-  paris: "/images/DJ_headphones_with_202603261909.jpeg",
+  paris: {
+    wide: "/images/DJ_headphones_with_202603261909.jpeg",
+    long: "/images/DJ_headphones_with_202603261909.jpeg",
+  },
   /** IL Israel — Royal Blue & Pure White */
-  israel: "/images/DJ_headphones_with_202603261917.jpeg",
+  israel: {
+    wide: "/images/DJ_headphones_with_202603261917.jpeg",
+    long: "/images/DJ_headphones_with_202603261917.jpeg",
+  },
   /** UK London — Royal Blue, Crimson Red, White */
-  london: "/images/Headphones,_chain,_shards,_202603261908.jpeg",
+  london: {
+    wide: "/images/london wide.jpeg",
+    long: "/images/london long.jpeg",
+  },
 } as const;
 
 /**

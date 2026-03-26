@@ -33,13 +33,23 @@ export function useCityThemeOptional(): CityThemeContextValue | null {
 
 export function CityThemeProvider({ children }: { children: ReactNode }) {
   const [dialectId, setDialectId] = useState(DEFAULT_DIALECT_ID);
+  const [useWideBg, setUseWideBg] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 768 : true,
+  );
 
   const setDialect = useCallback((id: string) => {
     setDialectId(id || DEFAULT_DIALECT_ID);
   }, []);
 
   const tokens = useMemo(() => getCityThemeForDialect(dialectId), [dialectId]);
-  const bgUrl = tokens.bg;
+  const bgUrl = useWideBg ? tokens.bg.wide : tokens.bg.long;
+
+  useEffect(() => {
+    const syncViewport = () => setUseWideBg(window.innerWidth >= 768);
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+    return () => window.removeEventListener("resize", syncViewport);
+  }, []);
 
   useEffect(() => {
     applyDialectThemeToDocument(tokens);
@@ -52,7 +62,7 @@ export function CityThemeProvider({ children }: { children: ReactNode }) {
       <div
         className="pointer-events-none fixed inset-0 z-0 bg-cover bg-fixed transition-[background-image] duration-500"
         style={{
-          backgroundImage: `url(${bgUrl})`,
+          backgroundImage: `url("${bgUrl.replace(/"/g, '\\"')}")`,
           backgroundPosition: "center top",
         }}
         aria-hidden

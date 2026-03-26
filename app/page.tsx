@@ -137,7 +137,10 @@ export default function Home() {
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (text) setInputText(text);
+      if (text) {
+        setInputText(text);
+        setToast("Pasted!");
+      }
     } catch {
       /* ignore */
     }
