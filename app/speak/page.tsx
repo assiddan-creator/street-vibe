@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
-import { fetchTtsAudioUrl } from "@/lib/ttsClient";
+import { fetchTtsAudioUrl, speakNativeTts } from "@/lib/ttsClient";
 import {
   INPUT_LANGUAGES,
   LOADING_MESSAGES,
@@ -18,6 +18,23 @@ import {
 } from "@/lib/streetVibeTheme";
 
 type DuoTurn = "me" | "them";
+
+type TtsEngine = "minimax" | "google" | "native";
+
+const TTS_ENGINE_STORAGE_KEY = "streetvibe-tts-engine";
+
+function readStoredTtsEngine(): TtsEngine {
+  if (typeof window === "undefined") return "minimax";
+  const v = localStorage.getItem(TTS_ENGINE_STORAGE_KEY);
+  if (v === "minimax" || v === "google" || v === "native") return v;
+  return "minimax";
+}
+
+const ENGINE_DISPLAY: Record<TtsEngine, string> = {
+  minimax: "MiniMax",
+  google: "Google",
+  native: "Native",
+};
 
 export default function SpeakPage() {
   const [outputLang, setOutputLang] = useState("Jamaican Patois");
@@ -35,7 +52,17 @@ export default function SpeakPage() {
   const [ttsLoading, setTtsLoading] = useState(false);
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
+  const [ttsEngine, setTtsEngine] = useState<TtsEngine>(readStoredTtsEngine);
+  const [resolvedEngine, setResolvedEngine] = useState<TtsEngine | null>(null);
+  const [ttsOutcome, setTtsOutcome] = useState<"unset" | "pending" | "success" | "failed">("unset");
+  const [toast, setToast] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     activeTurnRef.current = activeTurn;
@@ -127,31 +154,70 @@ export default function SpeakPage() {
     setTtsError(null);
     audioRef.current?.pause();
     audioRef.current = null;
+    if (typeof window !== "undefined") window.speechSynthesis.cancel();
+
+    setTtsOutcome("pending");
     setTtsLoading(true);
     setTtsPlaying(false);
 
+    const effectiveEngine: TtsEngine = ttsEngine === "google" ? "native" : ttsEngine;
+
     try {
-      const url = await fetchTtsAudioUrl(text, outputLang);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => {
-        setTtsPlaying(false);
-        audioRef.current = null;
-      };
-      audio.onerror = () => {
-        setTtsError("Playback failed");
-        setTtsPlaying(false);
-        audioRef.current = null;
-      };
-      setTtsPlaying(true);
-      await audio.play();
+      if (ttsEngine === "google") {
+        setToast("Google TTS coming soon");
+      }
+
+      if (ttsEngine === "minimax") {
+        const url = await fetchTtsAudioUrl(text, outputLang);
+        setTtsLoading(false);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        setTtsPlaying(true);
+        await new Promise<void>((resolve, reject) => {
+          audio.onended = () => resolve();
+          audio.onerror = () => reject(new Error("Playback failed"));
+          void audio.play().catch(reject);
+        });
+        setResolvedEngine("minimax");
+        setTtsOutcome("success");
+      } else {
+        setTtsPlaying(true);
+        await speakNativeTts(text, outputLang);
+        setResolvedEngine("native");
+        setTtsOutcome("success");
+      }
     } catch (e) {
-      setTtsError(e instanceof Error ? e.message : "TTS failed");
-      setTtsPlaying(false);
+      const msg = e instanceof Error ? e.message : "TTS failed";
+      setTtsError(msg);
+      setResolvedEngine(effectiveEngine === "native" ? "native" : "minimax");
+      setTtsOutcome("failed");
     } finally {
       setTtsLoading(false);
+      setTtsPlaying(false);
+      audioRef.current = null;
     }
   };
+
+  const handleTtsEngineChange = (value: TtsEngine) => {
+    setTtsEngine(value);
+    setTtsOutcome("unset");
+    setResolvedEngine(null);
+    try {
+      localStorage.setItem(TTS_ENGINE_STORAGE_KEY, value);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const labelEngine: TtsEngine =
+    ttsOutcome === "success" || ttsOutcome === "failed" ? (resolvedEngine ?? ttsEngine) : ttsEngine;
+
+  const statusDotColor =
+    ttsOutcome === "pending" || ttsOutcome === "unset"
+      ? "#6b7280"
+      : ttsOutcome === "success"
+        ? "#22c55e"
+        : "#ef4444";
 
   const selectDropdownClass =
     "w-full rounded-lg border bg-zinc-950/90 px-2.5 py-2 text-xs text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
@@ -166,9 +232,22 @@ export default function SpeakPage() {
 
   return (
     <div
-      className="h-[100dvh] max-h-[100dvh] overflow-hidden transition-[background-color] duration-500 ease-in-out"
+      className="relative h-[100dvh] max-h-[100dvh] overflow-hidden transition-[background-color] duration-500 ease-in-out"
       style={{ backgroundColor: theme.bg }}
     >
+      {toast ? (
+        <div
+          className="pointer-events-none fixed bottom-20 left-1/2 z-50 max-w-[min(92vw,360px)] -translate-x-1/2 rounded-lg border px-3 py-2 text-center text-[11px] font-medium text-white shadow-lg"
+          style={{
+            borderColor: `${theme.accent}66`,
+            backgroundColor: "rgba(0,0,0,0.88)",
+            boxShadow: `0 8px 24px ${theme.accent}33`,
+          }}
+          role="status"
+        >
+          {toast}
+        </div>
+      ) : null}
       <div className="mx-auto flex h-full max-h-[100dvh] w-full max-w-[min(100%,390px)] flex-col overflow-hidden px-2.5 pb-1.5 pt-1.5">
         <Link
           href="/"
@@ -224,6 +303,41 @@ export default function SpeakPage() {
                 ))}
               </optgroup>
             </select>
+          </div>
+        </div>
+
+        <div className="mb-1.5 flex shrink-0 flex-col gap-0.5">
+          <label htmlFor="ttsEngineSelector" className="text-[9px] font-medium uppercase tracking-wide text-white/50">
+            TTS engine
+          </label>
+          <div style={{ "--accent": theme.accent } as CSSProperties}>
+            <select
+              id="ttsEngineSelector"
+              value={ttsEngine}
+              onChange={(e) => handleTtsEngineChange(e.target.value as TtsEngine)}
+              className="w-full rounded-lg border bg-zinc-950/90 px-2 py-1.5 text-[10px] leading-tight text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0"
+              style={{ borderColor: `${theme.accent}88` }}
+            >
+              <option value="minimax" className="bg-zinc-900 text-white">
+                MiniMax (Replicate)
+              </option>
+              <option value="google" className="bg-zinc-900 text-white">
+                Google Cloud
+              </option>
+              <option value="native" className="bg-zinc-900 text-white">
+                Native Browser
+              </option>
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5 px-0.5 pt-0.5">
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: statusDotColor }}
+              aria-hidden
+            />
+            <span className="text-[10px] font-medium text-white/80">
+              Engine: {ENGINE_DISPLAY[labelEngine]}
+            </span>
           </div>
         </div>
 

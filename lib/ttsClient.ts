@@ -1,3 +1,44 @@
+/** BCP-47 locale for Web Speech API synthesis per output dialect. */
+export function getDialectLocaleForTts(outputLang: string): string {
+  const map: Record<string, string> = {
+    "London Roadman": "en-GB",
+    "Jamaican Patois": "en-JM",
+    "New York Brooklyn": "en-US",
+    "Tokyo Gyaru": "ja-JP",
+    "Paris Banlieue": "fr-FR",
+    "Russian Street": "ru-RU",
+    "Mumbai Hinglish": "hi-IN",
+    "Mexico City Barrio": "es-MX",
+    "Rio Favela": "pt-BR",
+    "English (Standard)": "en-US",
+    Spanish: "es-ES",
+    French: "fr-FR",
+    German: "de-DE",
+    Italian: "it-IT",
+    Russian: "ru-RU",
+    Portuguese: "pt-PT",
+    Japanese: "ja-JP",
+    Arabic: "ar-SA",
+    "Hebrew (Standard)": "he-IL",
+  };
+  return map[outputLang] ?? "en-US";
+}
+
+/** Speak with the browser's built-in TTS (no network). */
+export function speakNativeTts(text: string, dialect: string): Promise<void> {
+  if (typeof window === "undefined" || !window.speechSynthesis) {
+    return Promise.reject(new Error("Speech synthesis not available"));
+  }
+  return new Promise((resolve, reject) => {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = getDialectLocaleForTts(dialect);
+    u.onend = () => resolve();
+    u.onerror = () => reject(new Error("Speech synthesis failed"));
+    window.speechSynthesis.speak(u);
+  });
+}
+
 /** Poll Replicate until TTS prediction completes; returns audio URL string. */
 export async function fetchTtsAudioUrl(text: string, dialect: string): Promise<string> {
   const startRes = await fetch("/api/tts", {
