@@ -39,6 +39,8 @@ function buildPrompt({
     reply: "This is a reply in an argument or comeback situation — keep it sharp.",
     hype: "This is a hype message — energetic, loud, encouraging.",
     flirt: "This is a flirtatious message — smooth, charming, confident.",
+    angry: "This is an angry message — direct, aggressive, no filter, street attitude.",
+    stoned: "This is a relaxed chill message — slow energy, hazy, mellow, like texting after smoking.",
     default: "This is a casual message between friends.",
   };
 

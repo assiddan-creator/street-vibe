@@ -37,6 +37,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [slangLevel, setSlangLevel] = useState<1 | 2 | 3>(2);
+  const [context, setContext] = useState<string>("dm");
 
   useEffect(() => {
     if (!toast) return;
@@ -92,9 +94,9 @@ export default function Home() {
           text: trimmed,
           currentLang: dialect,
           translationMode: "slang",
-          slangLevel: 2,
+          slangLevel,
           isPremiumSelected: true,
-          context: "dm",
+          context,
           previousMessage: null,
         }),
       });
@@ -217,6 +219,66 @@ export default function Home() {
                 ))}
               </optgroup>
             </select>
+          </div>
+        </div>
+
+        <div className="mb-1.5 flex shrink-0 flex-col gap-1.5">
+          <div className="flex flex-wrap items-center justify-center gap-1">
+            {(
+              [
+                { level: 1 as const, label: "🌿 Mild" },
+                { level: 2 as const, label: "🔥 Street" },
+                { level: 3 as const, label: "💀 Raw" },
+              ] as const
+            ).map(({ level, label }) => {
+              const on = slangLevel === level;
+              return (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setSlangLevel(level)}
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold backdrop-blur-md transition-all duration-300 ${
+                    on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
+                  }`}
+                  style={
+                    on
+                      ? { borderColor: theme.accent, color: theme.accent, backgroundColor: `${theme.accent}18` }
+                      : undefined
+                  }
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-1">
+            {(
+              [
+                { value: "dm", label: "📱 Friend" },
+                { value: "flirt", label: "😏 Flirty" },
+                { value: "angry", label: "😤 Angry" },
+                { value: "stoned", label: "🌀 Stoned" },
+              ] as const
+            ).map(({ value, label }) => {
+              const on = context === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setContext(value)}
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold backdrop-blur-md transition-all duration-300 ${
+                    on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
+                  }`}
+                  style={
+                    on
+                      ? { borderColor: theme.accent, color: theme.accent, backgroundColor: `${theme.accent}18` }
+                      : undefined
+                  }
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
