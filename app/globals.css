@@ -39,3 +39,27 @@ body {
 .mic-pulse {
   animation: mic-pulse 1s ease-in-out infinite;
 }
+
+/* Translation output card — thin dark scrollbar, thumb uses --scroll-thumb (theme accent) */
+.output-card-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb, rgba(255, 255, 255, 0.22)) var(--scroll-track, rgba(0, 0, 0, 0.35));
+}
+
+.output-card-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.output-card-scroll::-webkit-scrollbar-track {
+  background: var(--scroll-track, rgba(0, 0, 0, 0.35));
+  border-radius: 4px;
+}
+
+.output-card-scroll::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb, rgba(255, 255, 255, 0.22));
+  border-radius: 4px;
+}
+
+.output-card-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover, var(--scroll-thumb, rgba(255, 255, 255, 0.3)));
+}

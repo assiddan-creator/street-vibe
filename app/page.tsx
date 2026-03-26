@@ -309,31 +309,31 @@ export default function Home() {
   };
 
   const selectDropdownClass =
-    "w-full rounded-lg border bg-zinc-950/90 px-3 py-2.5 text-sm text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
+    "w-full rounded-lg border bg-zinc-950/90 px-2.5 py-2 text-xs text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
 
   const inputLangSelectClass =
-    "w-full max-w-[min(100%,280px)] rounded-lg border bg-zinc-950/90 px-2.5 py-1.5 text-xs text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
+    "w-full max-w-[min(100%,280px)] rounded-lg border bg-zinc-950/90 px-2 py-1 text-[11px] leading-tight text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
 
   return (
     <div
-      className="min-h-[100dvh] overflow-x-hidden transition-[background-color] duration-500 ease-in-out"
+      className="h-[100dvh] max-h-[100dvh] overflow-hidden transition-[background-color] duration-500 ease-in-out"
       style={{ backgroundColor: theme.bg }}
     >
-      <div className="mx-auto flex h-[100dvh] max-h-[100dvh] max-w-[480px] flex-col overflow-hidden px-3 pb-2 pt-2">
+      <div className="mx-auto flex h-full max-h-[100dvh] w-full max-w-[min(100%,390px)] flex-col overflow-hidden px-2.5 pb-1.5 pt-1.5">
         {/* Top bar */}
-        <header className="mb-2 flex shrink-0 items-center justify-between gap-3">
-          <span className="text-xl font-bold tracking-tight text-white transition-colors duration-500">
+        <header className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
+          <span className="text-lg font-bold leading-tight tracking-tight text-white transition-colors duration-500">
             StreetVibe
           </span>
           <div
-            className="flex max-w-[55%] min-w-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-[border-color,background-color,color] duration-500 ease-in-out"
+            className="flex max-w-[58%] min-w-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] transition-[border-color,background-color,color] duration-500 ease-in-out"
             style={{
               borderColor: `${theme.accent}55`,
               backgroundColor: `${theme.accent}18`,
               color: theme.accent,
             }}
           >
-            <span className="shrink-0 text-lg leading-none" aria-hidden>
+            <span className="shrink-0 text-base leading-none" aria-hidden>
               {theme.flag}
             </span>
             <span className="truncate font-medium">{theme.city}</span>
@@ -341,8 +341,8 @@ export default function Home() {
         </header>
 
         {/* Output / dialect dropdown */}
-        <div className="mb-2 flex shrink-0 flex-col gap-1">
-          <label htmlFor="output-lang" className="text-[10px] font-medium uppercase tracking-wide text-white/50">
+        <div className="mb-1.5 flex shrink-0 flex-col gap-0.5">
+          <label htmlFor="output-lang" className="text-[9px] font-medium uppercase tracking-wide text-white/50">
             Output
           </label>
           <div style={{ "--accent": theme.accent } as CSSProperties}>
@@ -371,17 +371,22 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Output card — scrolls; keeps mic + inputs in view */}
-        <section className="mb-2 min-h-0 flex-1 overflow-hidden">
+        {/* Output card — max height + themed scrollbar */}
+        <section className="mb-1.5 shrink-0 overflow-hidden">
           <div
-            className="h-full min-h-0 overflow-y-auto overflow-x-hidden rounded-2xl border p-3 shadow-lg transition-[border-color,background-color] duration-500 ease-in-out"
-            style={{
-              borderColor: `${theme.accent}40`,
-              backgroundColor: `${theme.accent}0d`,
-            }}
+            className="output-card-scroll max-h-[280px] overflow-y-auto overflow-x-hidden rounded-xl border p-2.5 shadow-lg transition-[border-color,background-color] duration-500 ease-in-out"
+            style={
+              {
+                borderColor: `${theme.accent}40`,
+                backgroundColor: `${theme.accent}0d`,
+                ["--scroll-thumb" as string]: `${theme.accent}88`,
+                ["--scroll-thumb-hover" as string]: `${theme.accent}aa`,
+                ["--scroll-track" as string]: "rgba(0,0,0,0.45)",
+              } as CSSProperties
+            }
           >
-            <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-white/40">Original</p>
-            <p className="mb-3 min-h-0 max-h-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-xs leading-relaxed text-white/45 transition-colors duration-500">
+            <p className="mb-1 text-[9px] font-medium uppercase tracking-wider text-white/40">Original</p>
+            <p className="mb-2 min-h-0 max-h-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] leading-snug text-white/45 transition-colors duration-500">
               {loading || originalText.trim() ? (
                 originalText.trim() || "—"
               ) : (
@@ -389,44 +394,44 @@ export default function Home() {
               )}
             </p>
 
-            <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-white/40">Street</p>
-            <div className="min-h-0 max-h-none overflow-visible text-base font-bold leading-snug transition-colors duration-500">
+            <p className="mb-0.5 text-[9px] font-medium uppercase tracking-wider text-white/40">Street</p>
+            <div className="min-h-0 max-h-none overflow-visible text-sm font-bold leading-snug transition-colors duration-500">
               {loading ? (
-                <p className="animate-pulse text-sm font-semibold" style={{ color: theme.accent }}>
+                <p className="animate-pulse text-xs font-semibold leading-tight" style={{ color: theme.accent }}>
                   {loadingMessage}
                 </p>
               ) : error ? (
-                <p className="max-h-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-xs font-normal text-red-400">
+                <p className="max-h-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] font-normal leading-tight text-red-400">
                   {error}
                 </p>
               ) : originalText.trim() ? (
                 translatedText.trim() ? (
                   <p
-                    className="max-h-none whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                    className="max-h-none whitespace-pre-wrap break-words text-[11px] leading-snug [overflow-wrap:anywhere]"
                     style={{ color: theme.accent }}
                   >
                     {translatedText}
                   </p>
                 ) : (
-                  <p className="text-xs font-normal italic text-white/35">
+                  <p className="text-[11px] font-normal italic leading-tight text-white/35">
                     Translation lands here — coming next.
                   </p>
                 )
               ) : (
-                <p className="text-xs font-normal italic text-white/35">
+                <p className="text-[11px] font-normal italic leading-tight text-white/35">
                   Flip a line to see the vibe in {theme.city}.
                 </p>
               )}
             </div>
 
-            <div className="mt-2 flex max-h-none flex-wrap gap-1.5 overflow-visible">
+            <div className="mt-1.5 flex max-h-none flex-wrap gap-1 overflow-visible">
               {loading ? (
-                <span className="text-xs text-white/35">…</span>
+                <span className="text-[10px] text-white/35">…</span>
               ) : dictionaryPills.length > 0 ? (
                 dictionaryPills.map((pill, i) => (
                   <span
                     key={`${pill}-${i}`}
-                    className="max-w-full whitespace-pre-wrap break-words rounded-full border px-3 py-1 text-xs font-medium transition-all duration-500"
+                    className="max-w-full whitespace-pre-wrap break-words rounded-full border px-2 py-0.5 text-[10px] font-medium leading-tight transition-all duration-500"
                     style={{
                       borderColor: `${theme.accent}55`,
                       color: theme.accent,
@@ -437,16 +442,16 @@ export default function Home() {
                   </span>
                 ))
               ) : (
-                <span className="text-xs text-white/30">Slang dictionary chips will appear here.</span>
+                <span className="text-[10px] text-white/30">Slang dictionary chips will appear here.</span>
               )}
             </div>
           </div>
         </section>
 
         {/* From → input → Flip → mic row */}
-        <div className="flex shrink-0 flex-col gap-2 pb-1">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="input-lang" className="text-[10px] font-medium uppercase tracking-wide text-white/45">
+        <div className="flex shrink-0 flex-col gap-1.5 pb-0.5">
+          <div className="flex flex-col gap-0.5">
+            <label htmlFor="input-lang" className="text-[9px] font-medium uppercase tracking-wide text-white/45">
               From
             </label>
             <div style={{ "--accent": theme.accent } as CSSProperties}>
@@ -472,14 +477,14 @@ export default function Home() {
               readOnly={isListening}
               onChange={(e) => setInputText(e.target.value)}
               placeholder="Say it plain…"
-              className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-sm text-white placeholder:text-white/35 transition-[box-shadow,border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0 read-only:opacity-95"
+              className="w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2 text-xs text-white placeholder:text-white/35 transition-[box-shadow,border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0 read-only:opacity-95"
             />
           </div>
           <button
             type="button"
             onClick={handleFlipIt}
             disabled={loading}
-            className="w-full rounded-xl py-2.5 text-center text-sm font-semibold text-black transition-[background-color,box-shadow] duration-500 ease-in-out enabled:active:scale-[0.98] disabled:opacity-60"
+            className="w-full rounded-lg py-2 text-center text-xs font-semibold text-black transition-[background-color,box-shadow] duration-500 ease-in-out enabled:active:scale-[0.98] disabled:opacity-60"
             style={{
               backgroundColor: theme.accent,
               boxShadow: `0 4px 20px ${theme.accent}44`,
@@ -488,24 +493,25 @@ export default function Home() {
             {loading ? "Flipping…" : "Flip it"}
           </button>
 
-          {/* Mic centered, copy + share on the sides; label + error below */}
-          <div className="flex items-center justify-center gap-4 overflow-visible pt-1">
-            <button
-              type="button"
-              onClick={handleCopy}
-              aria-label="Copy"
-              className="flex h-11 w-11 shrink-0 items-center justify-center self-start rounded-full border border-white/15 bg-black/30 text-white/80 transition-[border-color,color,background-color] duration-500 hover:bg-white/10"
-              style={{ borderColor: `${theme.accent}44` }}
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                />
-              </svg>
-            </button>
+          {/* Mic centered — grid for even spacing; copy/share 48×48 rounded-xl */}
+          <div className="grid w-full grid-cols-3 items-start gap-1 overflow-visible pt-0.5">
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={handleCopy}
+                aria-label="Copy"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] text-white/90 transition-opacity duration-200 hover:opacity-90 active:opacity-80"
+              >
+                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+              </button>
+            </div>
 
             <div className="flex min-w-0 flex-col items-center">
               <button
@@ -549,22 +555,23 @@ export default function Home() {
               ) : null}
             </div>
 
-            <button
-              type="button"
-              onClick={handleShare}
-              aria-label="Share"
-              className="flex h-11 w-11 shrink-0 items-center justify-center self-start rounded-full border border-white/15 bg-black/30 text-white/80 transition-[border-color,color,background-color] duration-500 hover:bg-white/10"
-              style={{ borderColor: `${theme.accent}44` }}
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                />
-              </svg>
-            </button>
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={handleShare}
+                aria-label="Share"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] text-white/90 transition-opacity duration-200 hover:opacity-90 active:opacity-80"
+              >
+                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
