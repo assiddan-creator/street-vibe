@@ -7,6 +7,11 @@ import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import {
+  GLASS_DUO_CARD,
+  GLASS_INPUT,
+  GLASS_OUTPUT_CARD,
+  GLASS_SELECT,
+  GLASS_SELECT_COMPACT,
   THEME_FLIP_BTN,
   THEME_GLASS_ICON_BTN,
   THEME_MIC_IDLE,
@@ -276,15 +281,9 @@ export default function SpeakPage() {
         ? "#22c55e"
         : "#ef4444";
 
-  const selectDropdownClass =
-    "w-full rounded-lg border bg-zinc-950/90 px-2.5 py-2 text-xs text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
-
-  const inputLangSelectClass =
-    "w-full max-w-[min(100%,280px)] rounded-lg border bg-zinc-950/90 px-2 py-1 text-[11px] leading-tight text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
-
   const duoBtnClass = (on: boolean) =>
     `flex-1 rounded-lg border px-2 py-1.5 text-center text-[11px] font-semibold transition-all duration-300 ${
-      on ? "text-black" : "border-white/15 bg-black/20 text-white/75"
+      on ? "text-black" : "border-white/10 bg-black/25 text-white/90 backdrop-blur-md"
     }`;
 
   return (
@@ -296,16 +295,12 @@ export default function SpeakPage() {
         </Link>
 
         <header className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
-          <span className="text-lg font-bold leading-tight tracking-tight text-white transition-colors duration-500">
+          <span className="text-lg font-bold leading-tight tracking-tight text-white drop-shadow-md transition-colors duration-500">
             StreetVibe
           </span>
           <div
-            className="flex max-w-[58%] min-w-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] transition-[border-color,background-color,color] duration-500 ease-in-out"
-            style={{
-              borderColor: `${theme.accent}55`,
-              backgroundColor: `${theme.accent}18`,
-              color: theme.accent,
-            }}
+            className="flex max-w-[58%] min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2 py-1 text-[11px] text-white backdrop-blur-md transition-colors duration-500 ease-in-out"
+            style={{ color: theme.accent }}
           >
             <span className="shrink-0 text-base leading-none" aria-hidden>
               {theme.flag}
@@ -323,8 +318,7 @@ export default function SpeakPage() {
               id="speak-output-lang"
               value={outputLang}
               onChange={(e) => setOutputLang(e.target.value)}
-              className={selectDropdownClass}
-              style={{ borderColor: `${theme.accent}88` }}
+              className={`${GLASS_SELECT} px-2.5 py-2 text-xs`}
             >
               <optgroup label="💎 Premium Slangs" className="bg-zinc-900 text-white">
                 {OUTPUT_PREMIUM_OPTIONS.map((o) => (
@@ -353,8 +347,7 @@ export default function SpeakPage() {
               id="ttsEngineSelector"
               value={ttsEngine}
               onChange={(e) => handleTtsEngineChange(e.target.value as TtsEngine)}
-              className="w-full rounded-lg border bg-zinc-950/90 px-2 py-1.5 text-[10px] leading-tight text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0"
-              style={{ borderColor: `${theme.accent}88` }}
+              className={`${GLASS_SELECT} px-2 py-1.5 text-[10px] leading-tight`}
             >
               <option value="minimax" className="bg-zinc-900 text-white">
                 MiniMax (Replicate)
@@ -381,19 +374,17 @@ export default function SpeakPage() {
 
         <section className="mb-1.5 shrink-0 overflow-hidden">
           <div
-            className="output-card-scroll max-h-[240px] overflow-y-auto overflow-x-hidden rounded-xl border p-2.5 shadow-lg transition-[border-color,background-color] duration-500 ease-in-out"
+            className={`${GLASS_OUTPUT_CARD} max-h-[240px]`}
             style={
               {
-                borderColor: `${theme.accent}40`,
-                backgroundColor: `${theme.accent}0d`,
                 ["--scroll-thumb" as string]: `${theme.accent}88`,
                 ["--scroll-thumb-hover" as string]: `${theme.accent}aa`,
-                ["--scroll-track" as string]: "rgba(0,0,0,0.45)",
+                ["--scroll-track" as string]: "rgba(0,0,0,0.35)",
               } as CSSProperties
             }
           >
             <p className="mb-1 text-[9px] font-medium uppercase tracking-wider text-white/40">Original</p>
-            <p className="mb-2 min-h-0 max-h-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] leading-snug text-white/45 transition-colors duration-500">
+            <p className="mb-2 min-h-0 max-h-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] leading-snug text-white/80 drop-shadow-sm transition-colors duration-500">
               {loading || originalText.trim() ? (
                 originalText.trim() || "—"
               ) : (
@@ -493,8 +484,7 @@ export default function SpeakPage() {
                 id="speak-input-lang"
                 value={inputLanguage}
                 onChange={(e) => setInputLanguage(e.target.value)}
-                className={inputLangSelectClass}
-                style={{ borderColor: `${theme.accent}88` }}
+                className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-[11px] leading-tight`}
               >
                 {INPUT_LANGUAGES.map((opt) => (
                   <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -516,14 +506,14 @@ export default function SpeakPage() {
                 }))
               }
               placeholder="Say it plain…"
-              className="w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2 text-xs text-white placeholder:text-white/35 transition-[box-shadow,border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0 read-only:opacity-95"
+              className={GLASS_INPUT}
             />
           </div>
           <button type="button" onClick={handleFlipIt} disabled={loading} className={THEME_FLIP_BTN}>
             {loading ? "Flipping…" : "Flip it"}
           </button>
 
-          <div className="rounded-xl border border-white/10 bg-black/20 p-1.5">
+          <div className={GLASS_DUO_CARD}>
             <p className="mb-1 text-center text-[9px] font-medium uppercase tracking-wide text-white/45">Duo mode</p>
             <div className="flex gap-1.5">
               <button

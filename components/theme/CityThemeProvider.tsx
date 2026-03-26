@@ -50,11 +50,14 @@ export function CityThemeProvider({ children }: { children: ReactNode }) {
   return (
     <CityThemeContext.Provider value={value}>
       <div
-        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-fixed transition-[background-image] duration-500"
-        style={{ backgroundImage: `url(${bgUrl})` }}
+        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-fixed transition-[background-image] duration-500"
+        style={{
+          backgroundImage: `url(${bgUrl})`,
+          backgroundPosition: "center top",
+        }}
         aria-hidden
       />
-      <div className="pointer-events-none fixed inset-0 z-[1] bg-black/70 backdrop-blur-xl" aria-hidden />
+      <div className="pointer-events-none fixed inset-0 z-[1] bg-black/40" aria-hidden />
       <div className="relative z-10 min-h-[100vh] min-h-[100dvh] overflow-y-auto text-white">{children}</div>
     </CityThemeContext.Provider>
   );
