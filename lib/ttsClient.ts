@@ -39,16 +39,28 @@ export function speakNativeTts(text: string, dialect: string): Promise<void> {
   });
 }
 
-/** Poll Replicate until TTS prediction completes; returns audio URL string. */
-export async function fetchTtsAudioUrl(text: string, dialect: string): Promise<string> {
+/** Poll Replicate until TTS prediction completes; returns playable URL (https or data:). */
+export async function fetchTtsAudioUrl(
+  text: string,
+  dialect: string,
+  engine: "minimax" | "google" = "minimax"
+): Promise<string> {
   const startRes = await fetch("/api/tts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, dialect }),
+    body: JSON.stringify({ text, dialect, engine }),
   });
-  const startData = (await startRes.json()) as { predictionId?: string; error?: string };
+  const startData = (await startRes.json()) as {
+    audioBase64?: string;
+    engine?: string;
+    predictionId?: string;
+    error?: string;
+  };
   if (!startRes.ok) {
     throw new Error(startData.error || "TTS request failed");
+  }
+  if (startData.audioBase64) {
+    return `data:audio/mp3;base64,${startData.audioBase64}`;
   }
   const predictionId = startData.predictionId;
   if (!predictionId) throw new Error("No prediction ID from TTS");

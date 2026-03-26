@@ -55,14 +55,7 @@ export default function SpeakPage() {
   const [ttsEngine, setTtsEngine] = useState<TtsEngine>(readStoredTtsEngine);
   const [resolvedEngine, setResolvedEngine] = useState<TtsEngine | null>(null);
   const [ttsOutcome, setTtsOutcome] = useState<"unset" | "pending" | "success" | "failed">("unset");
-  const [toast, setToast] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), 3500);
-    return () => window.clearTimeout(t);
-  }, [toast]);
 
   useEffect(() => {
     activeTurnRef.current = activeTurn;
@@ -160,15 +153,9 @@ export default function SpeakPage() {
     setTtsLoading(true);
     setTtsPlaying(false);
 
-    const effectiveEngine: TtsEngine = ttsEngine === "google" ? "native" : ttsEngine;
-
     try {
-      if (ttsEngine === "google") {
-        setToast("Google TTS coming soon");
-      }
-
       if (ttsEngine === "minimax") {
-        const url = await fetchTtsAudioUrl(text, outputLang);
+        const url = await fetchTtsAudioUrl(text, outputLang, "minimax");
         setTtsLoading(false);
         const audio = new Audio(url);
         audioRef.current = audio;
@@ -180,6 +167,19 @@ export default function SpeakPage() {
         });
         setResolvedEngine("minimax");
         setTtsOutcome("success");
+      } else if (ttsEngine === "google") {
+        const url = await fetchTtsAudioUrl(text, outputLang, "google");
+        setTtsLoading(false);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        setTtsPlaying(true);
+        await new Promise<void>((resolve, reject) => {
+          audio.onended = () => resolve();
+          audio.onerror = () => reject(new Error("Playback failed"));
+          void audio.play().catch(reject);
+        });
+        setResolvedEngine("google");
+        setTtsOutcome("success");
       } else {
         setTtsPlaying(true);
         await speakNativeTts(text, outputLang);
@@ -189,7 +189,7 @@ export default function SpeakPage() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "TTS failed";
       setTtsError(msg);
-      setResolvedEngine(effectiveEngine === "native" ? "native" : "minimax");
+      setResolvedEngine(ttsEngine);
       setTtsOutcome("failed");
     } finally {
       setTtsLoading(false);
@@ -232,22 +232,9 @@ export default function SpeakPage() {
 
   return (
     <div
-      className="relative h-[100dvh] max-h-[100dvh] overflow-hidden transition-[background-color] duration-500 ease-in-out"
+      className="h-[100dvh] max-h-[100dvh] overflow-hidden transition-[background-color] duration-500 ease-in-out"
       style={{ backgroundColor: theme.bg }}
     >
-      {toast ? (
-        <div
-          className="pointer-events-none fixed bottom-20 left-1/2 z-50 max-w-[min(92vw,360px)] -translate-x-1/2 rounded-lg border px-3 py-2 text-center text-[11px] font-medium text-white shadow-lg"
-          style={{
-            borderColor: `${theme.accent}66`,
-            backgroundColor: "rgba(0,0,0,0.88)",
-            boxShadow: `0 8px 24px ${theme.accent}33`,
-          }}
-          role="status"
-        >
-          {toast}
-        </div>
-      ) : null}
       <div className="mx-auto flex h-full max-h-[100dvh] w-full max-w-[min(100%,390px)] flex-col overflow-hidden px-2.5 pb-1.5 pt-1.5">
         <Link
           href="/"
