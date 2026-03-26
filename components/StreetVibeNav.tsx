@@ -13,7 +13,7 @@ export function StreetVibeNav() {
 
   return (
     <nav
-      className="mx-auto mb-2 flex w-full max-w-[min(100%,390px)] items-center justify-center gap-2 px-2.5 pt-1.5"
+      className="mx-auto mb-1.5 flex w-full max-w-[min(100%,390px)] items-center justify-center gap-2 px-2.5"
       aria-label="Main"
     >
       <Link

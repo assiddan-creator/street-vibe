@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -175,6 +176,8 @@ export default function Home() {
             <span className="truncate font-medium">{theme.city}</span>
           </div>
         </header>
+
+        <StreetVibeNav />
 
         {/* Output / dialect dropdown */}
         <div className="mb-1.5 flex shrink-0 flex-col gap-0.5">

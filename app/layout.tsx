@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { CityThemeProvider } from "@/components/theme/CityThemeProvider";
 import "./globals.css";
 
@@ -30,10 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-[100dvh] antialiased`}
       >
-        <CityThemeProvider>
-          <StreetVibeNav />
-          {children}
-        </CityThemeProvider>
+        <CityThemeProvider>{children}</CityThemeProvider>
       </body>
     </html>
   );
