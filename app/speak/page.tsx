@@ -235,7 +235,7 @@ export default function SpeakPage() {
 
     try {
       if (ttsEngine === "minimax") {
-        const url = await fetchTtsAudioUrl(text, outputLang, "minimax");
+        const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context);
         setTtsLoading(false);
         const audio = new Audio(url);
         audioRef.current = audio;
@@ -248,7 +248,7 @@ export default function SpeakPage() {
         setResolvedEngine("minimax");
         setTtsOutcome("success");
       } else if (ttsEngine === "google") {
-        const url = await fetchTtsAudioUrl(text, outputLang, "google");
+        const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context);
         setTtsLoading(false);
         const audio = new Audio(url);
         audioRef.current = audio;

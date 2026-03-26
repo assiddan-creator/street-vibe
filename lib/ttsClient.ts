@@ -40,16 +40,27 @@ export function speakNativeTts(text: string, dialect: string): Promise<void> {
   });
 }
 
+const CONTEXT_TUNING: Record<string, { speed: number; emotion: string }> = {
+  dm: { speed: 0.95, emotion: "neutral" },
+  flirt: { speed: 0.9, emotion: "happy" },
+  angry: { speed: 1.1, emotion: "angry" },
+  stoned: { speed: 0.8, emotion: "calm" },
+  default: { speed: 0.95, emotion: "neutral" },
+};
+
 /** Poll Replicate until TTS prediction completes; returns playable URL (https or data:). */
 export async function fetchTtsAudioUrl(
   text: string,
   dialect: string,
-  engine: "minimax" | "google" = "minimax"
+  engine: "minimax" | "google" = "minimax",
+  context?: string
 ): Promise<string> {
+  const tuning = CONTEXT_TUNING[context ?? "default"] ?? CONTEXT_TUNING.default;
+
   const startRes = await fetch("/api/tts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, dialect, engine }),
+    body: JSON.stringify({ text, dialect, engine, tuning }),
   });
   const startData = (await startRes.json()) as {
     audioBase64?: string;

@@ -102,6 +102,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing text" }, { status: 400, headers: corsHeaders });
   }
 
+  const tuning =
+    body.tuning && typeof body.tuning === "object"
+      ? (body.tuning as Record<string, unknown>)
+      : null;
+
   if (engine === "google") {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) {
@@ -113,6 +118,8 @@ export async function POST(req: NextRequest) {
 
     const dialectKey = typeof dialect === "string" ? dialect : "";
     const voice = GOOGLE_VOICE_MAP[dialectKey] ?? GOOGLE_VOICE_DEFAULT;
+    const speakingRate =
+      typeof tuning?.speed === "number" ? tuning.speed : voice.speakingRate;
 
     try {
       const ttsRes = await fetch(
@@ -125,7 +132,7 @@ export async function POST(req: NextRequest) {
             voice: { languageCode: voice.languageCode, name: voice.name },
             audioConfig: {
               audioEncoding: "MP3",
-              speakingRate: voice.speakingRate,
+              speakingRate,
               pitch: voice.pitch,
             },
           }),
@@ -166,10 +173,6 @@ export async function POST(req: NextRequest) {
   }
 
   const voiceConfig = resolveVoiceForDialect(dialect as string | undefined);
-  const tuning =
-    body.tuning && typeof body.tuning === "object"
-      ? (body.tuning as Record<string, unknown>)
-      : null;
 
   try {
     const minimaxRes = await fetch("https://api.replicate.com/v1/predictions", {
