@@ -87,6 +87,37 @@ const DIALECT_THEMES: DialectTheme[] = [
   },
 ];
 
+/** Dropdown order for premium slangs (matches extension-style grouping). */
+const PREMIUM_SLANG_IDS: string[] = [
+  "Jamaican Patois",
+  "London Roadman",
+  "New York Brooklyn",
+  "Tokyo Gyaru",
+  "Paris Banlieue",
+  "Russian Street",
+  "Mumbai Hinglish",
+  "Mexico City Barrio",
+  "Rio Favela",
+];
+
+type StandardOption = { value: string; label: string; flag: string };
+
+const STANDARD_LANGUAGES: StandardOption[] = [
+  { value: "English (Standard)", label: "English", flag: "🇬🇧" },
+  { value: "Spanish", label: "Spanish", flag: "🇪🇸" },
+  { value: "French", label: "French", flag: "🇫🇷" },
+  { value: "German", label: "German", flag: "🇩🇪" },
+  { value: "Italian", label: "Italian", flag: "🇮🇹" },
+  { value: "Russian", label: "Russian", flag: "🇷🇺" },
+  { value: "Portuguese", label: "Portuguese", flag: "🇵🇹" },
+  { value: "Japanese", label: "Japanese", flag: "🇯🇵" },
+  { value: "Arabic", label: "Arabic", flag: "🇸🇦" },
+  { value: "Hebrew (Standard)", label: "Hebrew", flag: "🇮🇱" },
+];
+
+const NEUTRAL_BG = "#111111";
+const NEUTRAL_ACCENT = "#888888";
+
 const LOADING_MESSAGES: Record<string, string> = {
   "London Roadman": "Hold tight bruv, mandem is translating...",
   "Jamaican Patois": "Hold a vibes, mi a cook di patwa...",
@@ -98,6 +129,8 @@ const LOADING_MESSAGES: Record<string, string> = {
   "Mexico City Barrio": "Aguanta tantito, wey...",
   "Rio Favela": "Segura aí, mano...",
 };
+
+const STANDARD_LOADING = "Translating…";
 
 function parseDictionaryPills(raw: string): string[] {
   const cleaned = raw.replace(/^dictionary:\s*/i, "").trim();
@@ -124,15 +157,40 @@ function splitTranslationAndDictionary(fullText: string): { translated: string; 
 }
 
 const INPUT_LANGUAGES = [
-  { value: "he-IL", label: "Hebrew" },
+  { value: "he-IL", label: "עברית / Hebrew" },
   { value: "en-US", label: "English" },
-  { value: "ru-RU", label: "Russian" },
-  { value: "ar-SA", label: "Arabic" },
-  { value: "es-ES", label: "Spanish" },
+  { value: "ru-RU", label: "Русский / Russian" },
+  { value: "ar-SA", label: "العربية / Arabic" },
+  { value: "es-ES", label: "Español / Spanish" },
 ] as const;
 
+type ResolvedTheme = {
+  bg: string;
+  accent: string;
+  flag: string;
+  city: string;
+};
+
+function resolveTheme(outputLang: string): ResolvedTheme {
+  const premium = DIALECT_THEMES.find((t) => t.id === outputLang);
+  if (premium) {
+    return { bg: premium.bg, accent: premium.accent, flag: premium.flag, city: premium.city };
+  }
+  const std = STANDARD_LANGUAGES.find((o) => o.value === outputLang);
+  return {
+    bg: NEUTRAL_BG,
+    accent: NEUTRAL_ACCENT,
+    flag: std?.flag ?? "🌐",
+    city: std?.label ?? outputLang,
+  };
+}
+
+function isPremiumSlang(value: string): boolean {
+  return DIALECT_THEMES.some((t) => t.id === value);
+}
+
 export default function Home() {
-  const [selectedDialectId, setSelectedDialectId] = useState(DIALECT_THEMES[0].id);
+  const [outputLang, setOutputLang] = useState("Jamaican Patois");
   const [inputLanguage, setInputLanguage] = useState("he-IL");
   const [inputText, setInputText] = useState("");
   const [originalText, setOriginalText] = useState("");
@@ -141,9 +199,12 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const theme = DIALECT_THEMES.find((t) => t.id === selectedDialectId) ?? DIALECT_THEMES[0];
+  const theme = resolveTheme(outputLang);
 
-  const loadingMessage = LOADING_MESSAGES[selectedDialectId] ?? LOADING_MESSAGES["London Roadman"];
+  const loadingMessage =
+    isPremiumSlang(outputLang) && LOADING_MESSAGES[outputLang]
+      ? LOADING_MESSAGES[outputLang]
+      : STANDARD_LOADING;
 
   const translateText = async (text: string, dialect: string) => {
     const trimmed = text.trim();
@@ -191,7 +252,7 @@ export default function Home() {
   };
 
   const handleFlipIt = () => {
-    void translateText(inputText, selectedDialectId);
+    void translateText(inputText, outputLang);
   };
 
   const handleCopy = async () => {
@@ -218,19 +279,25 @@ export default function Home() {
     }
   };
 
+  const selectDropdownClass =
+    "w-full rounded-lg border bg-zinc-950/90 px-3 py-2.5 text-sm text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
+
+  const inputLangSelectClass =
+    "w-full max-w-[min(100%,280px)] rounded-lg border bg-zinc-950/90 px-2.5 py-1.5 text-xs text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
+
   return (
     <div
-      className="min-h-screen transition-[background-color] duration-500 ease-in-out"
+      className="min-h-screen overflow-x-hidden overflow-y-auto transition-[background-color] duration-500 ease-in-out"
       style={{ backgroundColor: theme.bg }}
     >
-      <div className="mx-auto flex min-h-screen max-w-[480px] flex-col px-4 pb-8 pt-4">
+      <div className="mx-auto flex min-h-screen max-w-[480px] flex-col overflow-visible px-4 pb-8 pt-4">
         {/* Top bar */}
         <header className="mb-4 flex items-center justify-between gap-3">
           <span className="text-xl font-bold tracking-tight text-white transition-colors duration-500">
             StreetVibe
           </span>
           <div
-            className="flex max-w-[55%] items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-[border-color,background-color,color] duration-500 ease-in-out"
+            className="flex max-w-[55%] min-w-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-[border-color,background-color,color] duration-500 ease-in-out"
             style={{
               borderColor: `${theme.accent}55`,
               backgroundColor: `${theme.accent}18`,
@@ -244,41 +311,43 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Dialect pills */}
-        <div className="mb-5 -mx-1">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {DIALECT_THEMES.map((d) => {
-              const selected = d.id === selectedDialectId;
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => setSelectedDialectId(d.id)}
-                  className="shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-500 ease-in-out"
-                  style={
-                    selected
-                      ? {
-                          borderColor: d.accent,
-                          backgroundColor: `${d.accent}33`,
-                          color: d.accent,
-                          boxShadow: `0 0 0 1px ${d.accent}40`,
-                        }
-                      : {
-                          borderColor: `${d.accent}35`,
-                          backgroundColor: `${d.accent}12`,
-                          color: `${d.accent}aa`,
-                        }
-                  }
-                >
-                  {d.pillLabel}
-                </button>
-              );
-            })}
+        {/* Output / dialect dropdown */}
+        <div className="mb-5 flex flex-col gap-1.5">
+          <label htmlFor="output-lang" className="text-xs font-medium uppercase tracking-wide text-white/50">
+            Output
+          </label>
+          <div style={{ "--accent": theme.accent } as CSSProperties}>
+            <select
+              id="output-lang"
+              value={outputLang}
+              onChange={(e) => setOutputLang(e.target.value)}
+              className={selectDropdownClass}
+              style={{ borderColor: `${theme.accent}88` }}
+            >
+              <optgroup label="💎 Premium Slangs" className="bg-zinc-900 text-white">
+                {PREMIUM_SLANG_IDS.map((id) => {
+                  const t = DIALECT_THEMES.find((x) => x.id === id);
+                  if (!t) return null;
+                  return (
+                    <option key={t.id} value={t.id} className="bg-zinc-900 text-white">
+                      {t.id}
+                    </option>
+                  );
+                })}
+              </optgroup>
+              <optgroup label="🌐 Standard Languages" className="bg-zinc-900 text-white">
+                {STANDARD_LANGUAGES.map((o) => (
+                  <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
           </div>
         </div>
 
         {/* Output card */}
-        <section className="mb-5 min-h-0 flex-1 overflow-visible">
+        <section className="mb-5 flex-1 overflow-visible">
           <div
             className="overflow-visible rounded-2xl border p-4 shadow-lg transition-[border-color,background-color] duration-500 ease-in-out"
             style={{
@@ -287,7 +356,7 @@ export default function Home() {
             }}
           >
             <p className="mb-3 text-xs font-medium uppercase tracking-wider text-white/40">Original</p>
-            <p className="mb-6 min-h-[2.5rem] whitespace-pre-wrap break-words text-sm leading-relaxed text-white/45 transition-colors duration-500">
+            <p className="mb-6 min-h-[2.5rem] max-h-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm leading-relaxed text-white/45 transition-colors duration-500">
               {loading || originalText.trim() ? (
                 originalText.trim() || "—"
               ) : (
@@ -296,16 +365,21 @@ export default function Home() {
             </p>
 
             <p className="mb-2 text-xs font-medium uppercase tracking-wider text-white/40">Street</p>
-            <div className="min-h-[3rem] overflow-visible text-xl font-bold leading-snug transition-colors duration-500">
+            <div className="min-h-[3rem] max-h-none overflow-visible text-xl font-bold leading-snug transition-colors duration-500">
               {loading ? (
                 <p className="animate-pulse text-base font-semibold" style={{ color: theme.accent }}>
                   {loadingMessage}
                 </p>
               ) : error ? (
-                <p className="whitespace-pre-wrap break-words text-base font-normal text-red-400">{error}</p>
+                <p className="max-h-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-base font-normal text-red-400">
+                  {error}
+                </p>
               ) : originalText.trim() ? (
                 translatedText.trim() ? (
-                  <p className="whitespace-pre-wrap break-words" style={{ color: theme.accent }}>
+                  <p
+                    className="max-h-none whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                    style={{ color: theme.accent }}
+                  >
                     {translatedText}
                   </p>
                 ) : (
@@ -320,14 +394,14 @@ export default function Home() {
               )}
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex max-h-none flex-wrap gap-2 overflow-visible">
               {loading ? (
                 <span className="text-xs text-white/35">…</span>
               ) : dictionaryPills.length > 0 ? (
                 dictionaryPills.map((pill, i) => (
                   <span
                     key={`${pill}-${i}`}
-                    className="rounded-full border px-3 py-1 text-xs font-medium transition-all duration-500"
+                    className="max-w-full whitespace-pre-wrap break-words rounded-full border px-3 py-1 text-xs font-medium transition-all duration-500"
                     style={{
                       borderColor: `${theme.accent}55`,
                       color: theme.accent,
@@ -355,7 +429,7 @@ export default function Home() {
                 id="input-lang"
                 value={inputLanguage}
                 onChange={(e) => setInputLanguage(e.target.value)}
-                className="w-full max-w-[220px] rounded-lg border bg-black/30 px-3 py-2 text-sm text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0"
+                className={inputLangSelectClass}
                 style={{ borderColor: `${theme.accent}88` }}
               >
                 {INPUT_LANGUAGES.map((opt) => (
@@ -390,7 +464,7 @@ export default function Home() {
         </div>
 
         {/* Mic + actions */}
-        <div className="mt-auto flex items-end justify-center gap-4 pb-2">
+        <div className="mt-auto flex items-end justify-center gap-4 overflow-visible pb-2">
           <div className="flex flex-col items-center">
             <button
               type="button"
