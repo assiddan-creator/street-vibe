@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
@@ -26,6 +26,7 @@ import {
   resolveTheme,
   splitTranslationAndDictionary,
 } from "@/lib/streetVibeTheme";
+import { lookupSlang } from "@/lib/slangDictionary";
 
 export default function Home() {
   const [outputLang, setOutputLang] = useState("Jamaican Patois");
@@ -39,6 +40,14 @@ export default function Home() {
   const [toast, setToast] = useState<string | null>(null);
   const [slangLevel, setSlangLevel] = useState<1 | 2 | 3>(2);
   const [context, setContext] = useState<string>("dm");
+  const [popupWord, setPopupWord] = useState<{
+    word: string;
+    meaning: string;
+    example: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [popupLoading, setPopupLoading] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -170,10 +179,53 @@ export default function Home() {
     setError(null);
   };
 
+  const handleWordClick = async (word: string, e: MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const x = rect.left;
+    const y = rect.bottom + window.scrollY + 6;
+    const clean = word.replace(/[^a-zA-ZÀ-ÿА-яёÀ-ÿ\u3040-\u30FF\uAC00-\uD7AF]/g, "").trim();
+    if (!clean) return;
+    const local = lookupSlang(clean, outputLang);
+    if (local) {
+      setPopupWord({ word: clean, meaning: local.meaning, example: local.example, x, y });
+      return;
+    }
+    setPopupLoading(true);
+    setPopupWord({ word: clean, meaning: "...", example: "", x, y });
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: `What does the slang word "${clean}" mean in ${outputLang}? Reply in this exact format: MEANING: <one line meaning> | EXAMPLE: <one example sentence>`,
+          currentLang: "English",
+          translationMode: "standard",
+          slangLevel: 1,
+          isPremiumSelected: false,
+          context: "default",
+          previousMessage: null,
+        }),
+      });
+      const data = (await res.json()) as { fullText?: string };
+      const full = data.fullText ?? "";
+      const meaning = full.match(/MEANING:\s*(.+?)(\||$)/)?.[1]?.trim() ?? full;
+      const example = full.match(/EXAMPLE:\s*(.+)/)?.[1]?.trim() ?? "";
+      setPopupWord({ word: clean, meaning, example, x, y });
+    } catch {
+      setPopupWord(null);
+    } finally {
+      setPopupLoading(false);
+    }
+  };
+
   return (
     <>
       <Toast message={toast} accent={theme.accent} />
-      <div className="mx-auto flex w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-1.5 pt-1.5">
+      <div
+        className="mx-auto flex w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-1.5 pt-1.5"
+        onClick={() => setPopupWord(null)}
+      >
         {/* Top bar */}
         <header className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
           <span className="text-lg font-bold leading-tight tracking-tight text-white drop-shadow-md transition-colors duration-500">
@@ -315,11 +367,20 @@ export default function Home() {
                 </p>
               ) : originalText.trim() ? (
                 translatedText.trim() ? (
-                  <p
-                    className="max-h-none whitespace-pre-wrap break-words text-[11px] leading-snug [overflow-wrap:anywhere]"
-                    style={{ color: theme.accent }}
-                  >
-                    {translatedText}
+                  <p className="max-h-none leading-snug [overflow-wrap:anywhere]" style={{ color: theme.accent }}>
+                    {translatedText.split(/(\s+)/).map((token, i) =>
+                      token.trim() ? (
+                        <span
+                          key={i}
+                          onClick={(e) => void handleWordClick(token, e)}
+                          className="cursor-pointer rounded px-0.5 text-[11px] transition-all duration-150 hover:bg-white/10 active:bg-white/20"
+                        >
+                          {token}
+                        </span>
+                      ) : (
+                        <span key={i}>{token}</span>
+                      ),
+                    )}
                   </p>
                 ) : (
                   <p className="text-[11px] font-normal italic leading-tight text-white/35">
@@ -504,6 +565,26 @@ export default function Home() {
         </div>
 
       </div>
+
+      {popupWord && (
+        <div
+          className="fixed z-50 max-w-[260px] rounded-xl border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-md"
+          style={{ left: Math.min(popupWord.x, window.innerWidth - 280), top: popupWord.y }}
+        >
+          <button
+            type="button"
+            onClick={() => setPopupWord(null)}
+            className="absolute right-2 top-2 text-white/40 hover:text-white"
+          >
+            ✕
+          </button>
+          <p className="mb-1 pr-6 text-[11px] font-bold text-white">{popupWord.word}</p>
+          <p className="text-[11px] text-white/80">{popupLoading ? "Looking up..." : popupWord.meaning}</p>
+          {popupWord.example ? (
+            <p className="mt-1 text-[10px] italic text-white/50">&quot;{popupWord.example}&quot;</p>
+          ) : null}
+        </div>
+      )}
     </>
   );
 }
