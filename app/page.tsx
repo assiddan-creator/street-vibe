@@ -198,7 +198,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: `What does the slang word "${clean}" mean in ${outputLang}? Reply in this exact format: MEANING: <one line meaning> | EXAMPLE: <one example sentence>`,
+          text: `In the context of ${outputLang} slang, the sentence is: "${translatedText}". What does the word "${clean}" mean in THIS specific context? Reply in this exact format: MEANING: <one line meaning in context> | EXAMPLE: <one example sentence>`,
           currentLang: "English",
           translationMode: "standard",
           slangLevel: 1,
