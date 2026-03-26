@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 type DialectTheme = {
   id: string;
@@ -94,10 +94,7 @@ export default function Home() {
   const [translatedText, setTranslatedText] = useState("");
   const [dictionaryPills, setDictionaryPills] = useState<string[]>([]);
 
-  const theme = useMemo(
-    () => DIALECT_THEMES.find((t) => t.id === selectedDialectId) ?? DIALECT_THEMES[0],
-    [selectedDialectId]
-  );
+  const theme = DIALECT_THEMES.find((t) => t.id === selectedDialectId) ?? DIALECT_THEMES[0];
 
   const hasOutput = originalText.trim().length > 0 || translatedText.trim().length > 0;
 
