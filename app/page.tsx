@@ -443,87 +443,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Mic + actions — fixed above inputs so visible without scrolling the page */}
-        <div className="flex shrink-0 items-end justify-center gap-3 overflow-visible py-2">
-          <div className="flex flex-col items-center">
-            <button
-              type="button"
-              onClick={toggleMic}
-              aria-label={isListening ? "Stop listening" : "Tap to speak"}
-              className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
-                isListening ? "mic-pulse" : ""
-              }`}
-              style={
-                isListening
-                  ? {
-                      background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
-                      boxShadow: `0 8px 28px ${theme.accent}55`,
-                    }
-                  : {
-                      background: "#52525b",
-                      boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
-                    }
-              }
-            >
-              <svg
-                className={`h-8 w-8 ${isListening ? "text-black/90" : "text-white"}`}
-                fill="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden
-              >
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14C5.52 16.16 8.53 19 12 19s6.48-2.84 6.93-6.86c.09-.6-.39-1.14-1-1.14z" />
-              </svg>
-            </button>
-            <span
-              className={`mt-1 text-center text-[10px] transition-colors duration-300 ${isListening ? "" : "text-white/50"}`}
-              style={isListening ? { color: theme.accent } : undefined}
-            >
-              {isListening ? "listening..." : "tap to speak"}
-            </span>
-            {micError ? (
-              <p className="mt-1 max-w-[220px] text-center text-[10px] font-medium leading-tight text-red-400">
-                {micError}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="flex gap-2 pb-1">
-            <button
-              type="button"
-              onClick={handleCopy}
-              aria-label="Copy"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/30 text-white/80 transition-[border-color,color,background-color] duration-500 hover:bg-white/10"
-              style={{ borderColor: `${theme.accent}44` }}
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={handleShare}
-              aria-label="Share"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/30 text-white/80 transition-[border-color,color,background-color] duration-500 hover:bg-white/10"
-              style={{ borderColor: `${theme.accent}44` }}
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Input + Flip */}
+        {/* From → input → Flip → mic row */}
         <div className="flex shrink-0 flex-col gap-2 pb-1">
           <div className="flex flex-col gap-1">
             <label htmlFor="input-lang" className="text-[10px] font-medium uppercase tracking-wide text-white/45">
@@ -567,6 +487,85 @@ export default function Home() {
           >
             {loading ? "Flipping…" : "Flip it"}
           </button>
+
+          {/* Mic centered, copy + share on the sides; label + error below */}
+          <div className="flex items-center justify-center gap-4 overflow-visible pt-1">
+            <button
+              type="button"
+              onClick={handleCopy}
+              aria-label="Copy"
+              className="flex h-11 w-11 shrink-0 items-center justify-center self-start rounded-full border border-white/15 bg-black/30 text-white/80 transition-[border-color,color,background-color] duration-500 hover:bg-white/10"
+              style={{ borderColor: `${theme.accent}44` }}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+            </button>
+
+            <div className="flex min-w-0 flex-col items-center">
+              <button
+                type="button"
+                onClick={toggleMic}
+                aria-label={isListening ? "Stop listening" : "Tap to speak"}
+                className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
+                  isListening ? "mic-pulse" : ""
+                }`}
+                style={
+                  isListening
+                    ? {
+                        background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
+                        boxShadow: `0 8px 28px ${theme.accent}55`,
+                      }
+                    : {
+                        background: "#52525b",
+                        boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+                      }
+                }
+              >
+                <svg
+                  className={`h-8 w-8 ${isListening ? "text-black/90" : "text-white"}`}
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14C5.52 16.16 8.53 19 12 19s6.48-2.84 6.93-6.86c.09-.6-.39-1.14-1-1.14z" />
+                </svg>
+              </button>
+              <span
+                className={`mt-1 text-center text-[10px] transition-colors duration-300 ${isListening ? "" : "text-white/50"}`}
+                style={isListening ? { color: theme.accent } : undefined}
+              >
+                {isListening ? "listening..." : "tap to speak"}
+              </span>
+              {micError ? (
+                <p className="mt-1 max-w-[220px] text-center text-[10px] font-medium leading-tight text-red-400">
+                  {micError}
+                </p>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleShare}
+              aria-label="Share"
+              className="flex h-11 w-11 shrink-0 items-center justify-center self-start rounded-full border border-white/15 bg-black/30 text-white/80 transition-[border-color,color,background-color] duration-500 hover:bg-white/10"
+              style={{ borderColor: `${theme.accent}44` }}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
