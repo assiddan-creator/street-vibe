@@ -450,7 +450,7 @@ export default function SpeakPage() {
 
         <section className="mb-1.5 shrink-0 overflow-hidden">
           <div
-            className={`${GLASS_OUTPUT_CARD} max-h-[240px]`}
+            className={`${GLASS_OUTPUT_CARD} max-h-none overflow-visible`}
             style={
               {
                 ["--scroll-thumb" as string]: `${theme.accent}88`,
