@@ -201,6 +201,22 @@ export default function SpeakPage() {
     }
   };
 
+  const handleClear = () => {
+    setBuffers({ me: "", them: "" });
+    setOriginalText("");
+    setTranslatedText("");
+    setDictionaryPills([]);
+    setError(null);
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (typeof window !== "undefined") window.speechSynthesis.cancel();
+    setTtsError(null);
+    setTtsLoading(false);
+    setTtsPlaying(false);
+    setTtsOutcome("unset");
+    setResolvedEngine(null);
+  };
+
   const handlePlayTts = async () => {
     const text = translatedText.trim();
     if (!text || loading) return;
@@ -447,7 +463,7 @@ export default function SpeakPage() {
               <p className="mt-1 text-[10px] font-medium leading-tight text-red-400">{ttsError}</p>
             ) : null}
 
-            <div className="mt-1.5 flex max-h-none flex-wrap gap-1 overflow-visible">
+            <div className="mt-1.5 flex max-h-none flex-wrap items-center justify-center gap-1 overflow-visible">
               {loading ? (
                 <span className="text-[10px] text-white/35">…</span>
               ) : dictionaryPills.length > 0 ? (
@@ -465,7 +481,9 @@ export default function SpeakPage() {
                   </span>
                 ))
               ) : (
-                <span className="text-[10px] text-white/30">Slang dictionary chips will appear here.</span>
+                <span className="w-full text-center text-[10px] text-white/30">
+                  Slang dictionary chips will appear here.
+                </span>
               )}
             </div>
           </div>
@@ -616,7 +634,7 @@ export default function SpeakPage() {
               ) : null}
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex justify-center gap-1">
               <button
                 type="button"
                 onClick={() => void handleShare()}
@@ -629,6 +647,21 @@ export default function SpeakPage() {
                     strokeLinejoin="round"
                     strokeWidth={2}
                     d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={handleClear}
+                aria-label="Clear text and translation"
+                className={THEME_GLASS_ICON_BTN}
+              >
+                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                   />
                 </svg>
               </button>
