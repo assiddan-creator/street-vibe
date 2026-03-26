@@ -41,11 +41,11 @@ export function speakNativeTts(text: string, dialect: string): Promise<void> {
 }
 
 const CONTEXT_TUNING: Record<string, { speed: number; emotion: string }> = {
-  dm: { speed: 0.95, emotion: "neutral" },
-  flirt: { speed: 0.9, emotion: "happy" },
-  angry: { speed: 1.1, emotion: "angry" },
+  dm: { speed: 0.85, emotion: "neutral" },
+  flirt: { speed: 0.8, emotion: "happy" },
+  angry: { speed: 1.0, emotion: "angry" },
   stoned: { speed: 0.8, emotion: "calm" },
-  default: { speed: 0.95, emotion: "neutral" },
+  default: { speed: 0.85, emotion: "neutral" },
 };
 
 /** Poll Replicate until TTS prediction completes; returns playable URL (https or data:). */
