@@ -7,8 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-const REPLICATE_MINIMAX_VERSION = "minimax/speech-02-turbo";
-
 const LANGUAGE_BOOST_MAP: Record<string, string> = {
   "London Roadman": "English",
   "Jamaican Patois": "English",
@@ -194,7 +192,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: REPLICATE_MINIMAX_VERSION,
+        model: "minimax/speech-02-turbo",
         input: {
           text,
           voice_id: voiceConfig.voice_id,
@@ -202,7 +200,7 @@ export async function POST(req: NextRequest) {
           pitch: (tuning?.pitch as number | undefined) ?? voiceConfig.pitch,
           emotion: (tuning?.emotion as string | undefined) ?? voiceConfig.emotion,
           volume: (tuning?.volume as number | undefined) ?? 1.0,
-          language_boost: LANGUAGE_BOOST_MAP[dialect as string] ?? "Automatic",
+          language_boost: LANGUAGE_BOOST_MAP[dialect as string ?? ""] ?? "Automatic",
           english_normalization: true,
         },
       }),
