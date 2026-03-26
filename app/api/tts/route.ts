@@ -7,8 +7,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-const REPLICATE_MINIMAX_VERSION =
-  "29657f664032844b8f800486164cf26acb2507288e348133e78ae871a43211d0";
+const REPLICATE_MINIMAX_VERSION = "minimax/speech-02-turbo";
+
+const LANGUAGE_BOOST_MAP: Record<string, string> = {
+  "London Roadman": "English",
+  "Jamaican Patois": "English",
+  "New York Brooklyn": "English",
+  "Tokyo Gyaru": "Japanese",
+  "Paris Banlieue": "French",
+  "Russian Street": "Russian",
+  "Lisbon Street": "Portuguese",
+  "Mexico City Barrio": "Spanish",
+  "Rio Favela": "Portuguese",
+  "Israeli Street": "Hebrew",
+};
 
 const GOOGLE_VOICE_MAP: Record<
   string,
@@ -182,7 +194,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        version: REPLICATE_MINIMAX_VERSION,
+        model: REPLICATE_MINIMAX_VERSION,
         input: {
           text,
           voice_id: voiceConfig.voice_id,
@@ -190,6 +202,8 @@ export async function POST(req: NextRequest) {
           pitch: (tuning?.pitch as number | undefined) ?? voiceConfig.pitch,
           emotion: (tuning?.emotion as string | undefined) ?? voiceConfig.emotion,
           volume: (tuning?.volume as number | undefined) ?? 1.0,
+          language_boost: LANGUAGE_BOOST_MAP[dialect as string] ?? "Automatic",
+          english_normalization: true,
         },
       }),
     });
