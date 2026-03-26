@@ -87,21 +87,89 @@ const DIALECT_THEMES: DialectTheme[] = [
   },
 ];
 
+const LOADING_MESSAGES: Record<string, string> = {
+  "London Roadman": "Hold tight bruv, mandem is translating...",
+  "Jamaican Patois": "Hold a vibes, mi a cook di patwa...",
+  "New York Brooklyn": "Hold up my guy, cooking up the heat...",
+  "Tokyo Gyaru": "Chotto matte! Cooking something yabai...",
+  "Paris Banlieue": "Attends 2s gros, je prépare une dinguerie...",
+  "Russian Street": "Sekundu bratan, shcha vsyo budet...",
+  "Mumbai Hinglish": "Arey bhai, zara ruk na public...",
+  "Mexico City Barrio": "Aguanta tantito, wey...",
+  "Rio Favela": "Segura aí, mano...",
+};
+
+function parseDictionaryPills(raw: string): string[] {
+  const cleaned = raw.replace(/^dictionary:\s*/i, "").trim();
+  if (!cleaned) return [];
+  return cleaned
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 export default function Home() {
   const [selectedDialectId, setSelectedDialectId] = useState(DIALECT_THEMES[0].id);
   const [inputText, setInputText] = useState("");
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [dictionaryPills, setDictionaryPills] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const theme = DIALECT_THEMES.find((t) => t.id === selectedDialectId) ?? DIALECT_THEMES[0];
 
-  const hasOutput = originalText.trim().length > 0 || translatedText.trim().length > 0;
+  const loadingMessage = LOADING_MESSAGES[selectedDialectId] ?? LOADING_MESSAGES["London Roadman"];
 
-  const handleFlipIt = () => {
-    setOriginalText(inputText);
+  const translateText = async (text: string, dialect: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    setLoading(true);
+    setError(null);
+    setOriginalText(trimmed);
     setTranslatedText("");
     setDictionaryPills([]);
+
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: trimmed,
+          currentLang: dialect,
+          translationMode: "slang",
+          slangLevel: 2,
+          isPremiumSelected: true,
+          context: "dm",
+          previousMessage: null,
+        }),
+      });
+
+      const data = (await res.json()) as { fullText?: string; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error || "Translation failed");
+      }
+
+      const fullText = String(data.fullText ?? "").trim();
+      const parts = fullText.split("|||");
+      const translated = parts[0]?.trim() ?? "";
+      const dictRaw = parts.slice(1).join("|||").trim();
+      const pills = parseDictionaryPills(dictRaw);
+
+      setTranslatedText(translated);
+      setDictionaryPills(pills);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Translation failed");
+      setTranslatedText("");
+      setDictionaryPills([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFlipIt = () => {
+    void translateText(inputText, selectedDialectId);
   };
 
   const handleCopy = async () => {
@@ -198,7 +266,7 @@ export default function Home() {
           >
             <p className="mb-3 text-xs font-medium uppercase tracking-wider text-white/40">Original</p>
             <p className="mb-6 min-h-[2.5rem] text-sm leading-relaxed text-white/45 transition-colors duration-500">
-              {hasOutput ? (
+              {loading || originalText.trim() ? (
                 originalText.trim() || "—"
               ) : (
                 <span className="italic">Your original line will show here after you flip it.</span>
@@ -207,7 +275,13 @@ export default function Home() {
 
             <p className="mb-2 text-xs font-medium uppercase tracking-wider text-white/40">Street</p>
             <div className="min-h-[3rem] text-xl font-bold leading-snug transition-colors duration-500">
-              {hasOutput ? (
+              {loading ? (
+                <p className="animate-pulse text-base font-semibold" style={{ color: theme.accent }}>
+                  {loadingMessage}
+                </p>
+              ) : error ? (
+                <p className="text-base font-normal text-red-400">{error}</p>
+              ) : originalText.trim() ? (
                 translatedText.trim() ? (
                   <p style={{ color: theme.accent }}>{translatedText}</p>
                 ) : (
@@ -223,7 +297,9 @@ export default function Home() {
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              {dictionaryPills.length > 0 ? (
+              {loading ? (
+                <span className="text-xs text-white/35">…</span>
+              ) : dictionaryPills.length > 0 ? (
                 dictionaryPills.map((pill, i) => (
                   <span
                     key={`${pill}-${i}`}
@@ -258,13 +334,14 @@ export default function Home() {
           <button
             type="button"
             onClick={handleFlipIt}
-            className="w-full rounded-xl py-3.5 text-center text-base font-semibold text-black transition-[background-color,box-shadow] duration-500 ease-in-out active:scale-[0.98]"
+            disabled={loading}
+            className="w-full rounded-xl py-3.5 text-center text-base font-semibold text-black transition-[background-color,box-shadow] duration-500 ease-in-out enabled:active:scale-[0.98] disabled:opacity-60"
             style={{
               backgroundColor: theme.accent,
               boxShadow: `0 4px 20px ${theme.accent}44`,
             }}
           >
-            Flip it
+            {loading ? "Flipping…" : "Flip it"}
           </button>
         </div>
 
