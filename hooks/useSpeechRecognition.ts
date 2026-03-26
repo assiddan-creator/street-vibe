@@ -1,111 +1,131 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState, useRef, useCallback } from "react";
 
-type RecognitionCtor = new () => SpeechRecognition;
-
-/** Web Speech API (Chrome: webkitSpeechRecognition). */
-function getRecognitionCtor(): RecognitionCtor | null {
-  if (typeof window === "undefined") return null;
-  const w = window as Window & {
-    SpeechRecognition?: RecognitionCtor;
-    webkitSpeechRecognition?: RecognitionCtor;
-  };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+interface UseSpeechRecognitionProps {
+  lang?: string;
+  onResult?: (text: string) => void;
+  onFinalResult?: (text: string) => void;
 }
 
-export type UseSpeechRecognitionOptions = {
-  lang?: string;
-  onInterim?: (text: string) => void;
-  onFinal?: (text: string) => void;
-};
-
-export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) {
-  const { lang = "en-US", onInterim, onFinal } = options;
-  const onInterimRef = useRef(onInterim);
-  const onFinalRef = useRef(onFinal);
-  onInterimRef.current = onInterim;
-  onFinalRef.current = onFinal;
-
-  const [supported, setSupported] = useState(false);
-  const [listening, setListening] = useState(false);
+export function useSpeechRecognition({
+  lang = "he-IL",
+  onResult,
+  onFinalResult,
+}: UseSpeechRecognitionProps = {}) {
+  const [isListening, setIsListening] = useState(false);
+  const [interimText, setInterimText] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-
-  useEffect(() => {
-    setSupported(!!getRecognitionCtor());
-  }, []);
-
-  const stop = useCallback(() => {
-    try {
-      recognitionRef.current?.stop();
-    } catch {
-      /* ignore */
-    }
-    setListening(false);
-  }, []);
+  const recognitionRef = useRef<unknown>(null);
 
   const start = useCallback(() => {
-    const Ctor = getRecognitionCtor();
-    if (!Ctor) {
-      setError("Speech recognition is not supported in this browser.");
+    if (typeof window === "undefined") return;
+
+    const w = window as unknown as {
+      SpeechRecognition?: new () => unknown;
+      webkitSpeechRecognition?: new () => unknown;
+    };
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SR) {
+      setError("Speech recognition not supported in this browser. Please use Chrome.");
       return;
     }
-    setError(null);
 
-    try {
-      recognitionRef.current?.stop();
-    } catch {
-      /* ignore */
+    if (recognitionRef.current) {
+      try {
+        (recognitionRef.current as { stop: () => void }).stop();
+      } catch {
+        /* ignore */
+      }
     }
 
-    const recognition = new Ctor();
+    const recognition = new SR() as {
+      continuous: boolean;
+      interimResults: boolean;
+      lang: string;
+      onstart: (() => void) | null;
+      onresult: ((event: { resultIndex: number; results: SpeechRecognitionResultList }) => void) | null;
+      onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+      onend: (() => void) | null;
+      start: () => void;
+    };
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = lang;
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onstart = () => {
+      setIsListening(true);
+      setError(null);
+      setInterimText("");
+    };
+
+    recognition.onresult = (event) => {
       let interim = "";
-      let finalChunk = "";
+      let final = "";
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        const piece = result[0]?.transcript ?? "";
-        if (result.isFinal) finalChunk += piece;
-        else interim += piece;
+        if (result.isFinal) {
+          final += result[0].transcript;
+        } else {
+          interim += result[0].transcript;
+        }
       }
-      if (interim) onInterimRef.current?.(interim);
-      if (finalChunk) onFinalRef.current?.(finalChunk.trim());
+
+      if (interim) {
+        setInterimText(interim);
+        onResult?.(interim);
+      }
+
+      if (final) {
+        setInterimText("");
+        onFinalResult?.(final.trim());
+      }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      if (event.error === "aborted" || event.error === "no-speech") return;
-      setError(event.error || "recognition error");
-      setListening(false);
+      const errorMessages: Record<string, string> = {
+        "not-allowed": "Microphone access denied. Please allow microphone.",
+        "no-speech": "No speech detected. Try again.",
+        network: "Network error. Check your connection.",
+        "audio-capture": "No microphone found.",
+      };
+      setError(errorMessages[event.error] || "Error: " + event.error);
+      setIsListening(false);
     };
 
     recognition.onend = () => {
-      setListening(false);
+      setIsListening(false);
+      setInterimText("");
     };
 
     recognitionRef.current = recognition;
+
     try {
       recognition.start();
-      setListening(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not start microphone");
-      setListening(false);
+    } catch {
+      setError("Could not start microphone.");
+      setIsListening(false);
     }
-  }, [lang]);
+  }, [lang, onResult, onFinalResult]);
 
-  useEffect(() => {
-    return () => {
+  const stop = useCallback(() => {
+    if (recognitionRef.current) {
       try {
-        recognitionRef.current?.abort();
+        (recognitionRef.current as { stop: () => void }).stop();
       } catch {
         /* ignore */
       }
-    };
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    setInterimText("");
   }, []);
 
-  return { supported, listening, error, start, stop };
+  const toggle = useCallback(() => {
+    if (isListening) stop();
+    else start();
+  }, [isListening, start, stop]);
+
+  return { isListening, interimText, error, start, stop, toggle };
 }

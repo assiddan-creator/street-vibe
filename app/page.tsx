@@ -1,7 +1,8 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 type DialectTheme = {
   id: string;
@@ -209,6 +210,24 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selectedInputLang = inputLanguage;
+
+  const onFinalSpeech = useCallback((text: string) => {
+    setInputText((prev) => (prev + " " + text).trim());
+  }, []);
+
+  const { isListening, interimText, error: micError, toggle: toggleMic } = useSpeechRecognition({
+    lang: selectedInputLang,
+    onFinalResult: onFinalSpeech,
+  });
+
+  const inputDisplayValue = useMemo(() => {
+    if (isListening && interimText) {
+      return [inputText.trim(), interimText].filter(Boolean).join(" ");
+    }
+    return inputText;
+  }, [inputText, interimText, isListening]);
+
   const theme = resolveTheme(outputLang);
 
   const loadingMessage =
@@ -262,7 +281,7 @@ export default function Home() {
   };
 
   const handleFlipIt = () => {
-    void translateText(inputText, outputLang);
+    void translateText(inputDisplayValue.trim(), outputLang);
   };
 
   const handleCopy = async () => {
@@ -429,18 +448,43 @@ export default function Home() {
           <div className="flex flex-col items-center">
             <button
               type="button"
-              aria-label="Tap to speak"
-              className="flex h-14 w-14 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95"
-              style={{
-                background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
-                boxShadow: `0 8px 28px ${theme.accent}55`,
-              }}
+              onClick={toggleMic}
+              aria-label={isListening ? "Stop listening" : "Tap to speak"}
+              className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
+                isListening ? "mic-pulse" : ""
+              }`}
+              style={
+                isListening
+                  ? {
+                      background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
+                      boxShadow: `0 8px 28px ${theme.accent}55`,
+                    }
+                  : {
+                      background: "#52525b",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+                    }
+              }
             >
-              <svg className="h-7 w-7 text-black/90" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <svg
+                className={`h-8 w-8 ${isListening ? "text-black/90" : "text-white"}`}
+                fill="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden
+              >
                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14C5.52 16.16 8.53 19 12 19s6.48-2.84 6.93-6.86c.09-.6-.39-1.14-1-1.14z" />
               </svg>
             </button>
-            <span className="mt-1 text-[10px] text-white/50">tap to speak</span>
+            <span
+              className={`mt-1 text-center text-[10px] transition-colors duration-300 ${isListening ? "" : "text-white/50"}`}
+              style={isListening ? { color: theme.accent } : undefined}
+            >
+              {isListening ? "listening..." : "tap to speak"}
+            </span>
+            {micError ? (
+              <p className="mt-1 max-w-[220px] text-center text-[10px] font-medium leading-tight text-red-400">
+                {micError}
+              </p>
+            ) : null}
           </div>
 
           <div className="flex gap-2 pb-1">
@@ -504,10 +548,11 @@ export default function Home() {
           <div style={{ "--accent": theme.accent } as CSSProperties}>
             <input
               type="text"
-              value={inputText}
+              value={inputDisplayValue}
+              readOnly={isListening}
               onChange={(e) => setInputText(e.target.value)}
               placeholder="Say it plain…"
-              className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-sm text-white placeholder:text-white/35 transition-[box-shadow,border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0"
+              className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-sm text-white placeholder:text-white/35 transition-[box-shadow,border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0 read-only:opacity-95"
             />
           </div>
           <button
