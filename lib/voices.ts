@@ -43,11 +43,11 @@ export const VOICE_MAP: Record<string, VoiceTuning> = {
     pitch: -2,
     emotion: "neutral",
   },
-  "Mumbai Hinglish": {
+  "Lisbon Street": {
     voice_id: "Casual_Guy",
-    speed: 1.1,
-    pitch: 0,
-    emotion: "happy",
+    speed: 1.05,
+    pitch: -1,
+    emotion: "neutral",
   },
   "Mexico City Barrio": {
     voice_id: "Casual_Guy",
@@ -60,6 +60,12 @@ export const VOICE_MAP: Record<string, VoiceTuning> = {
     speed: 1.05,
     pitch: -1,
     emotion: "happy",
+  },
+  "Israeli Street": {
+    voice_id: "Casual_Guy",
+    speed: 1.0,
+    pitch: 0,
+    emotion: "neutral",
   },
 };
 

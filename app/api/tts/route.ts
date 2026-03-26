@@ -50,11 +50,11 @@ const GOOGLE_VOICE_MAP: Record<
     pitch: -1.5,
     speakingRate: 1.0,
   },
-  "Mumbai Hinglish": {
-    languageCode: "hi-IN",
-    name: "hi-IN-Neural2-C",
-    pitch: 0,
-    speakingRate: 1.1,
+  "Lisbon Street": {
+    languageCode: "pt-PT",
+    name: "pt-PT-Neural2-B",
+    pitch: -1.5,
+    speakingRate: 1.05,
   },
   "Mexico City Barrio": {
     languageCode: "es-US",
@@ -66,6 +66,12 @@ const GOOGLE_VOICE_MAP: Record<
     languageCode: "pt-BR",
     name: "pt-BR-Neural2-B",
     pitch: -1.5,
+    speakingRate: 1.05,
+  },
+  "Israeli Street": {
+    languageCode: "he-IL",
+    name: "he-IL-Neural2-B",
+    pitch: 0,
     speakingRate: 1.05,
   },
 };

@@ -9,91 +9,109 @@ export type CityThemeTokens = {
   bg: string;
 };
 
+/** All ten `public/images` assets are assigned exactly once to premium dialects below. */
 const IMG = {
-  abstract907: "/images/Abstract_flat_lay_202603261907.jpeg",
-  abstract911: "/images/Abstract_flat_lay_202603261911.jpeg",
-  abstract912: "/images/Abstract_flat_lay_202603261912.jpeg",
-  abstract914: "/images/Abstract_flat_lay_202603261914.jpeg",
-  abstract915: "/images/Abstract_flat_lay_202603261915.jpeg",
-  blackObjects: "/images/Black_objects_with_202603261852.jpeg",
-  dj904: "/images/DJ_headphones_with_202603261904.jpeg",
-  dj909: "/images/DJ_headphones_with_202603261909.jpeg",
-  dj917: "/images/DJ_headphones_with_202603261917.jpeg",
-  headphones908: "/images/Headphones,_chain,_shards,_202603261908.jpeg",
+  /** JP Tokyo — White & Crimson Red */
+  tokyo: "/images/Abstract_flat_lay_202603261907.jpeg",
+  /** RU Moscow — Royal Blue, Crimson Red, White */
+  moscow: "/images/Abstract_flat_lay_202603261911.jpeg",
+  /** MX Mexico City — Emerald Green, White, Crimson Red */
+  mexicoCity: "/images/Abstract_flat_lay_202603261912.jpeg",
+  /** PT Lisbon — Red & Green */
+  lisbon: "/images/Abstract_flat_lay_202603261914.jpeg",
+  /** BR Rio — Emerald Green, Gold Yellow, Royal Blue */
+  rio: "/images/Abstract_flat_lay_202603261915.jpeg",
+  /** JM Kingston — Lime Green & Gold */
+  kingston: "/images/Black_objects_with_202603261852.jpeg",
+  /** US Brooklyn — Royal Blue, Crimson Red, White */
+  brooklyn: "/images/DJ_headphones_with_202603261904.jpeg",
+  /** FR Paris — Tricolour Blue, White, Crimson Red */
+  paris: "/images/DJ_headphones_with_202603261909.jpeg",
+  /** IL Israel — Royal Blue & Pure White */
+  israel: "/images/DJ_headphones_with_202603261917.jpeg",
+  /** UK London — Royal Blue, Crimson Red, White */
+  london: "/images/Headphones,_chain,_shards,_202603261908.jpeg",
 } as const;
 
 /**
- * Premium dialects: explicit glow / button / border / accent + placeholder bg images.
- * User can remap `bg` per dialect later.
+ * Premium dialects: neon glow / button / border / accent + full-bleed background image.
+ * Colors follow each territory’s flag or neon palette as specified.
  */
 export const CITY_THEME_BY_DIALECT_ID: Record<string, CityThemeTokens> = {
-  "Jamaican Patois": {
-    glow: "#a8ff3e",
-    button: "#22C55E",
-    buttonBorder: "#15803d",
-    accent: "#4ade80",
-    bg: IMG.blackObjects,
-  },
-  "London Roadman": {
-    glow: "#c4b5fd",
-    button: "#a78bfa",
-    buttonBorder: "#7c3aed",
-    accent: "#a78bfa",
-    bg: IMG.abstract907,
-  },
-  "New York Brooklyn": {
-    glow: "#fca5a5",
-    button: "#f87171",
-    buttonBorder: "#dc2626",
-    accent: "#f87171",
-    bg: IMG.dj904,
-  },
   "Tokyo Gyaru": {
-    glow: "#93c5fd",
-    button: "#60a5fa",
-    buttonBorder: "#2563eb",
-    accent: "#60a5fa",
-    bg: IMG.abstract911,
-  },
-  "Paris Banlieue": {
-    glow: "#fde047",
-    button: "#fbbf24",
-    buttonBorder: "#d97706",
-    accent: "#fbbf24",
-    bg: IMG.abstract912,
+    glow: "#ff1a3d",
+    button: "#f8fafc",
+    buttonBorder: "#dc2626",
+    accent: "#f43f5e",
+    bg: IMG.tokyo,
   },
   "Russian Street": {
-    glow: "#f1f5f9",
-    button: "#e2e8f0",
-    buttonBorder: "#94a3b8",
-    accent: "#e2e8f0",
-    bg: IMG.abstract914,
-  },
-  "Mumbai Hinglish": {
-    glow: "#fdba74",
-    button: "#fb923c",
-    buttonBorder: "#ea580c",
-    accent: "#fb923c",
-    bg: IMG.abstract915,
+    glow: "#3b82f6",
+    button: "#1e40af",
+    buttonBorder: "#dc2626",
+    accent: "#93c5fd",
+    bg: IMG.moscow,
   },
   "Mexico City Barrio": {
-    glow: "#f9a8d4",
-    button: "#f472b6",
-    buttonBorder: "#db2777",
-    accent: "#f472b6",
-    bg: IMG.dj909,
+    glow: "#10b981",
+    button: "#047857",
+    buttonBorder: "#dc2626",
+    accent: "#34d399",
+    bg: IMG.mexicoCity,
+  },
+  "Lisbon Street": {
+    glow: "#dc2626",
+    button: "#16a34a",
+    buttonBorder: "#15803d",
+    accent: "#22c55e",
+    bg: IMG.lisbon,
   },
   "Rio Favela": {
-    glow: "#6ee7b7",
-    button: "#34d399",
-    buttonBorder: "#059669",
+    glow: "#fbbf24",
+    button: "#059669",
+    buttonBorder: "#1d4ed8",
     accent: "#34d399",
-    bg: IMG.dj917,
+    bg: IMG.rio,
+  },
+  "Jamaican Patois": {
+    glow: "#bef264",
+    button: "#ca8a04",
+    buttonBorder: "#65a30d",
+    accent: "#4ade80",
+    bg: IMG.kingston,
+  },
+  "New York Brooklyn": {
+    glow: "#3b82f6",
+    button: "#1e3a8a",
+    buttonBorder: "#dc2626",
+    accent: "#f87171",
+    bg: IMG.brooklyn,
+  },
+  "Paris Banlieue": {
+    glow: "#2563eb",
+    button: "#1d4ed8",
+    buttonBorder: "#dc2626",
+    accent: "#60a5fa",
+    bg: IMG.paris,
+  },
+  "Israeli Street": {
+    glow: "#60a5fa",
+    button: "#2563eb",
+    buttonBorder: "#f8fafc",
+    accent: "#93c5fd",
+    bg: IMG.israel,
+  },
+  "London Roadman": {
+    glow: "#3b82f6",
+    button: "#1e40af",
+    buttonBorder: "#dc2626",
+    accent: "#60a5fa",
+    bg: IMG.london,
   },
 };
 
-/** Shared placeholder for all standard output languages until manually tuned. */
-const STANDARD_BG_PLACEHOLDER = IMG.headphones908;
+/** Fallback for standard (non-premium) output languages — generic abstract hero. */
+const STANDARD_BG_PLACEHOLDER = IMG.tokyo;
 
 export const DEFAULT_DIALECT_ID = "Jamaican Patois";
 

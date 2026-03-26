@@ -12,7 +12,7 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "London Roadman",
     pillLabel: "London",
     bg: "#0d0d1a",
-    accent: "#a78bfa",
+    accent: "#60a5fa",
     flag: "🇬🇧",
     city: "London",
   },
@@ -36,7 +36,7 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Tokyo Gyaru",
     pillLabel: "Tokyo",
     bg: "#0a0f1a",
-    accent: "#60a5fa",
+    accent: "#f43f5e",
     flag: "🇯🇵",
     city: "Tokyo",
   },
@@ -44,7 +44,7 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Paris Banlieue",
     pillLabel: "Paris",
     bg: "#1a1400",
-    accent: "#fbbf24",
+    accent: "#60a5fa",
     flag: "🇫🇷",
     city: "Paris",
   },
@@ -52,17 +52,17 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Russian Street",
     pillLabel: "Moscow",
     bg: "#0f0f0f",
-    accent: "#e2e8f0",
+    accent: "#93c5fd",
     flag: "🇷🇺",
     city: "Moscow",
   },
   {
-    id: "Mumbai Hinglish",
-    pillLabel: "Mumbai",
-    bg: "#1a0f00",
-    accent: "#fb923c",
-    flag: "🇮🇳",
-    city: "Mumbai",
+    id: "Lisbon Street",
+    pillLabel: "Lisbon",
+    bg: "#0a1a0f",
+    accent: "#22c55e",
+    flag: "🇵🇹",
+    city: "Lisbon",
   },
   {
     id: "Mexico City Barrio",
@@ -79,6 +79,14 @@ export const DIALECT_THEMES: DialectTheme[] = [
     accent: "#34d399",
     flag: "🇧🇷",
     city: "Rio",
+  },
+  {
+    id: "Israeli Street",
+    pillLabel: "Tel Aviv",
+    bg: "#0a1528",
+    accent: "#93c5fd",
+    flag: "🇮🇱",
+    city: "Tel Aviv",
   },
 ];
 
@@ -104,9 +112,10 @@ export const OUTPUT_PREMIUM_OPTIONS: { value: string; label: string }[] = [
   { value: "Tokyo Gyaru", label: "🇯🇵 Tokyo Gyaru" },
   { value: "Paris Banlieue", label: "🇫🇷 Paris Banlieue" },
   { value: "Russian Street", label: "🇷🇺 Russian Street" },
-  { value: "Mumbai Hinglish", label: "🇮🇳 Mumbai Hinglish" },
+  { value: "Lisbon Street", label: "🇵🇹 Lisbon Street" },
   { value: "Mexico City Barrio", label: "🇲🇽 Mexico City Barrio" },
   { value: "Rio Favela", label: "🇧🇷 Rio Favela" },
+  { value: "Israeli Street", label: "🇮🇱 Israeli Street" },
 ];
 
 export const OUTPUT_STANDARD_OPTIONS: { value: string; label: string }[] = [
@@ -132,9 +141,10 @@ export const LOADING_MESSAGES: Record<string, string> = {
   "Tokyo Gyaru": "Chotto matte! Cooking something yabai...",
   "Paris Banlieue": "Attends 2s gros, je prépare une dinguerie...",
   "Russian Street": "Sekundu bratan, shcha vsyo budet...",
-  "Mumbai Hinglish": "Arey bhai, zara ruk na public...",
+  "Lisbon Street": "Bóra lá, já vamos traduzir isto...",
   "Mexico City Barrio": "Aguanta tantito, wey...",
   "Rio Favela": "Segura aí, mano...",
+  "Israeli Street": "רגע אחד, מתרגמים...",
 };
 
 export const STANDARD_LOADING = "Translating…";
