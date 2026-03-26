@@ -1,7 +1,6 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
@@ -15,7 +14,6 @@ import {
   THEME_FLIP_BTN,
   THEME_GLASS_ICON_BTN,
   THEME_MIC_IDLE,
-  THEME_NAV_PILL,
   THEME_PLAY_BTN,
 } from "@/lib/themeUiClasses";
 import { fetchTtsAudioUrl, speakNativeTts } from "@/lib/ttsClient";
@@ -290,10 +288,6 @@ export default function SpeakPage() {
     <>
       <Toast message={toast} accent={theme.accent} />
       <div className="mx-auto flex w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-1.5 pt-1.5">
-        <Link href="/" className={`${THEME_NAV_PILL} mb-1.5 shrink-0`}>
-          Text Mode
-        </Link>
-
         <header className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
           <span className="text-lg font-bold leading-tight tracking-tight text-white drop-shadow-md transition-colors duration-500">
             StreetVibe

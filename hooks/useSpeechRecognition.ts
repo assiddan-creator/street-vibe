@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 interface UseSpeechRecognitionProps {
   lang?: string;
@@ -8,6 +8,11 @@ interface UseSpeechRecognitionProps {
   onFinalResult?: (text: string) => void;
 }
 
+/**
+ * Web Speech API wrapper. Uses non-continuous mode so each utterance yields a single final
+ * result (fixes duplicate / runaway transcripts on mobile). Interim text is rebuilt from the
+ * full results list each event so it replaces the live line instead of stacking duplicates.
+ */
 export function useSpeechRecognition({
   lang = "he-IL",
   onResult,
@@ -17,6 +22,15 @@ export function useSpeechRecognition({
   const [interimText, setInterimText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<unknown>(null);
+  const onResultRef = useRef(onResult);
+  const onFinalResultRef = useRef(onFinalResult);
+  /** Dedupe: some mobile engines emit the same final transcript twice in a row. */
+  const lastFinalEmittedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    onResultRef.current = onResult;
+    onFinalResultRef.current = onFinalResult;
+  }, [onResult, onFinalResult]);
 
   const start = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -39,9 +53,12 @@ export function useSpeechRecognition({
       }
     }
 
+    lastFinalEmittedRef.current = null;
+
     const recognition = new SR() as {
       continuous: boolean;
       interimResults: boolean;
+      maxAlternatives: number;
       lang: string;
       onstart: (() => void) | null;
       onresult: ((event: { resultIndex: number; results: SpeechRecognitionResultList }) => void) | null;
@@ -49,8 +66,10 @@ export function useSpeechRecognition({
       onend: (() => void) | null;
       start: () => void;
     };
-    recognition.continuous = true;
+    // One utterance per session — avoids piling the same interim/final on mobile.
+    recognition.continuous = false;
     recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
     recognition.lang = lang;
 
     recognition.onstart = () => {
@@ -61,26 +80,33 @@ export function useSpeechRecognition({
 
     recognition.onresult = (event) => {
       let interim = "";
-      let final = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result.isFinal) {
-          final += result[0].transcript;
-        } else {
+        if (!result.isFinal) {
           interim += result[0].transcript;
         }
       }
 
-      if (interim) {
-        setInterimText(interim);
-        onResult?.(interim);
+      let newFinal = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          newFinal += result[0].transcript;
+        }
       }
 
-      if (final) {
-        setInterimText("");
-        onFinalResult?.(final.trim());
+      setInterimText(interim);
+      onResultRef.current?.(interim);
+
+      const trimmed = newFinal.trim();
+      if (!trimmed) return;
+
+      if (trimmed === lastFinalEmittedRef.current) {
+        return;
       }
+      lastFinalEmittedRef.current = trimmed;
+      setInterimText("");
+      onFinalResultRef.current?.(trimmed);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -107,7 +133,7 @@ export function useSpeechRecognition({
       setError("Could not start microphone.");
       setIsListening(false);
     }
-  }, [lang, onResult, onFinalResult]);
+  }, [lang]);
 
   const stop = useCallback(() => {
     if (recognitionRef.current) {

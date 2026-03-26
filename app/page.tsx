@@ -1,7 +1,6 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
@@ -13,7 +12,6 @@ import {
   GLASS_SELECT_COMPACT,
   THEME_FLIP_BTN,
   THEME_GLASS_ICON_BTN,
-  THEME_LINK_PILL,
   THEME_MIC_IDLE,
 } from "@/lib/themeUiClasses";
 import {
@@ -412,11 +410,6 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="shrink-0 pt-4 pb-2">
-          <Link href="/speak" className={THEME_LINK_PILL}>
-            Speak Mode with Audio
-          </Link>
-        </div>
       </div>
     </>
   );
