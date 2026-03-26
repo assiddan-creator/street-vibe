@@ -3,8 +3,16 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import {
+  THEME_FLIP_BTN,
+  THEME_GLASS_ICON_BTN,
+  THEME_MIC_IDLE,
+  THEME_NAV_PILL,
+  THEME_PLAY_BTN,
+} from "@/lib/themeUiClasses";
 import { fetchTtsAudioUrl, speakNativeTts } from "@/lib/ttsClient";
 import {
   INPUT_LANGUAGES,
@@ -93,6 +101,11 @@ export default function SpeakPage() {
   }, [buffers, activeTurn, interimText, isListening]);
 
   const theme = resolveTheme(outputLang);
+  const { setDialect } = useCityTheme();
+
+  useEffect(() => {
+    setDialect(outputLang);
+  }, [outputLang, setDialect]);
 
   const loadingMessage =
     isPremiumSlang(outputLang) && LOADING_MESSAGES[outputLang]
@@ -147,9 +160,6 @@ export default function SpeakPage() {
   const handleFlipIt = () => {
     void translateText(inputDisplayValue.trim(), outputLang);
   };
-
-  const iconActionBtnClass =
-    "flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-white/12 bg-zinc-950/90 text-white/90 transition-opacity duration-200 hover:opacity-90 active:opacity-80";
 
   const handleCopy = async () => {
     const text = translatedText.trim();
@@ -278,17 +288,10 @@ export default function SpeakPage() {
     }`;
 
   return (
-    <div
-      className="min-h-[100vh] min-h-[100dvh] overflow-y-auto transition-[background-color] duration-500 ease-in-out"
-      style={{ backgroundColor: theme.bg }}
-    >
+    <>
       <Toast message={toast} accent={theme.accent} />
       <div className="mx-auto flex w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-1.5 pt-1.5">
-        <Link
-          href="/"
-          className="mb-1.5 inline-flex w-fit shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-[border-color,color] duration-500"
-          style={{ borderColor: `${theme.accent}66`, color: theme.accent }}
-        >
+        <Link href="/" className={`${THEME_NAV_PILL} mb-1.5 shrink-0`}>
           Text Mode
         </Link>
 
@@ -404,12 +407,7 @@ export default function SpeakPage() {
                 type="button"
                 onClick={() => void handlePlayTts()}
                 disabled={loading || !translatedText.trim() || ttsLoading}
-                className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-all duration-300 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
-                style={{
-                  borderColor: `${theme.accent}66`,
-                  backgroundColor: `${theme.accent}22`,
-                  color: theme.accent,
-                }}
+                className={THEME_PLAY_BTN}
                 aria-label={ttsPlaying ? "Playing audio" : "Play translation audio"}
               >
                 {ttsLoading ? (
@@ -521,16 +519,7 @@ export default function SpeakPage() {
               className="w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2 text-xs text-white placeholder:text-white/35 transition-[box-shadow,border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0 read-only:opacity-95"
             />
           </div>
-          <button
-            type="button"
-            onClick={handleFlipIt}
-            disabled={loading}
-            className="w-full rounded-lg py-2 text-center text-xs font-semibold text-black transition-[background-color,box-shadow] duration-500 ease-in-out enabled:active:scale-[0.98] disabled:opacity-60"
-            style={{
-              backgroundColor: theme.accent,
-              boxShadow: `0 4px 20px ${theme.accent}44`,
-            }}
-          >
+          <button type="button" onClick={handleFlipIt} disabled={loading} className={THEME_FLIP_BTN}>
             {loading ? "Flipping…" : "Flip it"}
           </button>
 
@@ -573,7 +562,7 @@ export default function SpeakPage() {
                 type="button"
                 onClick={() => void handleCopy()}
                 aria-label="Copy Street translation"
-                className={iconActionBtnClass}
+                className={THEME_GLASS_ICON_BTN}
               >
                 <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path
@@ -588,7 +577,7 @@ export default function SpeakPage() {
                 type="button"
                 onClick={() => void handlePaste()}
                 aria-label="Paste from clipboard"
-                className={iconActionBtnClass}
+                className={THEME_GLASS_ICON_BTN}
               >
                 <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path
@@ -607,18 +596,15 @@ export default function SpeakPage() {
                 onClick={toggleMic}
                 aria-label={isListening ? "Stop listening" : "Tap to speak"}
                 className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
-                  isListening ? "mic-pulse" : ""
+                  isListening ? "mic-pulse border-transparent" : THEME_MIC_IDLE
                 }`}
                 style={
                   isListening
                     ? {
                         background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
-                        boxShadow: `0 8px 28px ${theme.accent}55`,
+                        boxShadow: `0 8px 28px ${theme.accent}55, 0 0 15px -1px var(--theme-glow)`,
                       }
-                    : {
-                        background: "#52525b",
-                        boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
-                      }
+                    : undefined
                 }
               >
                 <svg
@@ -648,7 +634,7 @@ export default function SpeakPage() {
                 type="button"
                 onClick={() => void handleShare()}
                 aria-label="Share"
-                className={iconActionBtnClass}
+                className={THEME_GLASS_ICON_BTN}
               >
                 <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path
@@ -663,6 +649,6 @@ export default function SpeakPage() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

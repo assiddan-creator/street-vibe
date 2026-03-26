@@ -3,8 +3,10 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { THEME_FLIP_BTN, THEME_GLASS_ICON_BTN, THEME_LINK_PILL, THEME_MIC_IDLE } from "@/lib/themeUiClasses";
 import {
   INPUT_LANGUAGES,
   LOADING_MESSAGES,
@@ -53,6 +55,11 @@ export default function Home() {
   }, [inputText, interimText, isListening]);
 
   const theme = resolveTheme(outputLang);
+  const { setDialect } = useCityTheme();
+
+  useEffect(() => {
+    setDialect(outputLang);
+  }, [outputLang, setDialect]);
 
   const loadingMessage =
     isPremiumSlang(outputLang) && LOADING_MESSAGES[outputLang]
@@ -108,9 +115,6 @@ export default function Home() {
     void translateText(inputDisplayValue.trim(), outputLang);
   };
 
-  const iconActionBtnClass =
-    "flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-white/12 bg-zinc-950/90 text-white/90 transition-opacity duration-200 hover:opacity-90 active:opacity-80";
-
   const handleCopy = async () => {
     const text = translatedText.trim();
     if (!text) return;
@@ -152,10 +156,7 @@ export default function Home() {
     "w-full max-w-[min(100%,280px)] rounded-lg border bg-zinc-950/90 px-2 py-1 text-[11px] leading-tight text-white transition-[border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
 
   return (
-    <div
-      className="min-h-[100vh] min-h-[100dvh] overflow-y-auto transition-[background-color] duration-500 ease-in-out"
-      style={{ backgroundColor: theme.bg }}
-    >
+    <>
       <Toast message={toast} accent={theme.accent} />
       <div className="mx-auto flex w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-1.5 pt-1.5">
         {/* Top bar */}
@@ -318,16 +319,7 @@ export default function Home() {
               className="w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2 text-xs text-white placeholder:text-white/35 transition-[box-shadow,border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0 read-only:opacity-95"
             />
           </div>
-          <button
-            type="button"
-            onClick={handleFlipIt}
-            disabled={loading}
-            className="w-full rounded-lg py-2 text-center text-xs font-semibold text-black transition-[background-color,box-shadow] duration-500 ease-in-out enabled:active:scale-[0.98] disabled:opacity-60"
-            style={{
-              backgroundColor: theme.accent,
-              boxShadow: `0 4px 20px ${theme.accent}44`,
-            }}
-          >
+          <button type="button" onClick={handleFlipIt} disabled={loading} className={THEME_FLIP_BTN}>
             {loading ? "Flipping…" : "Flip it"}
           </button>
 
@@ -338,7 +330,7 @@ export default function Home() {
                 type="button"
                 onClick={() => void handleCopy()}
                 aria-label="Copy Street translation"
-                className={iconActionBtnClass}
+                className={THEME_GLASS_ICON_BTN}
               >
                 <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path
@@ -353,7 +345,7 @@ export default function Home() {
                 type="button"
                 onClick={() => void handlePaste()}
                 aria-label="Paste from clipboard"
-                className={iconActionBtnClass}
+                className={THEME_GLASS_ICON_BTN}
               >
                 <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path
@@ -372,18 +364,15 @@ export default function Home() {
                 onClick={toggleMic}
                 aria-label={isListening ? "Stop listening" : "Tap to speak"}
                 className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
-                  isListening ? "mic-pulse" : ""
+                  isListening ? "mic-pulse border-transparent" : THEME_MIC_IDLE
                 }`}
                 style={
                   isListening
                     ? {
                         background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
-                        boxShadow: `0 8px 28px ${theme.accent}55`,
+                        boxShadow: `0 8px 28px ${theme.accent}55, 0 0 15px -1px var(--theme-glow)`,
                       }
-                    : {
-                        background: "#52525b",
-                        boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
-                      }
+                    : undefined
                 }
               >
                 <svg
@@ -413,7 +402,7 @@ export default function Home() {
                 type="button"
                 onClick={handleShare}
                 aria-label="Share"
-                className={iconActionBtnClass}
+                className={THEME_GLASS_ICON_BTN}
               >
                 <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path
@@ -429,20 +418,11 @@ export default function Home() {
         </div>
 
         <div className="shrink-0 pt-4 pb-2">
-          <Link
-            href="/speak"
-            className="flex w-full items-center justify-center rounded-lg border py-2 text-center text-xs font-semibold transition-[background-color,border-color,color] duration-500"
-            style={{
-              borderColor: `${theme.accent}66`,
-              backgroundColor: `${theme.accent}18`,
-              color: theme.accent,
-              boxShadow: `0 2px 12px ${theme.accent}22`,
-            }}
-          >
+          <Link href="/speak" className={THEME_LINK_PILL}>
             Speak Mode with Audio
           </Link>
         </div>
       </div>
-    </div>
+    </>
   );
 }
