@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GOOGLE_VOICE_DEFAULT, GOOGLE_VOICE_MAP } from "@/lib/googleTtsVoiceConfig";
+import {
+  GOOGLE_VOICE_DEFAULT,
+  GOOGLE_VOICE_MAP,
+  resolveGoogleChirp3HdVoiceName,
+} from "@/lib/googleTtsVoiceConfig";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
@@ -23,18 +27,6 @@ const MINIMAX_DEFAULTS = {
 function parseTtsGender(v: unknown): "male" | "female" {
   return v === "female" ? "female" : "male";
 }
-
-const LANGUAGE_BOOST_MAP: Record<string, string> = {
-  "London Roadman": "English",
-  "Jamaican Patois": "English",
-  "New York Brooklyn": "English",
-  "Tokyo Gyaru": "Japanese",
-  "Paris Banlieue": "French",
-  "Russian Street": "Russian",
-  "Mexico City Barrio": "Spanish",
-  "Rio Favela": "Portuguese",
-  "Israeli Street": "Hebrew",
-};
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
@@ -74,6 +66,8 @@ export async function POST(req: NextRequest) {
 
     const dialectKey = typeof dialect === "string" ? dialect : "";
     const voice = GOOGLE_VOICE_MAP[dialectKey] ?? GOOGLE_VOICE_DEFAULT;
+    const genderKey = parseTtsGender(body.ttsGender);
+    const voiceName = resolveGoogleChirp3HdVoiceName(voice.languageCode, genderKey);
     const speakingRate =
       typeof tuning?.speed === "number" ? tuning.speed : voice.speakingRate;
 
@@ -85,7 +79,7 @@ export async function POST(req: NextRequest) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             input: { text },
-            voice: { languageCode: voice.languageCode, name: voice.name },
+            voice: { languageCode: voice.languageCode, name: voiceName },
             audioConfig: {
               audioEncoding: "MP3",
               speakingRate,

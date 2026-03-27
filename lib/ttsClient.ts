@@ -1,4 +1,4 @@
-import { resolveGoogleVoiceForDialect } from "@/lib/googleTtsVoiceConfig";
+import { resolveGoogleChirp3HdVoiceName, resolveGoogleVoiceForDialect } from "@/lib/googleTtsVoiceConfig";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 import { getStoredTtsGender, MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
@@ -99,6 +99,7 @@ export async function fetchTtsAudioUrl(
 
   if (effectiveEngine === "google") {
     const voice = resolveGoogleVoiceForDialect(dialect);
+    const googleVoiceName = resolveGoogleChirp3HdVoiceName(voice.languageCode, ttsGender);
     const speakingRate =
       typeof tuning.speed === "number" ? tuning.speed : voice.speakingRate;
     console.info("[TTS]", "Starting TTS request", {
@@ -118,7 +119,7 @@ export async function fetchTtsAudioUrl(
       },
       googleTextSynthesizeBodyPreview: {
         input: { text: textPreview(text, 500) },
-        voice: { languageCode: voice.languageCode, name: voice.name },
+        voice: { languageCode: voice.languageCode, name: googleVoiceName },
         audioConfig: {
           audioEncoding: "MP3",
           speakingRate,
