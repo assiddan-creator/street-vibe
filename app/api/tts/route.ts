@@ -8,6 +8,7 @@ import {
 import { resolveMinimaxEmotionFromVibe } from "@/lib/minimaxTtsEmotion";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
+import { shapeTextForGoogleTts } from "@/lib/googleSpeechWriter";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 
 const corsHeaders = {
@@ -56,6 +57,8 @@ export async function POST(req: NextRequest) {
       ? (body.tuning as Record<string, unknown>)
       : null;
 
+  const vibeContext = typeof body.context === "string" ? body.context : undefined;
+
   if (resolvedEngine === "google") {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) {
@@ -71,6 +74,19 @@ export async function POST(req: NextRequest) {
     const voiceName = resolveGoogleChirp3HdVoiceName(voice.languageCode, genderKey);
     const speakingRate =
       typeof tuning?.speed === "number" ? tuning.speed : voice.speakingRate;
+
+    const shapedText = shapeTextForGoogleTts(text, {
+      vibe: vibeContext,
+      dialectId: dialectKey || undefined,
+    });
+    const originalLen = text.length;
+    const shapedLen = shapedText.length;
+    const shapingChanged = shapedText !== text;
+    console.info("[tts][google] speech shaping", {
+      originalLen,
+      shapedLen,
+      shapingChanged,
+    });
 
     const audioConfig: {
       audioEncoding: "MP3";
@@ -89,7 +105,7 @@ export async function POST(req: NextRequest) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            input: { text },
+            input: { text: shapedText },
             voice: { languageCode: voice.languageCode, name: voiceName },
             audioConfig,
           }),
@@ -135,7 +151,6 @@ export async function POST(req: NextRequest) {
     typeof tuning?.pitch === "number" ? tuning.pitch : MINIMAX_DEFAULTS.pitch;
   const genderKey = parseTtsGender(body.ttsGender);
   const voiceId = MINIMAX_VOICE_ID_BY_GENDER[genderKey];
-  const vibeContext = typeof body.context === "string" ? body.context : undefined;
   const emotion = resolveMinimaxEmotionFromVibe(vibeContext);
 
   try {
