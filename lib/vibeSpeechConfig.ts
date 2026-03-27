@@ -6,6 +6,13 @@
  * TODO: Per-dialect speech pacing (speed / pause curves) wired from here into `/api/tts`.
  * TODO: Per-dialect Google Cloud TTS text shaping / style hints.
  * TODO: Neighborhood-specific interjection insertion (translate + TTS coordination).
+ *
+ * TODO (dialect-specific MiniMax tuning — future overrides in `dialectOverrides`):
+ * - London Roadman: sharper pacing
+ * - Jamaican Patois: looser swing
+ * - New York Brooklyn: compressed aggression
+ * - Israeli Street: blunt punch
+ * - Rio Favela: melodic bounce
  */
 
 import { isKnownPremiumDialect, type StreetVibeDialectId } from "@/lib/dialectRegistry";
@@ -15,9 +22,28 @@ export type StreetVibeId = "friend" | "flirty" | "angry" | "stoned";
 
 export type PauseProfile = "minimal" | "natural" | "relaxed" | "punctuated";
 
-/** Optional per-dialect tweaks — intentionally empty; extension point only. */
+/** Conservative policy for optional future interjection insertion (TTS input only). */
+export type InterjectionPolicy = "none" | "minimal" | "light";
+
+/** MiniMax / Replicate `speech-2.8-turbo` tuning bundle (emotion + numeric defaults). */
+export type MinimaxTtsTuning = {
+  minimaxEmotion: string;
+  minimaxSpeed: number;
+  minimaxPitch: number;
+  minimaxVolume: number;
+  interjectionPolicy: InterjectionPolicy;
+  /** Human-readable; for docs and future model prompts — not sent to API today. */
+  deliveryNotes: string;
+};
+
+/** Optional per-dialect tweaks — intentionally sparse; extension point only. */
 export type VibeDialectOverride = Partial<{
   minimaxEmotion: string;
+  minimaxSpeed: number;
+  minimaxPitch: number;
+  minimaxVolume: number;
+  interjectionPolicy: InterjectionPolicy;
+  deliveryNotes: string;
   speechStyleNotes: string;
   googleTextStyleNotes: string[];
   pauseProfile: PauseProfile;
@@ -25,8 +51,18 @@ export type VibeDialectOverride = Partial<{
   warmthLevel: number;
 }>;
 
+/** Matches prior `/api/tts` MiniMax defaults when client omits `tuning`. */
+const MINIMAX_BASE_SPEED = 0.85;
+const MINIMAX_BASE_PITCH = 0;
+const MINIMAX_BASE_VOLUME = 1;
+
 export type VibeSpeechEntry = {
   minimaxEmotion: string;
+  minimaxSpeed: number;
+  minimaxPitch: number;
+  minimaxVolume: number;
+  interjectionPolicy: InterjectionPolicy;
+  deliveryNotes: string;
   speechStyleNotes: string;
   googleTextStyleNotes: string[];
   pauseProfile: PauseProfile;
@@ -38,10 +74,16 @@ export type VibeSpeechEntry = {
 
 /**
  * Seeded from current production behavior only (friend/dm → auto, flirt → happy, angry, stoned → calm).
+ * Numeric MiniMax defaults match historical `MINIMAX_DEFAULTS` + volume 1.0 for every vibe.
  */
 export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
   friend: {
     minimaxEmotion: "auto",
+    minimaxSpeed: MINIMAX_BASE_SPEED,
+    minimaxPitch: MINIMAX_BASE_PITCH,
+    minimaxVolume: MINIMAX_BASE_VOLUME,
+    interjectionPolicy: "none",
+    deliveryNotes: "Default conversational delivery; same pace as legacy MiniMax path.",
     speechStyleNotes: "Neutral / default street cadence; matches legacy `dm` / default MiniMax emotion.",
     googleTextStyleNotes: [],
     pauseProfile: "natural",
@@ -50,6 +92,11 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
   },
   flirty: {
     minimaxEmotion: "happy",
+    minimaxSpeed: MINIMAX_BASE_SPEED,
+    minimaxPitch: MINIMAX_BASE_PITCH,
+    minimaxVolume: MINIMAX_BASE_VOLUME,
+    interjectionPolicy: "none",
+    deliveryNotes: "Warm, upbeat; same speed/pitch/volume caps as legacy flirt mapping.",
     speechStyleNotes: "Upbeat, charming tone; matches legacy `flirt` MiniMax emotion.",
     googleTextStyleNotes: [],
     pauseProfile: "natural",
@@ -58,6 +105,11 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
   },
   angry: {
     minimaxEmotion: "angry",
+    minimaxSpeed: MINIMAX_BASE_SPEED,
+    minimaxPitch: MINIMAX_BASE_PITCH,
+    minimaxVolume: MINIMAX_BASE_VOLUME,
+    interjectionPolicy: "none",
+    deliveryNotes: "High-intensity emotion via `angry`; numeric defaults unchanged from legacy.",
     speechStyleNotes: "Direct, high-intensity; matches legacy `angry` MiniMax emotion.",
     googleTextStyleNotes: [],
     pauseProfile: "punctuated",
@@ -66,6 +118,11 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
   },
   stoned: {
     minimaxEmotion: "calm",
+    minimaxSpeed: MINIMAX_BASE_SPEED,
+    minimaxPitch: MINIMAX_BASE_PITCH,
+    minimaxVolume: MINIMAX_BASE_VOLUME,
+    interjectionPolicy: "none",
+    deliveryNotes: "Calm emotion via `calm`; same baseline speed/pitch/volume as other vibes.",
     speechStyleNotes: "Mellow, slow energy; matches legacy `stoned` MiniMax emotion.",
     googleTextStyleNotes: [],
     pauseProfile: "relaxed",
@@ -104,6 +161,19 @@ function getResolvedVibeEntry(vibe: string | undefined, dialectId?: string): Vib
 export function resolveMinimaxEmotionFromVibeConfig(vibe: string | undefined, dialectId?: string): string {
   const entry = getResolvedVibeEntry(vibe, dialectId);
   return entry.minimaxEmotion;
+}
+
+/** Resolved MiniMax tuning for the given vibe (and optional premium dialect override). Always returns a full object. */
+export function resolveMinimaxTtsTuning(vibe: string | undefined, dialectId?: string): MinimaxTtsTuning {
+  const e = getResolvedVibeEntry(vibe, dialectId);
+  return {
+    minimaxEmotion: e.minimaxEmotion,
+    minimaxSpeed: e.minimaxSpeed,
+    minimaxPitch: e.minimaxPitch,
+    minimaxVolume: e.minimaxVolume,
+    interjectionPolicy: e.interjectionPolicy,
+    deliveryNotes: e.deliveryNotes,
+  };
 }
 
 export function getGoogleTextStyleNotesForVibe(vibe?: string, dialectId?: string): string[] {

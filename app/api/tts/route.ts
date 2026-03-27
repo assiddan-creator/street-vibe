@@ -5,8 +5,8 @@ import {
   isGoogleChirpVoiceName,
   resolveGoogleChirp3HdVoiceName,
 } from "@/lib/googleTtsVoiceConfig";
-import { resolveMinimaxEmotionFromVibe } from "@/lib/minimaxTtsEmotion";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
+import { resolveMinimaxTtsTuning } from "@/lib/vibeSpeechConfig";
 import { MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
 import { shapeTextForGoogleTts } from "@/lib/googleSpeechWriter";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
@@ -20,11 +20,8 @@ const corsHeaders = {
 /** Replicate MiniMax model — speech-2.8-turbo */
 const REPLICATE_MINIMAX_VERSION = "minimax/speech-2.8-turbo";
 
-/** Base MiniMax defaults; `voice_id` from `ttsGender`; `emotion` from Vibe via `resolveMinimaxEmotionFromVibe`. Client `tuning` overrides speed. */
-const MINIMAX_DEFAULTS = {
-  speed: 0.85,
-  pitch: 0,
-};
+/** Legacy baseline if `resolveMinimaxTtsTuning` were unavailable (not expected). */
+const MINIMAX_FALLBACK = { speed: 0.85, pitch: 0, volume: 1.0, emotion: "auto" };
 
 function parseTtsGender(v: unknown): "male" | "female" {
   return v === "female" ? "female" : "male";
@@ -145,13 +142,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const dialectKeyMm = typeof dialect === "string" ? dialect : "";
+  const mmTuning = resolveMinimaxTtsTuning(vibeContext, dialectKeyMm || undefined);
+
   const speed =
-    typeof tuning?.speed === "number" ? tuning.speed : MINIMAX_DEFAULTS.speed;
+    typeof tuning?.speed === "number"
+      ? tuning.speed
+      : (mmTuning.minimaxSpeed ?? MINIMAX_FALLBACK.speed);
   const pitch =
-    typeof tuning?.pitch === "number" ? tuning.pitch : MINIMAX_DEFAULTS.pitch;
+    typeof tuning?.pitch === "number"
+      ? tuning.pitch
+      : (mmTuning.minimaxPitch ?? MINIMAX_FALLBACK.pitch);
+  const volume =
+    typeof tuning?.volume === "number"
+      ? tuning.volume
+      : (mmTuning.minimaxVolume ?? MINIMAX_FALLBACK.volume);
   const genderKey = parseTtsGender(body.ttsGender);
   const voiceId = MINIMAX_VOICE_ID_BY_GENDER[genderKey];
-  const emotion = resolveMinimaxEmotionFromVibe(vibeContext);
+  const emotion = mmTuning.minimaxEmotion || MINIMAX_FALLBACK.emotion;
 
   try {
     const minimaxRes = await fetch("https://api.replicate.com/v1/predictions", {
@@ -168,7 +176,7 @@ export async function POST(req: NextRequest) {
           speed,
           pitch,
           emotion,
-          volume: (tuning?.volume as number | undefined) ?? 1.0,
+          volume,
           language_boost: resolveMinimaxLanguageBoost(typeof dialect === "string" ? dialect : ""),
           english_normalization: true,
         },

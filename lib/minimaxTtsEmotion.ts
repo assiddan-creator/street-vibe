@@ -19,4 +19,9 @@ export function resolveMinimaxEmotionFromVibe(vibe: string | undefined): string 
   return MINIMAX_EMOTION_BY_VIBE[vibe] ?? MINIMAX_EMOTION_BY_VIBE.default;
 }
 
-export { resolveMinimaxEmotionFromVibeConfig, type StreetVibeId } from "@/lib/vibeSpeechConfig";
+export {
+  resolveMinimaxEmotionFromVibeConfig,
+  resolveMinimaxTtsTuning,
+  type MinimaxTtsTuning,
+  type StreetVibeId,
+} from "@/lib/vibeSpeechConfig";
