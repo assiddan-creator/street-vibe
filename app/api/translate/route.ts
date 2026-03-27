@@ -6,6 +6,7 @@ import {
   SCRIPT_OUTPUT_UNIVERSAL_RULE,
   splitTranslationAndDictionary,
 } from "@/lib/streetVibeTheme";
+import { isKnownPremiumDialect } from "@/lib/dialectRegistry";
 import {
   containsLatinLeak,
   countLatinTokens,
@@ -13,6 +14,10 @@ import {
   sanitizeIsraeliStreetOutput,
   shouldRetryIsraeliStreetOutput,
 } from "@/lib/hebrewOutputGuard";
+import {
+  formatIsraeliStreetRetryFromConfig,
+  formatSlangControlPromptGuidance,
+} from "@/lib/slangControlConfig";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -119,6 +124,11 @@ function buildPrompt({
   const isRussianLang =
     dialectId.toLowerCase().includes("russian") || primaryLanguage.toLowerCase().includes("russian");
 
+  const slangControlBlock =
+    slangRequested && isKnownPremiumDialect(dialectId)
+      ? `\n\n${formatSlangControlPromptGuidance(dialectId)}`
+      : "";
+
   const russianRule = isRussianLang
     ? `
 CRITICAL RULES FOR RUSSIAN — read carefully:
@@ -141,6 +151,7 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
       `${antiLeakageRule}\n` +
       `${lengthRule}\n` +
       `${noAIRule}` +
+      `${slangControlBlock}` +
       `${russianRule}\n\n` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +
@@ -261,7 +272,8 @@ export async function POST(req: NextRequest) {
         console.warn("[translate][Israeli Street] Triggering Hebrew-only retry (single attempt)", {
           latinTokenCountAfterSanitize: latinAfterSanitize,
         });
-        const retryPrompt = prompt + ISRAELI_STREET_RETRY_REINFORCEMENT;
+        const retryPrompt =
+          prompt + ISRAELI_STREET_RETRY_REINFORCEMENT + formatIsraeliStreetRetryFromConfig();
         const second = await callGeminiGenerate(apiKey, retryPrompt, slangRequested);
         if (!second.text) {
           console.warn("[translate][Israeli Street] Retry returned empty; keeping sanitized first-pass translation");
