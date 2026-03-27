@@ -2,6 +2,7 @@
 
 import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
@@ -25,8 +26,12 @@ import {
 } from "@/lib/streetVibeTheme";
 import { getCityThemeForDialect } from "@/lib/themeConfig";
 import { lookupSlang } from "@/lib/slangDictionary";
+import { hasOnboardingAnswers } from "@/lib/onboardingStorage";
 
 export default function Home() {
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   const [outputLang, setOutputLang] = useState("Jamaican Patois");
   const [inputLanguage, setInputLanguage] = useState("he-IL");
   const [inputText, setInputText] = useState("");
@@ -52,6 +57,11 @@ export default function Home() {
     const t = window.setTimeout(() => setToast(null), 2000);
     return () => window.clearTimeout(t);
   }, [toast]);
+
+  useEffect(() => {
+    setShowOnboarding(!hasOnboardingAnswers());
+    setOnboardingReady(true);
+  }, []);
 
   const selectedInputLang = inputLanguage;
 
@@ -195,6 +205,14 @@ export default function Home() {
   const micBall = cityTheme.micBall ?? null;
   const isActive = inputText.trim().length > 0 || originalText.trim().length > 0;
   const isIdle = !isActive;
+
+  if (!onboardingReady) {
+    return <div className="min-h-[100dvh] bg-[#0a0a0a]" aria-busy="true" aria-label="Loading" />;
+  }
+
+  if (showOnboarding) {
+    return <OnboardingFlow onComplete={() => setShowOnboarding(false)} />;
+  }
 
   return (
     <>
