@@ -19,6 +19,7 @@ import {
   formatPersonalizationBlockForTranslate,
   parseOptionalPersonalProfileFromBody,
 } from "@/lib/personalSlangProfile";
+import { buildDialectPackPromptHints, formatDialectPackPromptAppendix } from "@/lib/dialectPacks";
 import {
   formatIsraeliStreetRetryFromConfig,
   formatSlangControlPromptGuidance,
@@ -139,6 +140,11 @@ function buildPrompt({
       ? `\n\n${formatSlangControlPromptGuidance(dialectId)}`
       : "";
 
+  const dialectPackBlock =
+    slangRequested && isKnownPremiumDialect(dialectId)
+      ? formatDialectPackPromptAppendix(buildDialectPackPromptHints(dialectId))
+      : "";
+
   const russianRule = isRussianLang
     ? `
 CRITICAL RULES FOR RUSSIAN — read carefully:
@@ -163,6 +169,7 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
       `${noAIRule}` +
       `${personalizationBlock}` +
       `${slangControlBlock}` +
+      `${dialectPackBlock}` +
       `${russianRule}\n\n` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +

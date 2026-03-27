@@ -15,6 +15,8 @@ import {
 } from "@/lib/minimaxInterjectionWriter";
 import { getPreferredVibeFallback, parseOptionalPersonalProfileFromBody } from "@/lib/personalSlangProfile";
 import { shapeTextForGoogleTts } from "@/lib/googleSpeechWriter";
+import { isKnownPremiumDialect } from "@/lib/dialectRegistry";
+import { getDialectPack, getDialectPackTtsHints } from "@/lib/dialectPacks";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 
 const corsHeaders = {
@@ -91,10 +93,14 @@ export async function POST(req: NextRequest) {
     const originalLen = text.length;
     const shapedLen = shapedText.length;
     const shapingChanged = shapedText !== text;
+    const dialectPack = isKnownPremiumDialect(dialectKey) ? getDialectPack(dialectKey) : undefined;
+    const dialectPackTtsHints = isKnownPremiumDialect(dialectKey) ? getDialectPackTtsHints(dialectKey) : [];
     console.info("[tts][google] speech shaping", {
       originalLen,
       shapedLen,
       shapingChanged,
+      dialectPackLabel: dialectPack?.displayLabel,
+      dialectPackTtsHints,
     });
 
     const audioConfig: {
@@ -178,6 +184,8 @@ export async function POST(req: NextRequest) {
     dialectId: dialectKeyMm || undefined,
   });
   const interjectionPolicy = getInterjectionPolicy(vibeContext, dialectKeyMm || undefined);
+  const dialectPackMm = isKnownPremiumDialect(dialectKeyMm) ? getDialectPack(dialectKeyMm) : undefined;
+  const dialectPackTtsHintsMm = isKnownPremiumDialect(dialectKeyMm) ? getDialectPackTtsHints(dialectKeyMm) : [];
   console.info("[tts][minimax] interjection shaping", {
     originalLen: text.length,
     shapedLen: minimaxText.length,
@@ -188,6 +196,8 @@ export async function POST(req: NextRequest) {
       preferredTags: interjectionPolicy.preferredTags,
       placement: interjectionPolicy.placement,
     },
+    dialectPackLabel: dialectPackMm?.displayLabel,
+    dialectPackTtsHints: dialectPackTtsHintsMm,
   });
 
   try {
