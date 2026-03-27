@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isPremiumSlang } from "@/lib/streetVibeTheme";
 import { resolveVoiceForDialect } from "@/lib/voices";
 
 const corsHeaders = {
@@ -131,6 +132,9 @@ export async function POST(req: NextRequest) {
   const engine = typeof body.engine === "string" && body.engine ? body.engine : "minimax";
 
   const { text, dialect } = body || {};
+  const resolvedEngine =
+    engine === "minimax" && !isPremiumSlang(typeof dialect === "string" ? dialect : "") ? "google" : engine;
+
   if (!text || typeof text !== "string") {
     return NextResponse.json({ error: "Missing text" }, { status: 400, headers: corsHeaders });
   }
@@ -140,7 +144,7 @@ export async function POST(req: NextRequest) {
       ? (body.tuning as Record<string, unknown>)
       : null;
 
-  if (engine === "google") {
+  if (resolvedEngine === "google") {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) {
       return NextResponse.json(

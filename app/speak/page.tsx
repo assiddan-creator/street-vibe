@@ -319,14 +319,14 @@ export default function SpeakPage() {
               onChange={(e) => setOutputLang(e.target.value)}
               className="w-full rounded-none border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none"
             >
-              <optgroup label="💎 Premium Slangs" className="bg-zinc-900 text-white">
+              <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
                 {OUTPUT_PREMIUM_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                     {o.label}
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="🌐 Standard Languages" className="bg-zinc-900 text-white">
+              <optgroup label="🌐 All Languages — Google Voice" className="bg-zinc-900 text-white">
                 {OUTPUT_STANDARD_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                     {o.label}
@@ -342,14 +342,14 @@ export default function SpeakPage() {
                 onChange={(e) => setOutputLang(e.target.value)}
                 className={`${GLASS_SELECT} px-2.5 py-2 text-center text-xs`}
               >
-                <optgroup label="💎 Premium Slangs" className="bg-zinc-900 text-white">
+                <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
                   {OUTPUT_PREMIUM_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                       {o.label}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="🌐 Standard Languages" className="bg-zinc-900 text-white">
+                <optgroup label="🌐 All Languages — Google Voice" className="bg-zinc-900 text-white">
                   {OUTPUT_STANDARD_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                       {o.label}

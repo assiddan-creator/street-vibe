@@ -156,6 +156,19 @@ export const OUTPUT_STANDARD_OPTIONS: { value: string; label: string }[] = [
   { value: "Japanese", label: "🇯🇵 Japanese" },
   { value: "Arabic", label: "🇸🇦 Arabic" },
   { value: "Hebrew (Standard)", label: "🇮🇱 Hebrew" },
+  { value: "London Roadman", label: "🇬🇧 London Roadman" },
+  { value: "Jamaican Patois", label: "🇯🇲 Jamaican Patois" },
+  { value: "New York Brooklyn", label: "🗽 New York Brooklyn" },
+  { value: "Tokyo Gyaru", label: "🇯🇵 Tokyo Gyaru" },
+  { value: "Paris Banlieue", label: "🇫🇷 Paris Banlieue" },
+  { value: "Russian Street", label: "🇷🇺 Russian Street" },
+  { value: "Lisbon Street", label: "🇵🇹 Lisbon Street" },
+  { value: "Berlin Street", label: "🇩🇪 Berlin Street" },
+  { value: "Madrid Barrio", label: "🇪🇸 Madrid Barrio" },
+  { value: "Rome Street", label: "🇮🇹 Rome Street" },
+  { value: "Mexico City Barrio", label: "🇲🇽 Mexico City Barrio" },
+  { value: "Rio Favela", label: "🇧🇷 Rio Favela" },
+  { value: "Israeli Street", label: "🇮🇱 Israeli Street" },
 ];
 
 export const NEUTRAL_BG = "#111111";
