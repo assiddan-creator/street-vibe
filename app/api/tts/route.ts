@@ -8,6 +8,11 @@ import {
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { resolveMinimaxTtsTuning } from "@/lib/vibeSpeechConfig";
 import { MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
+import {
+  getInterjectionPolicy,
+  minimaxInterjectionWasApplied,
+  shapeTextForMinimaxTts,
+} from "@/lib/minimaxInterjectionWriter";
 import { shapeTextForGoogleTts } from "@/lib/googleSpeechWriter";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 
@@ -161,6 +166,23 @@ export async function POST(req: NextRequest) {
   const voiceId = MINIMAX_VOICE_ID_BY_GENDER[genderKey];
   const emotion = mmTuning.minimaxEmotion || MINIMAX_FALLBACK.emotion;
 
+  const minimaxText = shapeTextForMinimaxTts(text, {
+    vibe: vibeContext,
+    dialectId: dialectKeyMm || undefined,
+  });
+  const interjectionPolicy = getInterjectionPolicy(vibeContext, dialectKeyMm || undefined);
+  console.info("[tts][minimax] interjection shaping", {
+    originalLen: text.length,
+    shapedLen: minimaxText.length,
+    injected: minimaxInterjectionWasApplied(text, minimaxText),
+    policy: {
+      allowed: interjectionPolicy.allowed,
+      maxPerUtterance: interjectionPolicy.maxPerUtterance,
+      preferredTags: interjectionPolicy.preferredTags,
+      placement: interjectionPolicy.placement,
+    },
+  });
+
   try {
     const minimaxRes = await fetch("https://api.replicate.com/v1/predictions", {
       method: "POST",
@@ -171,7 +193,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         version: REPLICATE_MINIMAX_VERSION,
         input: {
-          text,
+          text: minimaxText,
           voice_id: voiceId,
           speed,
           pitch,
