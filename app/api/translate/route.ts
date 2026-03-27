@@ -15,6 +15,11 @@ import {
   shouldRetryIsraeliStreetOutput,
 } from "@/lib/hebrewOutputGuard";
 import {
+  buildPersonalizationPromptHints,
+  formatPersonalizationBlockForTranslate,
+  parseOptionalPersonalProfileFromBody,
+} from "@/lib/personalSlangProfile";
+import {
   formatIsraeliStreetRetryFromConfig,
   formatSlangControlPromptGuidance,
 } from "@/lib/slangControlConfig";
@@ -36,6 +41,7 @@ function buildPrompt({
   isPremiumSelected,
   context,
   previousMessage,
+  personalizationHints,
 }: {
   text: string;
   currentLang: string;
@@ -45,6 +51,7 @@ function buildPrompt({
   isPremiumSelected: boolean;
   context: string;
   previousMessage: string | null;
+  personalizationHints?: string[];
 }) {
   const INTENSITY_INSTRUCTIONS: Record<number, string> = {
     1: "Use mostly standard language with just a tiny hint of local flavor. Max 1-2 very mild slang words. Keep it readable.",
@@ -99,6 +106,8 @@ function buildPrompt({
     "<dictionary: 1-3 key slang words used, format: Word - Meaning>\n" +
     "Do not add any other text, explanation, or preamble.";
 
+  const personalizationBlock = formatPersonalizationBlockForTranslate(personalizationHints ?? []);
+
   if (!slangRequested) {
     return {
       prompt:
@@ -108,6 +117,7 @@ function buildPrompt({
         `Return ONLY the translated text. No explanations.\n` +
         `${antiLeakageRule}\n` +
         `${lengthRule}\n` +
+        `${personalizationBlock}` +
         `Text: '''${text}'''`,
       slangRequested: false,
     };
@@ -151,6 +161,7 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
       `${antiLeakageRule}\n` +
       `${lengthRule}\n` +
       `${noAIRule}` +
+      `${personalizationBlock}` +
       `${slangControlBlock}` +
       `${russianRule}\n\n` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
@@ -220,6 +231,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const profileFromBody = parseOptionalPersonalProfileFromBody(body);
+  const personalizationHints = buildPersonalizationPromptHints(profileFromBody);
+
   const { prompt, slangRequested } = buildPrompt({
     text: String(text),
     currentLang: String(currentLang),
@@ -229,6 +243,7 @@ export async function POST(req: NextRequest) {
     isPremiumSelected: !!isPremiumSelected,
     context: (context as string) || "default",
     previousMessage: previousMessage ? String(previousMessage) : null,
+    personalizationHints,
   });
 
   try {

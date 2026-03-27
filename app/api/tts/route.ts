@@ -13,6 +13,7 @@ import {
   minimaxInterjectionWasApplied,
   shapeTextForMinimaxTts,
 } from "@/lib/minimaxInterjectionWriter";
+import { getPreferredVibeFallback, parseOptionalPersonalProfileFromBody } from "@/lib/personalSlangProfile";
 import { shapeTextForGoogleTts } from "@/lib/googleSpeechWriter";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 
@@ -59,7 +60,13 @@ export async function POST(req: NextRequest) {
       ? (body.tuning as Record<string, unknown>)
       : null;
 
-  const vibeContext = typeof body.context === "string" ? body.context : undefined;
+  const profileFromBody = parseOptionalPersonalProfileFromBody(body);
+  let vibeContext =
+    typeof body.context === "string" && body.context.trim() !== "" ? body.context.trim() : undefined;
+  if (vibeContext === undefined && profileFromBody) {
+    const fb = getPreferredVibeFallback(profileFromBody);
+    if (fb) vibeContext = fb;
+  }
 
   if (resolvedEngine === "google") {
     const geminiKey = process.env.GEMINI_API_KEY;
