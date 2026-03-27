@@ -569,11 +569,11 @@ export default function Home() {
                 } as CSSProperties
               }
             >
-              <p className="mb-1 text-[10px] uppercase tracking-wider text-white/50">Original</p>
+              <p className="mb-1 text-[10px] text-white/50">Original</p>
               <p className="mb-2 whitespace-pre-wrap break-words text-[11px] leading-snug text-white/80">
                 {originalText.trim() || "—"}
               </p>
-              <p className="mb-0.5 text-[10px] uppercase tracking-wider text-white/50">Street</p>
+              <p className="mb-0.5 text-[10px] text-white/50">Street</p>
               <div className="min-h-0 text-sm font-bold leading-snug">
                 {loading ? (
                   <p className="animate-pulse text-xs font-semibold" style={{ color: theme.accent }}>
