@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getDialectPrimaryLanguage,
+  getDialectScriptLock,
+  SCRIPT_OUTPUT_UNIVERSAL_RULE,
+} from "@/lib/streetVibeTheme";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -48,11 +53,24 @@ function buildPrompt({
   const contextPrompt = CONTEXT_INSTRUCTIONS[context] || CONTEXT_INSTRUCTIONS.default;
   const customLocation = slangLocation ? String(slangLocation).trim() : "";
 
+  const dialectId = String(currentLang);
+  const primaryLanguage = getDialectPrimaryLanguage(dialectId);
+  const scriptLockBlock = [
+    "SCRIPT LOCK (MANDATORY — highest priority):",
+    SCRIPT_OUTPUT_UNIVERSAL_RULE,
+    getDialectScriptLock(dialectId),
+    dialectId === "Israeli Street" || dialectId === "Hebrew (Standard)"
+      ? "ISRAEL / HEBREW: Output ONLY in Hebrew script (א–ת). Do not write the main translation in English or Latin letters. Hebrew characters only."
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   const slangRequested =
     translationMode === "slang" || !!isPremiumSelected || customLocation !== "";
 
   const antiLeakageRule =
-    "ANTI-LEAKAGE: Never use Hebrew or Israeli slang transliterated into Latin characters (sababa, yalla, achi, magniv, etc.) unless the target language is explicitly Hebrew. All slang must belong exclusively to the target language and location.";
+    "ANTI-LEAKAGE: Never use Hebrew or Israeli slang transliterated into Latin characters (sababa, yalla, achi, magniv, etc.) unless the target dialect is Israeli Street or Hebrew (Standard). For Israeli/Hebrew targets, express those ideas in Hebrew script instead of Latin transliteration. All slang must belong exclusively to the target language and location.";
 
   const lengthRule =
     "LENGTH RULE: Keep the output roughly the same length as the input. Do not expand, explain, or add information that was not in the original text.";
@@ -71,7 +89,8 @@ function buildPrompt({
     return {
       prompt:
         `You are a professional translator.\n` +
-        `Translate the following into standard, formal, dictionary-accurate ${currentLang}.\n` +
+        `Translate the following into standard, formal, dictionary-accurate ${primaryLanguage} (target dialect id: ${dialectId}).\n` +
+        `${scriptLockBlock}\n` +
         `Return ONLY the translated text. No explanations.\n` +
         `${antiLeakageRule}\n` +
         `${lengthRule}\n` +
@@ -81,15 +100,15 @@ function buildPrompt({
   }
 
   const locationLine = customLocation
-    ? `You are a 22-year-old from ${customLocation} who speaks ${currentLang}. You grew up there, you text your friends every day, and you write exactly like people from your neighborhood.`
-    : `You are a 22-year-old native ${currentLang} speaker from the streets. You grew up there, you text your friends every day, and you write exactly like people from your city.`;
+    ? `You are a 22-year-old from ${customLocation} who speaks ${primaryLanguage}. You grew up there, you text your friends every day, and you write exactly like people from your neighborhood.`
+    : `You are a 22-year-old native ${primaryLanguage} speaker from the streets (voice: ${dialectId}). You grew up there, you text your friends every day, and you write exactly like people from your city.`;
 
   const previousLine = previousMessage
     ? `\nFor consistency, the previous message in this conversation was rewritten as: "${previousMessage}". Keep the same voice and energy.`
     : "";
 
   const isRussianLang =
-    typeof currentLang === "string" && currentLang.toLowerCase().includes("russian");
+    dialectId.toLowerCase().includes("russian") || primaryLanguage.toLowerCase().includes("russian");
 
   const russianRule = isRussianLang
     ? `
@@ -107,13 +126,14 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
   return {
     prompt:
       `${locationLine}${previousLine}\n\n` +
+      `${scriptLockBlock}\n\n` +
       `Context: ${contextPrompt}\n` +
       `Intensity: ${intensityPrompt}\n` +
       `${antiLeakageRule}\n` +
       `${lengthRule}\n` +
       `${noAIRule}` +
       `${russianRule}\n\n` +
-      `Rewrite the following text the way YOU would actually send it:\n` +
+      `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +
       `${formattingRule}`,
     slangRequested: true,

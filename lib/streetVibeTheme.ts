@@ -202,6 +202,77 @@ export const OUTPUT_STANDARD_OPTIONS: { value: string; label: string }[] = [
   { value: "Hebrew (Standard)", label: "🇮🇱 Hebrew" },
 ];
 
+/** Universal script rule injected before dialect-specific locks (translate API). */
+export const SCRIPT_OUTPUT_UNIVERSAL_RULE =
+  "The output text must be written in the native script of the target dialect. For Israel/Hebrew, use Hebrew characters only.";
+
+/**
+ * Each output dialect maps to its primary language + mandatory script for the LLM.
+ * Keys must match `OUTPUT_PREMIUM_OPTIONS` / `OUTPUT_STANDARD_OPTIONS` `value` strings.
+ */
+export const DIALECT_PRIMARY_LANGUAGE: Record<string, string> = {
+  "London Roadman": "English (UK street / Multicultural London English)",
+  "Jamaican Patois": "English (Jamaican Patois)",
+  "New York Brooklyn": "English (NYC / Brooklyn street)",
+  "Tokyo Gyaru": "Japanese",
+  "Paris Banlieue": "French",
+  "Russian Street": "Russian",
+  "Mexico City Barrio": "Spanish (Mexico)",
+  "Rio Favela": "Portuguese (Brazil)",
+  "Israeli Street": "Hebrew (Israeli street / spoken Hebrew)",
+  "English (Standard)": "English",
+  Spanish: "Spanish",
+  French: "French",
+  German: "German",
+  Italian: "Italian",
+  Russian: "Russian",
+  Portuguese: "Portuguese",
+  Japanese: "Japanese",
+  Arabic: "Arabic",
+  "Hebrew (Standard)": "Hebrew (Modern Israeli Hebrew)",
+};
+
+/** Dialect-specific script enforcement (appended after SCRIPT_OUTPUT_UNIVERSAL_RULE). */
+export const DIALECT_SCRIPT_LOCK: Record<string, string> = {
+  "London Roadman":
+    "Write ONLY in English using the Latin alphabet. British street tone; no other languages or scripts.",
+  "Jamaican Patois":
+    "Write ONLY in English using the Latin alphabet (Jamaican Patois orthography). No plain standard-English-only paraphrase unless the patois requires it.",
+  "New York Brooklyn":
+    "Write ONLY in English using the Latin alphabet. NYC street tone; no other languages or scripts.",
+  "Tokyo Gyaru":
+    "Write ONLY in Japanese using hiragana, katakana, and kanji as appropriate. Do not use Latin letters, romaji, or English for the main message body.",
+  "Paris Banlieue":
+    "Write ONLY in French using the Latin alphabet (with correct accents). No English.",
+  "Russian Street":
+    "Write ONLY in Russian using Cyrillic letters. Do not use Latin characters or English.",
+  "Mexico City Barrio":
+    "Write ONLY in Spanish using the Latin alphabet (Mexico). No English.",
+  "Rio Favela":
+    "Write ONLY in Brazilian Portuguese using the Latin alphabet. No English.",
+  "Israeli Street":
+    "TARGET DIALECT: Israeli Street (Israel). Write the rewritten message ONLY in Hebrew script (Unicode letters א–ת). Do not use English, Latin, or transliterated Hebrew (e.g. sababa, achi, yalla) as the main output — use authentic Hebrew orthography for slang.",
+  "English (Standard)": "Write ONLY in English using the Latin alphabet.",
+  Spanish: "Write ONLY in Spanish using the Latin alphabet.",
+  French: "Write ONLY in French using the Latin alphabet (with accents).",
+  German: "Write ONLY in German using the Latin alphabet.",
+  Italian: "Write ONLY in Italian using the Latin alphabet.",
+  Russian: "Write ONLY in Russian using Cyrillic. No Latin.",
+  Portuguese: "Write ONLY in Portuguese using the Latin alphabet.",
+  Japanese: "Write ONLY in Japanese (hiragana, katakana, kanji). No romaji or English for the translation.",
+  Arabic: "Write ONLY in Arabic using Arabic script. No English or Latin transliteration for the main text.",
+  "Hebrew (Standard)":
+    "TARGET: Modern Israeli Hebrew. Write ONLY in Hebrew script (א–ת). No English or Latin. Use proper Hebrew characters for every word of the translation.",
+};
+
+export function getDialectPrimaryLanguage(dialectId: string): string {
+  return DIALECT_PRIMARY_LANGUAGE[dialectId] ?? dialectId;
+}
+
+export function getDialectScriptLock(dialectId: string): string {
+  return DIALECT_SCRIPT_LOCK[dialectId] ?? `Write the translation ONLY in the native language and script that matches the target "${dialectId}". Do not default to English unless the target is an English dialect.`;
+}
+
 export const NEUTRAL_BG = "#111111";
 export const NEUTRAL_ACCENT = "#888888";
 
