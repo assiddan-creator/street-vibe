@@ -2,6 +2,12 @@
 
 import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FlipButtonSkeleton,
+  PopupWordSkeleton,
+  TranslationBlockSkeleton,
+  TtsPlaySkeleton,
+} from "@/components/ui/Skeleton";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
@@ -9,17 +15,15 @@ import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { GLASS_INPUT, GLASS_OUTPUT_CARD, GLASS_SELECT, GLASS_SELECT_COMPACT } from "@/lib/themeUiClasses";
 import {
   INPUT_LANGUAGES,
-  LOADING_MESSAGES,
   OUTPUT_PREMIUM_OPTIONS,
   OUTPUT_STANDARD_OPTIONS,
-  STANDARD_LOADING,
-  isPremiumSlang,
   parseDictionaryPills,
   resolveTheme,
   splitTranslationAndDictionary,
 } from "@/lib/streetVibeTheme";
 import { getCityThemeForDialect } from "@/lib/themeConfig";
 import { lookupSlang } from "@/lib/slangDictionary";
+import { getOnboardingPayloadForApi } from "@/lib/onboardingStorage";
 import { fetchTtsAudioUrl } from "@/lib/ttsClient";
 
 export default function SpeakPage() {
@@ -75,9 +79,6 @@ export default function SpeakPage() {
     setDialect(outputLang);
   }, [outputLang, setDialect]);
 
-  const loadingMessage =
-    isPremiumSlang(outputLang) && LOADING_MESSAGES[outputLang] ? LOADING_MESSAGES[outputLang] : STANDARD_LOADING;
-
   const translateText = async (text: string, dialect: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -87,6 +88,7 @@ export default function SpeakPage() {
     setTranslatedText("");
     setDictionaryPills([]);
     try {
+      const ob = getOnboardingPayloadForApi();
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,6 +100,7 @@ export default function SpeakPage() {
           isPremiumSelected: true,
           context,
           previousMessage: null,
+          ...(ob ? { onboardingAge: ob.onboardingAge, onboardingGender: ob.onboardingGender } : {}),
         }),
       });
       const data = (await res.json()) as { fullText?: string; error?: string };
@@ -149,7 +152,8 @@ export default function SpeakPage() {
     setTtsError(null);
     try {
       if (ttsEngine === "native") setTtsPlaying(true);
-      const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context);
+      const ob = getOnboardingPayloadForApi();
+      const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context, ob ?? undefined);
       if (url === null) {
         setTtsPlaying(false);
         return;
@@ -228,7 +232,7 @@ export default function SpeakPage() {
             ✕
           </button>
           <p className="mb-1 pr-6 text-[11px] font-bold text-white">{popupWord.word}</p>
-          <p className="text-[11px] text-white/80">{popupLoading ? "Looking up..." : popupWord.meaning}</p>
+          {popupLoading ? <PopupWordSkeleton /> : <p className="text-[11px] text-white/80">{popupWord.meaning}</p>}
           {popupWord.example ? (
             <p className="mt-1 text-[10px] italic text-white/50">&quot;{popupWord.example}&quot;</p>
           ) : null}
@@ -541,7 +545,9 @@ export default function SpeakPage() {
                 className="absolute inset-0"
                 style={{ background: `linear-gradient(135deg, ${theme.accent}33 0%, #00000099 100%)` }}
               />
-              <span className="relative z-10 drop-shadow-lg">{loading ? "Flipping…" : "Flip it 🔥"}</span>
+              <span className="relative z-10 flex w-full justify-center drop-shadow-lg">
+                {loading ? <FlipButtonSkeleton /> : "Flip it 🔥"}
+              </span>
             </button>
 
             <button
@@ -585,9 +591,7 @@ export default function SpeakPage() {
               <p className="mb-0.5 text-[10px] text-white/50">Street</p>
               <div className="min-h-0 text-sm font-bold leading-snug">
                 {loading ? (
-                  <p className="animate-pulse text-xs font-semibold" style={{ color: theme.accent }}>
-                    {loadingMessage}
-                  </p>
+                  <TranslationBlockSkeleton accent={theme.accent} />
                 ) : error ? (
                   <p className="text-[11px] font-normal text-red-400">{error}</p>
                 ) : translatedText.trim() ? (
@@ -626,7 +630,13 @@ export default function SpeakPage() {
                       fontFamily: "'Permanent Marker', cursive",
                     }}
                   >
-                    {ttsLoading ? "⏳ Loading..." : ttsPlaying ? "🔊 Playing..." : "▶ Play Street Voice"}
+                    {ttsLoading ? (
+                      <TtsPlaySkeleton />
+                    ) : ttsPlaying ? (
+                      "🔊 Playing..."
+                    ) : (
+                      "▶ Play Street Voice"
+                    )}
                   </button>
                   {ttsError ? <p className="text-center text-[10px] text-red-400">{ttsError}</p> : null}
                 </div>

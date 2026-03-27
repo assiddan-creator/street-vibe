@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { applyMinimaxAgeGenderAdjustments } from "@/lib/minimaxVoiceTuning";
+import { parseOnboardingAge, parseOnboardingGender } from "@/lib/onboardingApi";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 import { resolveVoiceForDialect } from "@/lib/voices";
 
@@ -183,6 +185,21 @@ export async function POST(req: NextRequest) {
 
   const voiceConfig = resolveVoiceForDialect(dialect as string | undefined);
 
+  let speed = (tuning?.speed as number | undefined) ?? voiceConfig.speed;
+  let pitch = (tuning?.pitch as number | undefined) ?? voiceConfig.pitch;
+  const onboardingAge = parseOnboardingAge(body.onboardingAge);
+  const onboardingGender = parseOnboardingGender(body.onboardingGender);
+  if (onboardingAge !== undefined || onboardingGender !== undefined) {
+    const tuned = applyMinimaxAgeGenderAdjustments({
+      speed,
+      pitch,
+      age: onboardingAge,
+      gender: onboardingGender,
+    });
+    speed = tuned.speed;
+    pitch = tuned.pitch;
+  }
+
   try {
     const minimaxRes = await fetch("https://api.replicate.com/v1/predictions", {
       method: "POST",
@@ -195,8 +212,8 @@ export async function POST(req: NextRequest) {
         input: {
           text,
           voice_id: voiceConfig.voice_id,
-          speed: (tuning?.speed as number | undefined) ?? voiceConfig.speed,
-          pitch: (tuning?.pitch as number | undefined) ?? voiceConfig.pitch,
+          speed,
+          pitch,
           emotion: (tuning?.emotion as string | undefined) ?? voiceConfig.emotion,
           volume: (tuning?.volume as number | undefined) ?? 1.0,
           language_boost: LANGUAGE_BOOST_MAP[dialect as string ?? ""] ?? "Automatic",

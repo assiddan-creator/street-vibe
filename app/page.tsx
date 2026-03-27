@@ -3,6 +3,12 @@
 import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
+import {
+  AppShellSkeleton,
+  FlipButtonSkeleton,
+  PopupWordSkeleton,
+  TranslationBlockSkeleton,
+} from "@/components/ui/Skeleton";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
@@ -15,18 +21,15 @@ import {
 } from "@/lib/themeUiClasses";
 import {
   INPUT_LANGUAGES,
-  LOADING_MESSAGES,
   OUTPUT_PREMIUM_OPTIONS,
   OUTPUT_STANDARD_OPTIONS,
-  STANDARD_LOADING,
-  isPremiumSlang,
   parseDictionaryPills,
   resolveTheme,
   splitTranslationAndDictionary,
 } from "@/lib/streetVibeTheme";
 import { getCityThemeForDialect } from "@/lib/themeConfig";
 import { lookupSlang } from "@/lib/slangDictionary";
-import { hasOnboardingAnswers } from "@/lib/onboardingStorage";
+import { getOnboardingPayloadForApi, hasOnboardingAnswers } from "@/lib/onboardingStorage";
 
 export default function Home() {
   const [onboardingReady, setOnboardingReady] = useState(false);
@@ -88,11 +91,6 @@ export default function Home() {
     setDialect(outputLang);
   }, [outputLang, setDialect]);
 
-  const loadingMessage =
-    isPremiumSlang(outputLang) && LOADING_MESSAGES[outputLang]
-      ? LOADING_MESSAGES[outputLang]
-      : STANDARD_LOADING;
-
   const translateText = async (text: string, dialect: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -104,6 +102,7 @@ export default function Home() {
     setDictionaryPills([]);
 
     try {
+      const ob = getOnboardingPayloadForApi();
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,6 +114,7 @@ export default function Home() {
           isPremiumSelected: true,
           context,
           previousMessage: null,
+          ...(ob ? { onboardingAge: ob.onboardingAge, onboardingGender: ob.onboardingGender } : {}),
         }),
       });
 
@@ -207,7 +207,7 @@ export default function Home() {
   const isIdle = !isActive;
 
   if (!onboardingReady) {
-    return <div className="min-h-[100dvh] bg-[#0a0a0a]" aria-busy="true" aria-label="Loading" />;
+    return <AppShellSkeleton />;
   }
 
   if (showOnboarding) {
@@ -230,7 +230,11 @@ export default function Home() {
             ✕
           </button>
           <p className="mb-1 pr-6 text-[11px] font-bold text-white">{popupWord.word}</p>
-          <p className="text-[11px] text-white/80">{popupLoading ? "Looking up..." : popupWord.meaning}</p>
+          {popupLoading ? (
+            <PopupWordSkeleton />
+          ) : (
+            <p className="text-[11px] text-white/80">{popupWord.meaning}</p>
+          )}
           {popupWord.example ? (
             <p className="mt-1 text-[10px] italic text-white/50">&quot;{popupWord.example}&quot;</p>
           ) : null}
@@ -551,7 +555,9 @@ export default function Home() {
                 className="absolute inset-0"
                 style={{ background: `linear-gradient(135deg, ${theme.accent}33 0%, #00000099 100%)` }}
               />
-              <span className="relative z-10 drop-shadow-lg">{loading ? "Flipping…" : "Flip it 🔥"}</span>
+              <span className="relative z-10 flex w-full justify-center drop-shadow-lg">
+                {loading ? <FlipButtonSkeleton /> : "Flip it 🔥"}
+              </span>
             </button>
 
             <button
@@ -594,9 +600,7 @@ export default function Home() {
               <p className="mb-0.5 text-[10px] text-white/50">Street</p>
               <div className="min-h-0 text-sm font-bold leading-snug">
                 {loading ? (
-                  <p className="animate-pulse text-xs font-semibold" style={{ color: theme.accent }}>
-                    {loadingMessage}
-                  </p>
+                  <TranslationBlockSkeleton accent={theme.accent} />
                 ) : error ? (
                   <p className="text-[11px] font-normal text-red-400">{error}</p>
                 ) : translatedText.trim() ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   type OnboardingAge,
   type OnboardingGender,
@@ -32,45 +32,27 @@ const GENDER_OPTIONS: { value: OnboardingGender; label: string }[] = [
   { value: "prefer-not", label: "Prefer not to say" },
 ];
 
-type Step = 0 | 1 | 2;
-
 type Props = {
   onComplete: () => void;
 };
 
 export function OnboardingFlow({ onComplete }: Props) {
-  const [step, setStep] = useState<Step>(0);
   const [vibe, setVibe] = useState<OnboardingVibe | null>(null);
   const [age, setAge] = useState<OnboardingAge | null>(null);
   const [gender, setGender] = useState<OnboardingGender | null>(null);
 
-  const goNext = useCallback(() => {
-    if (step === 0 && vibe) setStep(1);
-    else if (step === 1 && age) setStep(2);
-    else if (step === 2 && gender) {
-      saveOnboardingAnswers({ vibe: vibe!, age: age!, gender: gender! });
-      onComplete();
-    }
-  }, [step, vibe, age, gender, onComplete]);
+  const canSubmit = useMemo(() => vibe !== null && age !== null && gender !== null, [vibe, age, gender]);
 
-  const goBack = useCallback(() => {
-    if (step > 0) setStep((s) => (s - 1) as Step);
-  }, []);
-
-  const canNext =
-    (step === 0 && vibe !== null) || (step === 1 && age !== null) || (step === 2 && gender !== null);
-
-  const titles = ["What’s your target vibe?", "How old are you?", "How do you identify?"];
-  const subtitles = [
-    "We’ll tune translations to match your style.",
-    "Helps us keep tone age-appropriate.",
-    "Optional — used only to personalize voice & copy.",
-  ];
+  const handleSubmit = () => {
+    if (!canSubmit || !vibe || !age || !gender) return;
+    saveOnboardingAnswers({ vibe, age, gender });
+    onComplete();
+  };
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col bg-[#0a0a0a] px-4 pb-8 pt-10">
+    <div className="relative flex min-h-[100dvh] flex-col overflow-y-auto bg-[#0a0a0a] px-4 pb-10 pt-8">
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.12]"
+        className="pointer-events-none fixed inset-0 opacity-[0.12]"
         style={{
           background:
             "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(74, 222, 128, 0.35), transparent), radial-gradient(ellipse 60% 40% at 100% 50%, rgba(59, 130, 246, 0.12), transparent)",
@@ -78,7 +60,7 @@ export function OnboardingFlow({ onComplete }: Props) {
         aria-hidden
       />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[min(100%,400px)] flex-1 flex-col">
+      <div className="relative z-10 mx-auto w-full max-w-[min(100%,420px)] pb-4">
         <header className="mb-8 text-center">
           <p
             className="mb-1 text-2xl text-white"
@@ -86,30 +68,15 @@ export function OnboardingFlow({ onComplete }: Props) {
           >
             StreetVibe
           </p>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-white/35">Quick setup</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-white/35">Tune your experience</p>
         </header>
 
-        <div className="mb-6 flex justify-center gap-2" role="status" aria-label={`Step ${step + 1} of 3`}>
-          {([0, 1, 2] as const).map((i) => (
-            <span
-              key={i}
-              className="h-1.5 rounded-full transition-all duration-500 ease-out"
-              style={{
-                width: step === i ? 28 : 8,
-                backgroundColor: step >= i ? ACCENT : "rgba(255,255,255,0.12)",
-                opacity: step >= i ? 1 : 0.5,
-              }}
-            />
-          ))}
-        </div>
-
-        <div key={step} className="onboarding-step-enter flex flex-1 flex-col">
-          <h1 className="mb-1 text-center text-lg font-semibold tracking-tight text-white">{titles[step]}</h1>
-          <p className="mb-6 text-center text-[13px] leading-relaxed text-white/45">{subtitles[step]}</p>
-
-          <div className="flex flex-1 flex-col gap-2">
-            {step === 0 &&
-              VIBE_OPTIONS.map((opt) => {
+        <div className="onboarding-step-enter space-y-8">
+          <section>
+            <h2 className="mb-1 text-base font-semibold tracking-tight text-white">Target vibe</h2>
+            <p className="mb-3 text-[13px] text-white/45">How should translations feel?</p>
+            <div className="flex flex-col gap-2">
+              {VIBE_OPTIONS.map((opt) => {
                 const on = vibe === opt.value;
                 return (
                   <button
@@ -117,7 +84,7 @@ export function OnboardingFlow({ onComplete }: Props) {
                     type="button"
                     onClick={() => setVibe(opt.value)}
                     aria-pressed={on}
-                    className="group flex flex-col items-start rounded-xl border px-4 py-3 text-left transition-all duration-300 active:scale-[0.98]"
+                    className="group flex flex-col items-start rounded-xl border px-4 py-3 text-left transition-all duration-300 active:scale-[0.99]"
                     style={{
                       borderColor: on ? `${ACCENT}88` : "rgba(255,255,255,0.08)",
                       backgroundColor: on ? `${ACCENT}14` : "rgba(0,0,0,0.35)",
@@ -125,15 +92,18 @@ export function OnboardingFlow({ onComplete }: Props) {
                     }}
                   >
                     <span className="text-[15px] font-semibold text-white">{opt.label}</span>
-                    <span className="text-[12px] text-white/40 transition-colors group-hover:text-white/55">
-                      {opt.hint}
-                    </span>
+                    <span className="text-[12px] text-white/40">{opt.hint}</span>
                   </button>
                 );
               })}
+            </div>
+          </section>
 
-            {step === 1 &&
-              AGE_OPTIONS.map((opt) => {
+          <section>
+            <h2 className="mb-1 text-base font-semibold tracking-tight text-white">Age</h2>
+            <p className="mb-3 text-[13px] text-white/45">Helps keep tone age-appropriate.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {AGE_OPTIONS.map((opt) => {
                 const on = age === opt.value;
                 return (
                   <button
@@ -141,21 +111,26 @@ export function OnboardingFlow({ onComplete }: Props) {
                     type="button"
                     onClick={() => setAge(opt.value)}
                     aria-pressed={on}
-                    className="rounded-xl border px-4 py-3.5 text-center text-[15px] font-semibold transition-all duration-300 active:scale-[0.98]"
+                    className="rounded-xl border px-3 py-3.5 text-center text-[14px] font-semibold transition-all duration-300 active:scale-[0.98]"
                     style={{
                       borderColor: on ? `${ACCENT}88` : "rgba(255,255,255,0.08)",
                       backgroundColor: on ? `${ACCENT}14` : "rgba(0,0,0,0.35)",
-                      color: on ? ACCENT : "rgba(255,255,255,0.85)",
-                      boxShadow: on ? `0 0 20px ${ACCENT}22` : undefined,
+                      color: on ? ACCENT : "rgba(255,255,255,0.88)",
+                      boxShadow: on ? `0 0 16px ${ACCENT}18` : undefined,
                     }}
                   >
                     {opt.label}
                   </button>
                 );
               })}
+            </div>
+          </section>
 
-            {step === 2 &&
-              GENDER_OPTIONS.map((opt) => {
+          <section>
+            <h2 className="mb-1 text-base font-semibold tracking-tight text-white">Gender</h2>
+            <p className="mb-3 text-[13px] text-white/45">Personalizes voice & phrasing. Optional to share.</p>
+            <div className="flex flex-col gap-2">
+              {GENDER_OPTIONS.map((opt) => {
                 const on = gender === opt.value;
                 return (
                   <button
@@ -167,7 +142,7 @@ export function OnboardingFlow({ onComplete }: Props) {
                     style={{
                       borderColor: on ? `${ACCENT}88` : "rgba(255,255,255,0.08)",
                       backgroundColor: on ? `${ACCENT}14` : "rgba(0,0,0,0.35)",
-                      color: on ? ACCENT : "rgba(255,255,255,0.85)",
+                      color: on ? ACCENT : "rgba(255,255,255,0.88)",
                       boxShadow: on ? `0 0 20px ${ACCENT}22` : undefined,
                     }}
                   >
@@ -175,35 +150,23 @@ export function OnboardingFlow({ onComplete }: Props) {
                   </button>
                 );
               })}
-          </div>
+            </div>
+          </section>
         </div>
 
-        <div className="mt-8 flex gap-3">
-          {step > 0 ? (
-            <button
-              type="button"
-              onClick={goBack}
-              className="rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm font-medium text-white/70 transition-all duration-200 hover:bg-white/10"
-            >
-              Back
-            </button>
-          ) : (
-            <div className="w-[88px] shrink-0" aria-hidden />
-          )}
-          <button
-            type="button"
-            disabled={!canNext}
-            onClick={goNext}
-            className="min-w-0 flex-1 rounded-xl py-3.5 text-sm font-bold text-black transition-all duration-300 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-            style={{
-              background: canNext ? `linear-gradient(135deg, ${ACCENT}, #22c55e)` : "rgba(255,255,255,0.15)",
-              color: canNext ? "#0a0a0a" : "rgba(255,255,255,0.35)",
-              boxShadow: canNext ? `0 4px 24px ${ACCENT}44` : undefined,
-            }}
-          >
-            {step === 2 ? "Enter StreetVibe" : "Continue"}
-          </button>
-        </div>
+        <button
+          type="button"
+          disabled={!canSubmit}
+          onClick={handleSubmit}
+          className="sticky bottom-0 z-20 mt-10 w-full rounded-xl py-3.5 text-sm font-bold transition-all duration-300 enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+          style={{
+            background: canSubmit ? `linear-gradient(135deg, ${ACCENT}, #22c55e)` : "rgba(255,255,255,0.12)",
+            color: canSubmit ? "#0a0a0a" : "rgba(255,255,255,0.35)",
+            boxShadow: canSubmit ? `0 4px 28px ${ACCENT}44` : undefined,
+          }}
+        >
+          Enter StreetVibe
+        </button>
       </div>
     </div>
   );

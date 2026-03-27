@@ -60,3 +60,10 @@ export function saveOnboardingAnswers(answers: Omit<OnboardingAnswers, "complete
   };
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
+
+/** Safe fields to send with translate/TTS (client-side). */
+export function getOnboardingPayloadForApi(): { onboardingAge: OnboardingAge; onboardingGender: OnboardingGender } | null {
+  const o = getOnboardingAnswers();
+  if (!o) return null;
+  return { onboardingAge: o.age, onboardingGender: o.gender };
+}
