@@ -1,3 +1,4 @@
+import { STREETVIBE_DIALECT_REGISTRY, type StreetVibeDialectId } from "@/lib/dialectRegistry";
 import type { TtsVoiceGender } from "@/lib/ttsVoiceGender";
 
 /**
@@ -31,51 +32,12 @@ export type GoogleDialectVoiceConfig = {
 };
 
 export const GOOGLE_VOICE_MAP: Record<string, GoogleDialectVoiceConfig> = {
-  "London Roadman": {
-    languageCode: "en-GB",
-    pitch: -1.5,
-    speakingRate: 0.95,
-  },
-  "Jamaican Patois": {
-    languageCode: "en-GB",
-    pitch: -1.5,
-    speakingRate: 0.9,
-  },
-  "New York Brooklyn": {
-    languageCode: "en-US",
-    pitch: 0,
-    speakingRate: 0.95,
-  },
-  "Tokyo Gyaru": {
-    languageCode: "ja-JP",
-    pitch: 0.5,
-    speakingRate: 1.0,
-  },
-  "Paris Banlieue": {
-    languageCode: "fr-FR",
-    pitch: -1.5,
-    speakingRate: 0.95,
-  },
-  "Russian Street": {
-    languageCode: "ru-RU",
-    pitch: -1.5,
-    speakingRate: 0.9,
-  },
-  "Mexico City Barrio": {
-    languageCode: "es-US",
-    pitch: -1.5,
-    speakingRate: 0.95,
-  },
-  "Rio Favela": {
-    languageCode: "pt-BR",
-    pitch: -1.5,
-    speakingRate: 0.95,
-  },
-  "Israeli Street": {
-    languageCode: "he-IL",
-    pitch: 0,
-    speakingRate: 0.95,
-  },
+  ...Object.fromEntries(
+    (Object.keys(STREETVIBE_DIALECT_REGISTRY) as StreetVibeDialectId[]).map((id) => {
+      const g = STREETVIBE_DIALECT_REGISTRY[id].google;
+      return [id, { languageCode: g.languageCode, pitch: g.pitch, speakingRate: g.speakingRate }];
+    })
+  ),
 };
 
 export const GOOGLE_VOICE_DEFAULT: GoogleDialectVoiceConfig = {

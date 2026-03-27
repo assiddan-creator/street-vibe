@@ -23,6 +23,8 @@ import {
 } from "@/lib/streetVibeTheme";
 import { getCityThemeForDialect } from "@/lib/themeConfig";
 import { lookupSlang } from "@/lib/slangDictionary";
+import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
+
 export default function Home() {
   const [outputLang, setOutputLang] = useState("Jamaican Patois");
   const [inputLanguage, setInputLanguage] = useState("he-IL");
@@ -43,6 +45,11 @@ export default function Home() {
     y: number;
   } | null>(null);
   const [popupLoading, setPopupLoading] = useState(false);
+  const [ttsGender, setTtsGender] = useState<TtsVoiceGender>("male");
+
+  useEffect(() => {
+    setTtsGender(getStoredTtsGender());
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -346,6 +353,49 @@ export default function Home() {
               </select>
             </div>
           )}
+        </div>
+
+        <div className="mb-3 flex flex-col gap-1">
+          <p
+            className={
+              isIdle
+                ? "text-center text-[8px] uppercase tracking-widest text-white/25"
+                : "text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
+            }
+          >
+            🔊 Voice (TTS)
+          </p>
+          <div className="flex items-center justify-center gap-1">
+            {(
+              [
+                { value: "male" as const, label: "Male" },
+                { value: "female" as const, label: "Female" },
+              ] as const
+            ).map(({ value, label }) => {
+              const on = ttsGender === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    setTtsGender(value);
+                    setStoredTtsGender(value);
+                  }}
+                  aria-pressed={on}
+                  className={`min-w-[5.25rem] rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
+                    on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
+                  }`}
+                  style={
+                    on
+                      ? { borderColor: theme.accent, color: theme.accent, backgroundColor: `${theme.accent}18` }
+                      : undefined
+                  }
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className={`flex flex-col items-center transition-all duration-500 ${isActive ? "mb-4 mt-0" : "mb-8 mt-8"}`}>

@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  DICT_SEPARATOR,
   getDialectPrimaryLanguage,
   getDialectScriptLock,
   SCRIPT_OUTPUT_UNIVERSAL_RULE,
+  splitTranslationAndDictionary,
 } from "@/lib/streetVibeTheme";
+import {
+  containsLatinLeak,
+  countLatinTokens,
+  ISRAELI_STREET_RETRY_REINFORCEMENT,
+  sanitizeIsraeliStreetOutput,
+  shouldRetryIsraeliStreetOutput,
+} from "@/lib/hebrewOutputGuard";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -140,6 +149,28 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
   };
 }
 
+async function callGeminiGenerate(
+  apiKey: string,
+  prompt: string,
+  slangRequested: boolean
+): Promise<{ text: string; raw: unknown }> {
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
+  const geminiRes = await fetch(GEMINI_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: slangRequested ? 0.7 : 0.2,
+        maxOutputTokens: 1024,
+      },
+    }),
+  });
+  const data = await geminiRes.json();
+  const text = (data?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+  return { text, raw: data };
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
@@ -189,29 +220,67 @@ export async function POST(req: NextRequest) {
     previousMessage: previousMessage ? String(previousMessage) : null,
   });
 
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
-
   try {
-    const geminiRes = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: slangRequested ? 0.7 : 0.2,
-          maxOutputTokens: 1024,
-        },
-      }),
-    });
-
-    const data = await geminiRes.json();
-    const fullText = (data?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+    const first = await callGeminiGenerate(apiKey, prompt, slangRequested);
+    let fullText = first.text;
 
     if (!fullText) {
       return NextResponse.json(
-        { error: "Gemini returned no candidates", data },
+        { error: "Gemini returned no candidates", data: first.raw },
         { status: 502, headers: corsHeaders }
       );
+    }
+
+    const dialectId = String(currentLang);
+
+    if (dialectId === "Israeli Street") {
+      const { translated, dictRaw } = splitTranslationAndDictionary(fullText);
+      let t = translated;
+      const latinBefore = countLatinTokens(t);
+
+      if (containsLatinLeak(t)) {
+        console.warn("[translate][Israeli Street] Latin leakage detected in initial translation", {
+          latinTokenCount: latinBefore,
+          preview: t.slice(0, 140),
+        });
+      }
+
+      const sanitized = sanitizeIsraeliStreetOutput(t);
+      const latinAfterSanitize = countLatinTokens(sanitized);
+      if (sanitized !== t && (latinAfterSanitize < latinBefore || !containsLatinLeak(sanitized))) {
+        console.info("[translate][Israeli Street] Sanitization reduced Latin leakage", {
+          latinBefore,
+          latinAfter: latinAfterSanitize,
+        });
+      }
+      t = sanitized;
+
+      let combined = dictRaw ? `${t}${DICT_SEPARATOR}${dictRaw}` : t;
+
+      if (shouldRetryIsraeliStreetOutput(t)) {
+        console.warn("[translate][Israeli Street] Triggering Hebrew-only retry (single attempt)", {
+          latinTokenCountAfterSanitize: latinAfterSanitize,
+        });
+        const retryPrompt = prompt + ISRAELI_STREET_RETRY_REINFORCEMENT;
+        const second = await callGeminiGenerate(apiKey, retryPrompt, slangRequested);
+        if (!second.text) {
+          console.warn("[translate][Israeli Street] Retry returned empty; keeping sanitized first-pass translation");
+          fullText = combined;
+        } else {
+          const { translated: t2, dictRaw: d2 } = splitTranslationAndDictionary(second.text);
+          let t2s = sanitizeIsraeliStreetOutput(t2);
+          if (containsLatinLeak(t2s)) {
+            console.warn("[translate][Israeli Street] Latin leakage remains after retry", {
+              latinTokenCount: countLatinTokens(t2s),
+              preview: t2s.slice(0, 140),
+            });
+          }
+          combined = d2 ? `${t2s}${DICT_SEPARATOR}${d2}` : t2s;
+          fullText = combined;
+        }
+      } else {
+        fullText = combined;
+      }
     }
 
     return NextResponse.json({ fullText }, { status: 200, headers: corsHeaders });

@@ -1,3 +1,5 @@
+import { STREETVIBE_DIALECT_REGISTRY, type StreetVibeDialectId } from "@/lib/dialectRegistry";
+
 export type DialectTheme = {
   id: string;
   pillLabel: string;
@@ -211,15 +213,12 @@ export const SCRIPT_OUTPUT_UNIVERSAL_RULE =
  * Keys must match `OUTPUT_PREMIUM_OPTIONS` / `OUTPUT_STANDARD_OPTIONS` `value` strings.
  */
 export const DIALECT_PRIMARY_LANGUAGE: Record<string, string> = {
-  "London Roadman": "English (UK street / Multicultural London English)",
-  "Jamaican Patois": "English (Jamaican Patois)",
-  "New York Brooklyn": "English (NYC / Brooklyn street)",
-  "Tokyo Gyaru": "Japanese",
-  "Paris Banlieue": "French",
-  "Russian Street": "Russian",
-  "Mexico City Barrio": "Spanish (Mexico)",
-  "Rio Favela": "Portuguese (Brazil)",
-  "Israeli Street": "Hebrew (Israeli street / spoken Hebrew)",
+  ...Object.fromEntries(
+    (Object.keys(STREETVIBE_DIALECT_REGISTRY) as StreetVibeDialectId[]).map((id) => [
+      id,
+      STREETVIBE_DIALECT_REGISTRY[id].primaryLanguage,
+    ])
+  ),
   "English (Standard)": "English",
   Spanish: "Spanish",
   French: "French",
@@ -234,24 +233,12 @@ export const DIALECT_PRIMARY_LANGUAGE: Record<string, string> = {
 
 /** Dialect-specific script enforcement (appended after SCRIPT_OUTPUT_UNIVERSAL_RULE). */
 export const DIALECT_SCRIPT_LOCK: Record<string, string> = {
-  "London Roadman":
-    "Write ONLY in English using the Latin alphabet. British street tone; no other languages or scripts.",
-  "Jamaican Patois":
-    "Write ONLY in English using the Latin alphabet (Jamaican Patois orthography). No plain standard-English-only paraphrase unless the patois requires it.",
-  "New York Brooklyn":
-    "Write ONLY in English using the Latin alphabet. NYC street tone; no other languages or scripts.",
-  "Tokyo Gyaru":
-    "Write ONLY in Japanese using hiragana, katakana, and kanji as appropriate. Do not use Latin letters, romaji, or English for the main message body.",
-  "Paris Banlieue":
-    "Write ONLY in French using the Latin alphabet (with correct accents). No English.",
-  "Russian Street":
-    "Write ONLY in Russian using Cyrillic letters. Do not use Latin characters or English.",
-  "Mexico City Barrio":
-    "Write ONLY in Spanish using the Latin alphabet (Mexico). No English.",
-  "Rio Favela":
-    "Write ONLY in Brazilian Portuguese using the Latin alphabet. No English.",
-  "Israeli Street":
-    "TARGET DIALECT: Israeli Street (Israel). Write the rewritten message ONLY in Hebrew script (Unicode letters א–ת). Do not use English, Latin, or transliterated Hebrew (e.g. sababa, achi, yalla) as the main output — use authentic Hebrew orthography for slang.",
+  ...Object.fromEntries(
+    (Object.keys(STREETVIBE_DIALECT_REGISTRY) as StreetVibeDialectId[]).map((id) => [
+      id,
+      STREETVIBE_DIALECT_REGISTRY[id].scriptLock,
+    ])
+  ),
   "English (Standard)": "Write ONLY in English using the Latin alphabet.",
   Spanish: "Write ONLY in Spanish using the Latin alphabet.",
   French: "Write ONLY in French using the Latin alphabet (with accents).",
@@ -277,15 +264,12 @@ export const NEUTRAL_BG = "#111111";
 export const NEUTRAL_ACCENT = "#888888";
 
 export const LOADING_MESSAGES: Record<string, string> = {
-  "London Roadman": "Hold tight bruv, mandem is translating...",
-  "Jamaican Patois": "Hold a vibes, mi a cook di patwa...",
-  "New York Brooklyn": "Hold up my guy, cooking up the heat...",
-  "Tokyo Gyaru": "Chotto matte! Cooking something yabai...",
-  "Paris Banlieue": "Attends 2s gros, je prépare une dinguerie...",
-  "Russian Street": "Sekundu bratan, shcha vsyo budet...",
-  "Mexico City Barrio": "Aguanta tantito, wey...",
-  "Rio Favela": "Segura aí, mano...",
-  "Israeli Street": "רגע אחד, מתרגמים...",
+  ...Object.fromEntries(
+    (Object.keys(STREETVIBE_DIALECT_REGISTRY) as StreetVibeDialectId[]).map((id) => [
+      id,
+      STREETVIBE_DIALECT_REGISTRY[id].ui.loadingMessage,
+    ])
+  ),
 };
 
 export const STANDARD_LOADING = "Translating…";
