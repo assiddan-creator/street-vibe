@@ -222,7 +222,7 @@ export default function Home() {
         className="mx-auto flex w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-4 pt-3"
         onClick={() => setPopupWord(null)}
       >
-        <header className="relative mb-4 flex shrink-0 items-center justify-center">
+        <header className="mb-4 flex shrink-0 items-center justify-center">
           <span
             className="text-3xl text-white drop-shadow-lg"
             style={{
@@ -232,15 +232,6 @@ export default function Home() {
           >
             StreetVibe
           </span>
-          <div
-            className="absolute right-0 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2 py-1 text-[11px] backdrop-blur-md"
-            style={{ color: theme.accent }}
-          >
-            <span className="shrink-0 text-base leading-none" aria-hidden>
-              {theme.flag}
-            </span>
-            <span className="truncate font-medium">{theme.city}</span>
-          </div>
         </header>
 
         <StreetVibeNav />
@@ -257,13 +248,45 @@ export default function Home() {
               id="input-lang"
               value={inputLanguage}
               onChange={(e) => setInputLanguage(e.target.value)}
-              className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-[11px] leading-tight`}
+              className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-center text-[11px] leading-tight`}
             >
               {INPUT_LANGUAGES.map((opt) => (
                 <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
                   {opt.label}
                 </option>
               ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="mb-4 flex flex-col gap-0.5">
+          <label
+            htmlFor="output-lang"
+            className="text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
+          >
+            🌍 Translate To
+          </label>
+          <div style={{ "--accent": theme.accent } as CSSProperties}>
+            <select
+              id="output-lang"
+              value={outputLang}
+              onChange={(e) => setOutputLang(e.target.value)}
+              className={`${GLASS_SELECT} px-2.5 py-2 text-center text-xs`}
+            >
+              <optgroup label="💎 Premium Slangs" className="bg-zinc-900 text-white">
+                {OUTPUT_PREMIUM_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="🌐 Standard Languages" className="bg-zinc-900 text-white">
+                {OUTPUT_STANDARD_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
         </div>
@@ -387,38 +410,6 @@ export default function Home() {
                   </button>
                 );
               })}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-0.5">
-            <label
-              htmlFor="output-lang"
-              className="text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
-            >
-              🌍 Translate To
-            </label>
-            <div style={{ "--accent": theme.accent } as CSSProperties}>
-              <select
-                id="output-lang"
-                value={outputLang}
-                onChange={(e) => setOutputLang(e.target.value)}
-                className={`${GLASS_SELECT} px-2.5 py-2 text-xs`}
-              >
-                <optgroup label="💎 Premium Slangs" className="bg-zinc-900 text-white">
-                  {OUTPUT_PREMIUM_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
-                      {o.label}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="🌐 Standard Languages" className="bg-zinc-900 text-white">
-                  {OUTPUT_STANDARD_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
-                      {o.label}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
             </div>
           </div>
 
