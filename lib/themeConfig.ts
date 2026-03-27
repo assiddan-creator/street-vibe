@@ -7,6 +7,7 @@ export type CityThemeTokens = {
   buttonBorder: string;
   accent: string;
   bg: { wide: string; long: string };
+  micBall?: string | null;
 };
 
 /** Per-dialect hero images: `wide` (desktop), `long` (phone). Same path in both until split assets exist. */
@@ -64,79 +65,89 @@ const IMG = {
 } as const;
 
 /**
- * Premium dialects: neon glow / button / border / accent + full-bleed background image.
- * Colors follow each territory’s flag or neon palette as specified.
+ * Premium dialects: glow / button / border / accent + optional mic ball art path.
+ * Colors follow each territory’s flag palette as specified.
  */
 export const CITY_THEME_BY_DIALECT_ID: Record<string, CityThemeTokens> = {
   "Tokyo Gyaru": {
-    glow: "#ff1a3d",
-    button: "#f8fafc",
-    buttonBorder: "#dc2626",
-    accent: "#f43f5e",
+    glow: "#ffffff",
+    button: "#BC002D",
+    buttonBorder: "#ffffff",
+    accent: "#BC002D",
     bg: IMG.tokyo,
+    micBall: "/images/japan.jpeg",
   },
   "Russian Street": {
-    glow: "#3b82f6",
-    button: "#1e40af",
-    buttonBorder: "#dc2626",
-    accent: "#93c5fd",
+    glow: "#0032A0",
+    button: "#D52B1E",
+    buttonBorder: "#0032A0",
+    accent: "#D52B1E",
     bg: IMG.moscow,
+    micBall: "/images/russia.jpeg",
   },
   "Mexico City Barrio": {
-    glow: "#10b981",
-    button: "#047857",
-    buttonBorder: "#dc2626",
-    accent: "#34d399",
+    glow: "#CE1126",
+    button: "#006847",
+    buttonBorder: "#CE1126",
+    accent: "#006847",
     bg: IMG.mexicoCity,
+    micBall: "/images/mexico.jpeg",
   },
   "Lisbon Street": {
-    glow: "#dc2626",
-    button: "#16a34a",
-    buttonBorder: "#15803d",
-    accent: "#22c55e",
+    glow: "#FF0000",
+    button: "#006600",
+    buttonBorder: "#FF0000",
+    accent: "#006600",
     bg: IMG.lisbon,
+    micBall: null,
   },
   "Rio Favela": {
-    glow: "#fbbf24",
-    button: "#059669",
-    buttonBorder: "#1d4ed8",
-    accent: "#34d399",
+    glow: "#FFDF00",
+    button: "#009C3B",
+    buttonBorder: "#FFDF00",
+    accent: "#009C3B",
     bg: IMG.rio,
+    micBall: "/images/brasil.jpeg",
   },
   "Jamaican Patois": {
-    glow: "#bef264",
-    button: "#ca8a04",
-    buttonBorder: "#65a30d",
-    accent: "#4ade80",
+    glow: "#FED100",
+    button: "#009B44",
+    buttonBorder: "#FED100",
+    accent: "#009B44",
     bg: IMG.kingston,
+    micBall: "/images/jamaika.jpeg",
   },
   "New York Brooklyn": {
-    glow: "#3b82f6",
-    button: "#1e3a8a",
-    buttonBorder: "#dc2626",
-    accent: "#f87171",
+    glow: "#3C3B6E",
+    button: "#B22234",
+    buttonBorder: "#3C3B6E",
+    accent: "#B22234",
     bg: IMG.brooklyn,
+    micBall: "/images/usa.jpeg",
   },
   "Paris Banlieue": {
-    glow: "#2563eb",
-    button: "#1d4ed8",
-    buttonBorder: "#dc2626",
-    accent: "#60a5fa",
+    glow: "#ED2939",
+    button: "#002395",
+    buttonBorder: "#ED2939",
+    accent: "#002395",
     bg: IMG.paris,
+    micBall: "/images/france.jpeg",
   },
   "Israeli Street": {
-    glow: "#60a5fa",
-    button: "#2563eb",
-    buttonBorder: "#f8fafc",
-    accent: "#93c5fd",
+    glow: "#ffffff",
+    button: "#0038B8",
+    buttonBorder: "#ffffff",
+    accent: "#0038B8",
     bg: IMG.israel,
+    micBall: "/images/israel.jpeg",
   },
   "London Roadman": {
-    glow: "#3b82f6",
-    button: "#1e40af",
-    buttonBorder: "#dc2626",
-    accent: "#60a5fa",
+    glow: "#012169",
+    button: "#CF111A",
+    buttonBorder: "#012169",
+    accent: "#CF111A",
     bg: IMG.london,
+    micBall: "/images/england.jpeg",
   },
 };
 
@@ -156,5 +167,6 @@ export function getCityThemeForDialect(dialectId: string): CityThemeTokens {
     buttonBorder: t.accent,
     accent: t.accent,
     bg: STANDARD_BG_PLACEHOLDER,
+    micBall: null,
   };
 }
