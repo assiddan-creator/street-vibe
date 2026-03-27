@@ -254,37 +254,28 @@ export default function Home() {
 
         <StreetVibeNav />
 
-        {/* Output / dialect dropdown */}
-        <div className="mb-1.5 flex shrink-0 flex-col gap-0.5">
-          <label htmlFor="output-lang" className="text-[9px] font-medium uppercase tracking-wide text-white/50">
-            Output
+        <div className="mb-1.5 flex flex-col gap-0.5">
+          <label htmlFor="input-lang" className="text-center text-[9px] font-medium uppercase tracking-wide text-white/50">
+            🗣️ I speak
           </label>
           <div style={{ "--accent": theme.accent } as CSSProperties}>
             <select
-              id="output-lang"
-              value={outputLang}
-              onChange={(e) => setOutputLang(e.target.value)}
-              className={`${GLASS_SELECT} px-2.5 py-2 text-xs`}
+              id="input-lang"
+              value={inputLanguage}
+              onChange={(e) => setInputLanguage(e.target.value)}
+              className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-[11px] leading-tight`}
             >
-              <optgroup label="💎 Premium Slangs" className="bg-zinc-900 text-white">
-                {OUTPUT_PREMIUM_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
-                    {o.label}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="🌐 Standard Languages" className="bg-zinc-900 text-white">
-                {OUTPUT_STANDARD_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
-                    {o.label}
-                  </option>
-                ))}
-              </optgroup>
+              {INPUT_LANGUAGES.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
+                  {opt.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
         <div className="mb-1.5 flex shrink-0 flex-col gap-1.5">
+          <div className="mb-0.5 text-center text-[9px] font-medium uppercase tracking-wide text-white/50">⚡ Intensity</div>
           <div className="flex flex-wrap items-center justify-center gap-1">
             {(
               [
@@ -313,6 +304,10 @@ export default function Home() {
               );
             })}
           </div>
+        </div>
+
+        <div className="mb-1.5 flex shrink-0 flex-col gap-1.5">
+          <div className="mb-0.5 text-center text-[9px] font-medium uppercase tracking-wide text-white/50">🎭 Vibe</div>
           <div className="flex flex-wrap items-center justify-center gap-1">
             {(
               [
@@ -343,6 +338,102 @@ export default function Home() {
             })}
           </div>
         </div>
+
+        <div className="mb-1.5 flex flex-col items-center gap-0.5">
+          <label htmlFor="output-lang" className="text-[9px] font-medium uppercase tracking-wide text-white/50">
+            🌍 Translate to
+          </label>
+          <div style={{ "--accent": theme.accent } as CSSProperties} className="w-full">
+            <select
+              id="output-lang"
+              value={outputLang}
+              onChange={(e) => setOutputLang(e.target.value)}
+              className={`${GLASS_SELECT} px-2.5 py-2 text-xs`}
+            >
+              <optgroup label="💎 Premium Slangs" className="bg-zinc-900 text-white">
+                {OUTPUT_PREMIUM_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="🌐 Standard Languages" className="bg-zinc-900 text-white">
+                {OUTPUT_STANDARD_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center py-2">
+          <button
+            type="button"
+            onClick={toggleMic}
+            aria-label={isListening ? "Stop listening" : "Tap to speak"}
+            className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
+              isListening ? "mic-pulse border-transparent" : THEME_MIC_IDLE
+            }`}
+            style={
+              isListening
+                ? {
+                    background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
+                    boxShadow: `0 8px 28px ${theme.accent}55, 0 0 15px -1px var(--theme-glow)`,
+                  }
+                : undefined
+            }
+          >
+            <MicBallContent micBall={micBall} isListening={isListening} iconClassName="h-10 w-10" />
+          </button>
+          <span
+            className={`mt-1 text-center text-[10px] transition-colors duration-300 ${isListening ? "" : "text-white/50"}`}
+            style={isListening ? { color: theme.accent } : undefined}
+          >
+            {isListening ? "listening..." : "tap to speak"}
+          </span>
+          {micError ? (
+            <p className="mt-1 max-w-[220px] text-center text-[10px] font-medium leading-tight text-red-400">{micError}</p>
+          ) : null}
+        </div>
+
+        <div className="mb-1.5" style={{ "--accent": theme.accent } as CSSProperties}>
+          <input
+            type="text"
+            value={inputDisplayValue}
+            readOnly={isListening}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Say it plain…"
+            className={GLASS_INPUT}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleFlipIt}
+          disabled={loading}
+          className="relative mb-1.5 w-full overflow-hidden rounded-xl py-3 font-bold text-white transition-all duration-300 active:scale-95 disabled:opacity-60"
+          style={{
+            fontFamily: "'Permanent Marker', cursive",
+            fontSize: "1.1rem",
+            boxShadow: `0 4px 20px ${theme.accent}44`,
+          }}
+        >
+          {cityTheme.bg?.wide ? (
+            <img
+              src={cityTheme.bg.wide}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover opacity-75"
+              draggable={false}
+            />
+          ) : null}
+          <div
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(135deg, ${theme.accent}33 0%, #00000099 100%)` }}
+          />
+          <span className="relative z-10 drop-shadow-lg">{loading ? "Flipping…" : "Flip it 🔥"}</span>
+        </button>
 
         {/* Output card — max height + themed scrollbar */}
         <section className="mb-1.5 shrink-0 overflow-hidden">
@@ -430,163 +521,67 @@ export default function Home() {
           </div>
         </section>
 
-        {/* From → input → Flip → mic row */}
-        <div className="flex shrink-0 flex-col gap-1.5 pb-0.5">
-          <div className="flex flex-col gap-0.5">
-            <label htmlFor="input-lang" className="text-[9px] font-medium uppercase tracking-wide text-white/45">
-              From
-            </label>
-            <div style={{ "--accent": theme.accent } as CSSProperties}>
-              <select
-                id="input-lang"
-                value={inputLanguage}
-                onChange={(e) => setInputLanguage(e.target.value)}
-                className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-[11px] leading-tight`}
-              >
-                {INPUT_LANGUAGES.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div style={{ "--accent": theme.accent } as CSSProperties}>
-            <input
-              type="text"
-              value={inputDisplayValue}
-              readOnly={isListening}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Say it plain…"
-              className={GLASS_INPUT}
-            />
-          </div>
+        <div className="flex items-center justify-center gap-2 pb-1 pt-0.5">
           <button
             type="button"
-            onClick={handleFlipIt}
-            disabled={loading}
-            className="relative w-full overflow-hidden rounded-xl py-3 font-bold text-white transition-all duration-300 active:scale-95 disabled:opacity-60"
-            style={{
-              fontFamily: "'Permanent Marker', cursive",
-              fontSize: "1.1rem",
-              boxShadow: `0 4px 20px ${theme.accent}44`,
-            }}
+            onClick={() => void handleCopy()}
+            aria-label="Copy Street translation"
+            className={THEME_GLASS_ICON_BTN}
           >
-            {cityTheme.bg?.wide ? (
-              <img
-                src={cityTheme.bg.wide}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover opacity-75"
-                draggable={false}
+            <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
               />
-            ) : null}
-            <div
-              className="absolute inset-0"
-              style={{ background: `linear-gradient(135deg, ${theme.accent}33 0%, #00000099 100%)` }}
-            />
-            <span className="relative z-10 drop-shadow-lg">{loading ? "Flipping…" : "Flip it 🔥"}</span>
+            </svg>
           </button>
-
-          {/* Copy / Paste | Mic | Share — 48×48 icon buttons */}
-          <div className="grid w-full grid-cols-3 items-start gap-1 overflow-visible pt-0.5">
-            <div className="flex justify-center gap-1">
-              <button
-                type="button"
-                onClick={() => void handleCopy()}
-                aria-label="Copy Street translation"
-                className={THEME_GLASS_ICON_BTN}
-              >
-                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={() => void handlePaste()}
-                aria-label="Paste from clipboard"
-                className={THEME_GLASS_ICON_BTN}
-              >
-                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex min-w-0 flex-col items-center">
-              <button
-                type="button"
-                onClick={toggleMic}
-                aria-label={isListening ? "Stop listening" : "Tap to speak"}
-                className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
-                  isListening ? "mic-pulse border-transparent" : THEME_MIC_IDLE
-                }`}
-                style={
-                  isListening
-                    ? {
-                        background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
-                        boxShadow: `0 8px 28px ${theme.accent}55, 0 0 15px -1px var(--theme-glow)`,
-                      }
-                    : undefined
-                }
-              >
-                <MicBallContent micBall={micBall} isListening={isListening} iconClassName="h-8 w-8" />
-              </button>
-              <span
-                className={`mt-1 text-center text-[10px] transition-colors duration-300 ${isListening ? "" : "text-white/50"}`}
-                style={isListening ? { color: theme.accent } : undefined}
-              >
-                {isListening ? "listening..." : "tap to speak"}
-              </span>
-              {micError ? (
-                <p className="mt-1 max-w-[220px] text-center text-[10px] font-medium leading-tight text-red-400">
-                  {micError}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="flex justify-center gap-1">
-              <button
-                type="button"
-                onClick={() => void handleShare()}
-                aria-label="Share"
-                className={THEME_GLASS_ICON_BTN}
-              >
-                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                  />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={handleClear}
-                aria-label="Clear text and translation"
-                className={THEME_GLASS_ICON_BTN}
-              >
-                <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => void handlePaste()}
+            aria-label="Paste from clipboard"
+            className={THEME_GLASS_ICON_BTN}
+          >
+            <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleShare()}
+            aria-label="Share"
+            className={THEME_GLASS_ICON_BTN}
+          >
+            <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label="Clear text and translation"
+            className={THEME_GLASS_ICON_BTN}
+          >
+            <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
         </div>
 
       </div>
