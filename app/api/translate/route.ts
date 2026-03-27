@@ -58,7 +58,7 @@ function buildPrompt({
     "LENGTH RULE: Keep the output roughly the same length as the input. Do not expand, explain, or add information that was not in the original text.";
 
   const noAIRule =
-    "AUTHENTICITY RULE: Write exactly like a real person from that location would text a friend. No formal structure. No complete sentences if the original was not complete. No filler words. Raw and human.";
+    "AUTHENTICITY RULE: Write exactly like a real person texting a friend. NO commas unless absolutely necessary. Use short punchy phrases separated by spaces or line breaks — not commas. No full sentences if the original was casual. Raw, fast, human. Think WhatsApp message not a novel.";
 
   const formattingRule =
     "\n\nOUTPUT FORMAT — follow this exactly and nothing else:\n" +

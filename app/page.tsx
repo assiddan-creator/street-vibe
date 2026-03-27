@@ -479,7 +479,7 @@ export default function Home() {
             }`}
           >
             <div
-              className={`${GLASS_OUTPUT_CARD} max-h-none overflow-visible`}
+              className={`${GLASS_OUTPUT_CARD} min-h-[200px] max-h-none overflow-visible`}
               style={
                 {
                   ["--scroll-thumb" as string]: `${theme.accent}88`,
