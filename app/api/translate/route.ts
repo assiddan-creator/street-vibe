@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseOnboardingAge, parseOnboardingGender } from "@/lib/onboardingApi";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -8,22 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
-
-function buildAudienceCalibrationLine(onboardingAge?: string, onboardingGender?: string): string {
-  if (!onboardingAge && !onboardingGender) return "";
-  const bits: string[] = [];
-  if (onboardingAge) bits.push(`age band ${onboardingAge}`);
-  if (onboardingGender) {
-    const g =
-      onboardingGender === "prefer-not"
-        ? "not specified"
-        : onboardingGender === "non-binary"
-          ? "non-binary"
-          : onboardingGender;
-    bits.push(`gender presentation: ${g}`);
-  }
-  return `Audience calibration (for tone only; never echo these labels in the output): ${bits.join("; ")}.\n`;
-}
 
 function buildPrompt({
   text,
@@ -34,8 +17,6 @@ function buildPrompt({
   isPremiumSelected,
   context,
   previousMessage,
-  onboardingAge,
-  onboardingGender,
 }: {
   text: string;
   currentLang: string;
@@ -45,8 +26,6 @@ function buildPrompt({
   isPremiumSelected: boolean;
   context: string;
   previousMessage: string | null;
-  onboardingAge?: string;
-  onboardingGender?: string;
 }) {
   const INTENSITY_INSTRUCTIONS: Record<number, string> = {
     1: "Use mostly standard language with just a tiny hint of local flavor. Max 1-2 very mild slang words. Keep it readable.",
@@ -109,8 +88,6 @@ function buildPrompt({
     ? `\nFor consistency, the previous message in this conversation was rewritten as: "${previousMessage}". Keep the same voice and energy.`
     : "";
 
-  const audienceLine = buildAudienceCalibrationLine(onboardingAge, onboardingGender);
-
   const isRussianLang =
     typeof currentLang === "string" && currentLang.toLowerCase().includes("russian");
 
@@ -131,7 +108,6 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
     prompt:
       `${locationLine}${previousLine}\n\n` +
       `Context: ${contextPrompt}\n` +
-      `${audienceLine}` +
       `Intensity: ${intensityPrompt}\n` +
       `${antiLeakageRule}\n` +
       `${lengthRule}\n` +
@@ -173,12 +149,7 @@ export async function POST(req: NextRequest) {
     isPremiumSelected,
     context,
     previousMessage,
-    onboardingAge: rawAge,
-    onboardingGender: rawGender,
   } = body || {};
-
-  const onboardingAge = parseOnboardingAge(rawAge);
-  const onboardingGender = parseOnboardingGender(rawGender);
 
   if (!text || !currentLang) {
     return NextResponse.json(
@@ -196,8 +167,6 @@ export async function POST(req: NextRequest) {
     isPremiumSelected: !!isPremiumSelected,
     context: (context as string) || "default",
     previousMessage: previousMessage ? String(previousMessage) : null,
-    onboardingAge,
-    onboardingGender,
   });
 
   const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;

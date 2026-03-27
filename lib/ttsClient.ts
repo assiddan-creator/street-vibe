@@ -47,18 +47,12 @@ const CONTEXT_TUNING: Record<string, { speed: number; emotion: string }> = {
   default: { speed: 0.85, emotion: "neutral" },
 };
 
-export type TtsOnboardingPayload = {
-  onboardingAge?: string;
-  onboardingGender?: string;
-};
-
 /** Poll Replicate until TTS prediction completes; returns playable URL (https or data:). `null` when engine is native (playback via Web Speech API). */
 export async function fetchTtsAudioUrl(
   text: string,
   dialect: string,
   engine: "minimax" | "google" | "native" = "minimax",
-  context?: string,
-  onboarding?: TtsOnboardingPayload | null
+  context?: string
 ): Promise<string | null> {
   if (engine === "native") {
     await speakNativeTts(text, dialect);
@@ -70,14 +64,7 @@ export async function fetchTtsAudioUrl(
   const startRes = await fetch("/api/tts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text,
-      dialect,
-      engine,
-      tuning,
-      ...(onboarding?.onboardingAge ? { onboardingAge: onboarding.onboardingAge } : {}),
-      ...(onboarding?.onboardingGender ? { onboardingGender: onboarding.onboardingGender } : {}),
-    }),
+    body: JSON.stringify({ text, dialect, engine, tuning }),
   });
   const startData = (await startRes.json()) as {
     audioBase64?: string;

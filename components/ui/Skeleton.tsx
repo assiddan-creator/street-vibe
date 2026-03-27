@@ -52,7 +52,7 @@ export function PopupWordSkeleton() {
   );
 }
 
-/** Initial shell while onboarding gate hydrates */
+/** Full-width placeholder for initial layout paint */
 export function AppShellSkeleton() {
   return (
     <div className="min-h-[100dvh] bg-[#0a0a0a] px-4 pt-10">

@@ -2,13 +2,7 @@
 
 import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { OnboardingFlow } from "@/components/OnboardingFlow";
-import {
-  AppShellSkeleton,
-  FlipButtonSkeleton,
-  PopupWordSkeleton,
-  TranslationBlockSkeleton,
-} from "@/components/ui/Skeleton";
+import { FlipButtonSkeleton, PopupWordSkeleton, TranslationBlockSkeleton } from "@/components/ui/Skeleton";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
@@ -29,12 +23,7 @@ import {
 } from "@/lib/streetVibeTheme";
 import { getCityThemeForDialect } from "@/lib/themeConfig";
 import { lookupSlang } from "@/lib/slangDictionary";
-import { getOnboardingPayloadForApi, hasOnboardingAnswers } from "@/lib/onboardingStorage";
-
 export default function Home() {
-  const [onboardingReady, setOnboardingReady] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
   const [outputLang, setOutputLang] = useState("Jamaican Patois");
   const [inputLanguage, setInputLanguage] = useState("he-IL");
   const [inputText, setInputText] = useState("");
@@ -60,11 +49,6 @@ export default function Home() {
     const t = window.setTimeout(() => setToast(null), 2000);
     return () => window.clearTimeout(t);
   }, [toast]);
-
-  useEffect(() => {
-    setShowOnboarding(!hasOnboardingAnswers());
-    setOnboardingReady(true);
-  }, []);
 
   const selectedInputLang = inputLanguage;
 
@@ -102,7 +86,6 @@ export default function Home() {
     setDictionaryPills([]);
 
     try {
-      const ob = getOnboardingPayloadForApi();
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -114,7 +97,6 @@ export default function Home() {
           isPremiumSelected: true,
           context,
           previousMessage: null,
-          ...(ob ? { onboardingAge: ob.onboardingAge, onboardingGender: ob.onboardingGender } : {}),
         }),
       });
 
@@ -205,14 +187,6 @@ export default function Home() {
   const micBall = cityTheme.micBall ?? null;
   const isActive = inputText.trim().length > 0 || originalText.trim().length > 0;
   const isIdle = !isActive;
-
-  if (!onboardingReady) {
-    return <AppShellSkeleton />;
-  }
-
-  if (showOnboarding) {
-    return <OnboardingFlow onComplete={() => setShowOnboarding(false)} />;
-  }
 
   return (
     <>

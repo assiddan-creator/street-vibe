@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { applyMinimaxAgeGenderAdjustments } from "@/lib/minimaxVoiceTuning";
-import { parseOnboardingAge, parseOnboardingGender } from "@/lib/onboardingApi";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
-import { resolveVoiceForDialect } from "@/lib/voices";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +7,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-const REPLICATE_MINIMAX_VERSION = "minimax/speech-02-turbo";
+/** Replicate MiniMax model — speech-2.8-turbo */
+const REPLICATE_MINIMAX_VERSION = "minimax/speech-2.8-turbo";
+
+/** Default MiniMax input when demographic tuning is off; client `tuning` may override speed/emotion. */
+const MINIMAX_DEFAULTS = {
+  voice_id: "Casual_Guy",
+  emotion: "auto" as string,
+  speed: 1.0,
+  pitch: 0,
+};
 
 const LANGUAGE_BOOST_MAP: Record<string, string> = {
   "London Roadman": "English",
@@ -183,22 +189,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const voiceConfig = resolveVoiceForDialect(dialect as string | undefined);
-
-  let speed = (tuning?.speed as number | undefined) ?? voiceConfig.speed;
-  let pitch = (tuning?.pitch as number | undefined) ?? voiceConfig.pitch;
-  const onboardingAge = parseOnboardingAge(body.onboardingAge);
-  const onboardingGender = parseOnboardingGender(body.onboardingGender);
-  if (onboardingAge !== undefined || onboardingGender !== undefined) {
-    const tuned = applyMinimaxAgeGenderAdjustments({
-      speed,
-      pitch,
-      age: onboardingAge,
-      gender: onboardingGender,
-    });
-    speed = tuned.speed;
-    pitch = tuned.pitch;
-  }
+  const speed =
+    typeof tuning?.speed === "number" ? tuning.speed : MINIMAX_DEFAULTS.speed;
+  const pitch =
+    typeof tuning?.pitch === "number" ? tuning.pitch : MINIMAX_DEFAULTS.pitch;
 
   try {
     const minimaxRes = await fetch("https://api.replicate.com/v1/predictions", {
@@ -211,10 +205,10 @@ export async function POST(req: NextRequest) {
         version: REPLICATE_MINIMAX_VERSION,
         input: {
           text,
-          voice_id: voiceConfig.voice_id,
+          voice_id: MINIMAX_DEFAULTS.voice_id,
           speed,
           pitch,
-          emotion: (tuning?.emotion as string | undefined) ?? voiceConfig.emotion,
+          emotion: MINIMAX_DEFAULTS.emotion,
           volume: (tuning?.volume as number | undefined) ?? 1.0,
           language_boost: LANGUAGE_BOOST_MAP[dialect as string ?? ""] ?? "Automatic",
           english_normalization: true,

@@ -23,7 +23,6 @@ import {
 } from "@/lib/streetVibeTheme";
 import { getCityThemeForDialect } from "@/lib/themeConfig";
 import { lookupSlang } from "@/lib/slangDictionary";
-import { getOnboardingPayloadForApi } from "@/lib/onboardingStorage";
 import { fetchTtsAudioUrl } from "@/lib/ttsClient";
 
 export default function SpeakPage() {
@@ -88,7 +87,6 @@ export default function SpeakPage() {
     setTranslatedText("");
     setDictionaryPills([]);
     try {
-      const ob = getOnboardingPayloadForApi();
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,7 +98,6 @@ export default function SpeakPage() {
           isPremiumSelected: true,
           context,
           previousMessage: null,
-          ...(ob ? { onboardingAge: ob.onboardingAge, onboardingGender: ob.onboardingGender } : {}),
         }),
       });
       const data = (await res.json()) as { fullText?: string; error?: string };
@@ -152,8 +149,7 @@ export default function SpeakPage() {
     setTtsError(null);
     try {
       if (ttsEngine === "native") setTtsPlaying(true);
-      const ob = getOnboardingPayloadForApi();
-      const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context, ob ?? undefined);
+      const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context);
       if (url === null) {
         setTtsPlaying(false);
         return;
