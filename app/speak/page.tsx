@@ -15,9 +15,8 @@ import {
   GLASS_SELECT_COMPACT,
   THEME_GLASS_ICON_BTN,
   THEME_MIC_IDLE,
-  THEME_PLAY_BTN,
 } from "@/lib/themeUiClasses";
-import { fetchTtsAudioUrl, speakNativeTts } from "@/lib/ttsClient";
+import { fetchTtsAudioUrl } from "@/lib/ttsClient";
 import {
   INPUT_LANGUAGES,
   LOADING_MESSAGES,
@@ -221,61 +220,25 @@ export default function SpeakPage() {
     setResolvedEngine(null);
   };
 
-  const handlePlayTts = async () => {
+  const handlePlay = async () => {
     const text = translatedText.trim();
-    if (!text || loading) return;
-
+    if (!text) return;
+    setTtsLoading(true);
     setTtsError(null);
     audioRef.current?.pause();
     audioRef.current = null;
-    if (typeof window !== "undefined") window.speechSynthesis.cancel();
-
-    setTtsOutcome("pending");
-    setTtsLoading(true);
-    setTtsPlaying(false);
-
     try {
-      if (ttsEngine === "minimax") {
-        const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context);
-        setTtsLoading(false);
-        const audio = new Audio(url);
-        audioRef.current = audio;
-        setTtsPlaying(true);
-        await new Promise<void>((resolve, reject) => {
-          audio.onended = () => resolve();
-          audio.onerror = () => reject(new Error("Playback failed"));
-          void audio.play().catch(reject);
-        });
-        setResolvedEngine("minimax");
-        setTtsOutcome("success");
-      } else if (ttsEngine === "google") {
-        const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context);
-        setTtsLoading(false);
-        const audio = new Audio(url);
-        audioRef.current = audio;
-        setTtsPlaying(true);
-        await new Promise<void>((resolve, reject) => {
-          audio.onended = () => resolve();
-          audio.onerror = () => reject(new Error("Playback failed"));
-          void audio.play().catch(reject);
-        });
-        setResolvedEngine("google");
-        setTtsOutcome("success");
-      } else {
-        setTtsPlaying(true);
-        await speakNativeTts(text, outputLang);
-        setResolvedEngine("native");
-        setTtsOutcome("success");
-      }
+      const url = await fetchTtsAudioUrl(text, outputLang, "minimax", context);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setTtsPlaying(true);
+      audio.onended = () => setTtsPlaying(false);
+      await audio.play();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "TTS failed";
-      setTtsError(msg);
-      setResolvedEngine(ttsEngine);
-      setTtsOutcome("failed");
+      setTtsError(e instanceof Error ? e.message : "Playback failed");
+      setTtsPlaying(false);
     } finally {
       setTtsLoading(false);
-      setTtsPlaying(false);
-      audioRef.current = null;
     }
   };
 
@@ -478,32 +441,7 @@ export default function SpeakPage() {
               )}
             </p>
 
-            <div className="mb-0.5 flex items-center justify-between gap-2">
-              <p className="text-[9px] font-medium uppercase tracking-wider text-white/40">Street</p>
-              <button
-                type="button"
-                onClick={() => void handlePlayTts()}
-                disabled={loading || !translatedText.trim() || ttsLoading}
-                className={THEME_PLAY_BTN}
-                aria-label={ttsPlaying ? "Playing audio" : "Play translation audio"}
-              >
-                {ttsLoading ? (
-                  <span className="animate-pulse">Loading…</span>
-                ) : ttsPlaying ? (
-                  <>
-                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current" aria-hidden />
-                    Playing
-                  </>
-                ) : (
-                  <>
-                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    Play
-                  </>
-                )}
-              </button>
-            </div>
+            <p className="mb-0.5 text-[9px] font-medium uppercase tracking-wider text-white/40">Street</p>
             <div className="min-h-0 max-h-none overflow-visible text-sm font-bold leading-snug transition-colors duration-500">
               {loading ? (
                 <p className="animate-pulse text-xs font-semibold leading-tight" style={{ color: theme.accent }}>
@@ -532,9 +470,18 @@ export default function SpeakPage() {
                 </p>
               )}
             </div>
-            {ttsError ? (
-              <p className="mt-1 text-[10px] font-medium leading-tight text-red-400">{ttsError}</p>
+            {translatedText.trim() ? (
+              <button
+                type="button"
+                onClick={() => void handlePlay()}
+                disabled={ttsLoading || ttsPlaying}
+                className="mt-2 flex items-center gap-2 rounded-full border px-4 py-1.5 text-[11px] font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50"
+                style={{ borderColor: `${theme.accent}55`, color: theme.accent, backgroundColor: `${theme.accent}15` }}
+              >
+                {ttsLoading ? "⏳ Loading..." : ttsPlaying ? "🔊 Playing..." : "▶ Play"}
+              </button>
             ) : null}
+            {ttsError ? <p className="mt-1 text-[10px] text-red-400">{ttsError}</p> : null}
 
             <div className="mt-1.5 flex max-h-none flex-wrap items-center justify-center gap-1 overflow-visible">
               {loading ? (
