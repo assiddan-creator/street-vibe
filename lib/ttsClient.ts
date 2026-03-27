@@ -48,13 +48,18 @@ const CONTEXT_TUNING: Record<string, { speed: number; emotion: string }> = {
   default: { speed: 0.85, emotion: "neutral" },
 };
 
-/** Poll Replicate until TTS prediction completes; returns playable URL (https or data:). */
+/** Poll Replicate until TTS prediction completes; returns playable URL (https or data:). `null` when engine is native (playback via Web Speech API). */
 export async function fetchTtsAudioUrl(
   text: string,
   dialect: string,
-  engine: "minimax" | "google" = "minimax",
+  engine: "minimax" | "google" | "native" = "minimax",
   context?: string
-): Promise<string> {
+): Promise<string | null> {
+  if (engine === "native") {
+    await speakNativeTts(text, dialect);
+    return null;
+  }
+
   const tuning = CONTEXT_TUNING[context ?? "default"] ?? CONTEXT_TUNING.default;
 
   const startRes = await fetch("/api/tts", {

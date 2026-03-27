@@ -34,6 +34,7 @@ export default function SpeakPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [slangLevel, setSlangLevel] = useState<1 | 2 | 3>(2);
   const [context, setContext] = useState<string>("dm");
+  const [ttsEngine, setTtsEngine] = useState<"minimax" | "google" | "native">("minimax");
   const [ttsLoading, setTtsLoading] = useState(false);
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
@@ -147,7 +148,12 @@ export default function SpeakPage() {
     setTtsLoading(true);
     setTtsError(null);
     try {
-      const url = await fetchTtsAudioUrl(text, outputLang, "minimax", context);
+      if (ttsEngine === "native") setTtsPlaying(true);
+      const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context);
+      if (url === null) {
+        setTtsPlaying(false);
+        return;
+      }
       const audio = new Audio(url);
       audioRef.current = audio;
       setTtsPlaying(true);
@@ -155,6 +161,7 @@ export default function SpeakPage() {
       void audio.play();
     } catch (e) {
       setTtsError(e instanceof Error ? e.message : "Playback failed");
+      setTtsPlaying(false);
     } finally {
       setTtsLoading(false);
     }
@@ -606,17 +613,22 @@ export default function SpeakPage() {
               </div>
 
               {translatedText.trim() ? (
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-3 flex flex-col gap-1">
                   <button
                     type="button"
                     onClick={() => void handlePlay()}
                     disabled={ttsLoading || ttsPlaying}
-                    className="flex items-center gap-2 rounded-full border px-4 py-1.5 text-[11px] font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50"
-                    style={{ borderColor: `${theme.accent}55`, color: theme.accent, backgroundColor: `${theme.accent}15` }}
+                    className="relative w-full overflow-hidden rounded-xl py-2.5 text-sm font-bold transition-all duration-300 active:scale-95 disabled:opacity-50"
+                    style={{
+                      background: `linear-gradient(135deg, ${theme.accent}44, ${theme.accent}22)`,
+                      border: `1px solid ${theme.accent}55`,
+                      color: theme.accent,
+                      fontFamily: "'Permanent Marker', cursive",
+                    }}
                   >
-                    {ttsLoading ? "⏳" : ttsPlaying ? "🔊 Playing..." : "▶ Play"}
+                    {ttsLoading ? "⏳ Loading..." : ttsPlaying ? "🔊 Playing..." : "▶ Play Street Voice"}
                   </button>
-                  {ttsError ? <p className="text-[10px] text-red-400">{ttsError}</p> : null}
+                  {ttsError ? <p className="text-center text-[10px] text-red-400">{ttsError}</p> : null}
                 </div>
               ) : null}
 
@@ -637,6 +649,27 @@ export default function SpeakPage() {
               </div>
             </div>
           </section>
+
+          <div className="mt-6 flex flex-col gap-1.5 border-t border-white/5 pt-4">
+            <p className="text-center text-[8px] uppercase tracking-widest text-white/20">⚙️ Voice Engine</p>
+            <div style={{ "--accent": theme.accent } as CSSProperties}>
+              <select
+                value={ttsEngine}
+                onChange={(e) => setTtsEngine(e.target.value as "minimax" | "google" | "native")}
+                className="w-full rounded-none border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/30 outline-none"
+              >
+                <option value="minimax" className="bg-zinc-900 text-white">
+                  MiniMax (Replicate)
+                </option>
+                <option value="google" className="bg-zinc-900 text-white">
+                  Google Cloud
+                </option>
+                <option value="native" className="bg-zinc-900 text-white">
+                  Native Browser
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </>
