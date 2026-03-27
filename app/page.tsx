@@ -11,7 +11,6 @@ import {
   GLASS_OUTPUT_CARD,
   GLASS_SELECT,
   GLASS_SELECT_COMPACT,
-  THEME_FLIP_BTN,
   THEME_GLASS_ICON_BTN,
   THEME_MIC_IDLE,
 } from "@/lib/themeUiClasses";
@@ -232,12 +231,18 @@ export default function Home() {
         onClick={() => setPopupWord(null)}
       >
         {/* Top bar */}
-        <header className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
-          <span className="text-lg font-bold leading-tight tracking-tight text-white drop-shadow-md transition-colors duration-500">
+        <header className="mb-1.5 flex shrink-0 items-center justify-center gap-2 relative">
+          <span
+            className="text-2xl text-white drop-shadow-lg"
+            style={{
+              fontFamily: "'Permanent Marker', cursive",
+              textShadow: `0 0 20px ${theme.accent}88, 0 2px 4px rgba(0,0,0,0.8)`,
+            }}
+          >
             StreetVibe
           </span>
           <div
-            className="flex max-w-[58%] min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2 py-1 text-[11px] text-white backdrop-blur-md transition-colors duration-500 ease-in-out"
+            className="absolute right-0 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2 py-1 text-[11px] backdrop-blur-md transition-colors duration-500 ease-in-out"
             style={{ color: theme.accent }}
           >
             <span className="shrink-0 text-base leading-none" aria-hidden>
@@ -456,8 +461,30 @@ export default function Home() {
               className={GLASS_INPUT}
             />
           </div>
-          <button type="button" onClick={handleFlipIt} disabled={loading} className={THEME_FLIP_BTN}>
-            {loading ? "Flipping…" : "Flip it"}
+          <button
+            type="button"
+            onClick={handleFlipIt}
+            disabled={loading}
+            className="relative w-full overflow-hidden rounded-xl py-3 font-bold text-white transition-all duration-300 active:scale-95 disabled:opacity-60"
+            style={{
+              fontFamily: "'Permanent Marker', cursive",
+              fontSize: "1.1rem",
+              boxShadow: `0 4px 20px ${theme.accent}44`,
+            }}
+          >
+            {cityTheme.bg?.wide ? (
+              <img
+                src={cityTheme.bg.wide}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover opacity-50"
+                draggable={false}
+              />
+            ) : null}
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(135deg, ${theme.accent}33 0%, #00000099 100%)` }}
+            />
+            <span className="relative z-10 drop-shadow-lg">{loading ? "Flipping…" : "Flip it 🔥"}</span>
           </button>
 
           {/* Copy / Paste | Mic | Share — 48×48 icon buttons */}
