@@ -1,4 +1,8 @@
-import { resolveGoogleChirp3HdVoiceName, resolveGoogleVoiceForDialect } from "@/lib/googleTtsVoiceConfig";
+import {
+  isGoogleChirpVoiceName,
+  resolveGoogleChirp3HdVoiceName,
+  resolveGoogleVoiceForDialect,
+} from "@/lib/googleTtsVoiceConfig";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 import { getStoredTtsGender, MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
@@ -123,7 +127,7 @@ export async function fetchTtsAudioUrl(
         audioConfig: {
           audioEncoding: "MP3",
           speakingRate,
-          pitch: voice.pitch,
+          ...(isGoogleChirpVoiceName(googleVoiceName) ? {} : { pitch: voice.pitch }),
         },
       },
     });

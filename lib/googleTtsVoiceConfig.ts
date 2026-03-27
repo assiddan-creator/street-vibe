@@ -18,6 +18,11 @@ export function resolveGoogleChirp3HdVoiceName(languageCode: string, gender: Tts
   return `${languageCode}-Chirp3-HD-${persona}`;
 }
 
+/** Chirp / Chirp 3 HD voices do not support `pitch` in `audioConfig` for REST `text:synthesize`. */
+export function isGoogleChirpVoiceName(name: string): boolean {
+  return name.includes("Chirp");
+}
+
 /** Per-dialect audio tuning; `languageCode` selects the Chirp 3 HD locale. */
 export type GoogleDialectVoiceConfig = {
   languageCode: string;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   GOOGLE_VOICE_DEFAULT,
   GOOGLE_VOICE_MAP,
+  isGoogleChirpVoiceName,
   resolveGoogleChirp3HdVoiceName,
 } from "@/lib/googleTtsVoiceConfig";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
@@ -71,6 +72,16 @@ export async function POST(req: NextRequest) {
     const speakingRate =
       typeof tuning?.speed === "number" ? tuning.speed : voice.speakingRate;
 
+    const audioConfig: {
+      audioEncoding: "MP3";
+      speakingRate: number;
+      pitch?: number;
+    } = {
+      audioEncoding: "MP3",
+      speakingRate,
+      ...(isGoogleChirpVoiceName(voiceName) ? {} : { pitch: voice.pitch }),
+    };
+
     try {
       const ttsRes = await fetch(
         `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(geminiKey)}`,
@@ -80,11 +91,7 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             input: { text },
             voice: { languageCode: voice.languageCode, name: voiceName },
-            audioConfig: {
-              audioEncoding: "MP3",
-              speakingRate,
-              pitch: voice.pitch,
-            },
+            audioConfig,
           }),
         }
       );
