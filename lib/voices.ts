@@ -43,30 +43,6 @@ export const VOICE_MAP: Record<string, VoiceTuning> = {
     pitch: -2,
     emotion: "neutral",
   },
-  "Lisbon Street": {
-    voice_id: "Portuguese_ReservedYoungMan",
-    speed: 0.9,
-    pitch: -1,
-    emotion: "neutral",
-  },
-  "Berlin Street": {
-    voice_id: "English_MatureBoss",
-    speed: 0.9,
-    pitch: -1,
-    emotion: "neutral",
-  },
-  "Madrid Barrio": {
-    voice_id: "Spanish_ReservedYoungMan",
-    speed: 0.9,
-    pitch: -1,
-    emotion: "neutral",
-  },
-  "Rome Street": {
-    voice_id: "English_ImposingManner",
-    speed: 0.9,
-    pitch: -1,
-    emotion: "neutral",
-  },
   "Mexico City Barrio": {
     voice_id: "Spanish_ReservedYoungMan",
     speed: 0.9,

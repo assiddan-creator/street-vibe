@@ -21,10 +21,6 @@ const IMG = {
   mexico: { wide: "/images/mexico.jpeg", long: "/images/mexico.jpeg" },
   rio: { wide: "/images/brasil.jpeg", long: "/images/brasil.jpeg" },
   israel: { wide: "/images/israel.jpeg", long: "/images/israel.jpeg" },
-  germany: { wide: "/images/germany.jpeg", long: "/images/germany.jpeg" },
-  italy: { wide: "/images/italy.jpeg", long: "/images/italy.jpeg" },
-  portugal: { wide: "/images/portugal.jpeg", long: "/images/portugal.jpeg" },
-  spain: { wide: "/images/spain.jpeg", long: "/images/spain.jpeg" },
 } as const;
 
 /**
@@ -55,38 +51,6 @@ export const CITY_THEME_BY_DIALECT_ID: Record<string, CityThemeTokens> = {
     accent: "#006847",
     bg: IMG.mexico,
     micBall: "/images/mexico.jpeg",
-  },
-  "Berlin Street": {
-    glow: "#000000",
-    button: "#DD0000",
-    buttonBorder: "#FFCE00",
-    accent: "#DD0000",
-    bg: IMG.germany,
-    micBall: "/images/germany.jpeg",
-  },
-  "Madrid Barrio": {
-    glow: "#c60b1e",
-    button: "#c60b1e",
-    buttonBorder: "#ffc400",
-    accent: "#c60b1e",
-    bg: IMG.spain,
-    micBall: "/images/spain.jpeg",
-  },
-  "Rome Street": {
-    glow: "#009246",
-    button: "#009246",
-    buttonBorder: "#ce2b37",
-    accent: "#009246",
-    bg: IMG.italy,
-    micBall: "/images/italy.jpeg",
-  },
-  "Lisbon Street": {
-    glow: "#006600",
-    button: "#006600",
-    buttonBorder: "#FF0000",
-    accent: "#006600",
-    bg: IMG.portugal,
-    micBall: "/images/portugal.jpeg",
   },
   "Rio Favela": {
     glow: "#FFDF00",

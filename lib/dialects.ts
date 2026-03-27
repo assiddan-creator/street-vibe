@@ -12,7 +12,6 @@ export const DIALECTS: DialectOption[] = [
   { value: "Tokyo Gyaru", label: "Tokyo Gyaru", group: "street" },
   { value: "Paris Banlieue", label: "Paris Banlieue", group: "street" },
   { value: "Russian Street", label: "Russian Street", group: "street" },
-  { value: "Lisbon Street", label: "Lisbon Street", group: "street" },
   { value: "Mexico City Barrio", label: "Mexico City Barrio", group: "street" },
   { value: "Rio Favela", label: "Rio Favela", group: "street" },
   { value: "Israeli Street", label: "Israeli Street", group: "street" },

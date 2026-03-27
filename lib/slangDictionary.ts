@@ -356,7 +356,6 @@ const DIALECT_TO_DB_KEY: Record<string, string> = {
   "Tokyo Gyaru": "tokyo",
   "Paris Banlieue": "paris",
   "Russian Street": "russian",
-  "Lisbon Street": "lisbon",
   "Mexico City Barrio": "mexico",
   "Rio Favela": "rio",
   "Israeli Street": "israeli",
