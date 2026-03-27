@@ -421,7 +421,7 @@ export default function Home() {
               readOnly={isListening}
               onChange={(e) => setInputText(e.target.value)}
               placeholder="Say it plain…"
-              className={GLASS_INPUT}
+              className={`${GLASS_INPUT} border-white/5 bg-white/3`}
             />
           </div>
 
@@ -443,7 +443,7 @@ export default function Home() {
                     key={level}
                     type="button"
                     onClick={() => setSlangLevel(level)}
-                    className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-semibold backdrop-blur-md transition-all duration-300 ${
+                    className={`shrink-0 rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
                       on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
                     }`}
                     style={
@@ -476,7 +476,7 @@ export default function Home() {
                     key={value}
                     type="button"
                     onClick={() => setContext(value)}
-                    className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-semibold backdrop-blur-md transition-all duration-300 ${
+                    className={`shrink-0 rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
                       on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
                     }`}
                     style={
@@ -497,7 +497,8 @@ export default function Home() {
               type="button"
               onClick={() => void handleCopy()}
               aria-label="Copy"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/25 text-white/70 backdrop-blur-md transition-all duration-200 hover:bg-white/10 active:scale-95"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border bg-black/25 text-white/70 backdrop-blur-md transition-all duration-200 hover:bg-white/10 active:scale-95"
+              style={{ borderColor: `${theme.accent}30` }}
             >
               <svg className="h-[20px] w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path
@@ -539,7 +540,8 @@ export default function Home() {
               type="button"
               onClick={handleClear}
               aria-label="Clear"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/25 text-white/70 backdrop-blur-md transition-all duration-200 hover:bg-white/10 active:scale-95"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border bg-black/25 text-white/70 backdrop-blur-md transition-all duration-200 hover:bg-white/10 active:scale-95"
+              style={{ borderColor: `${theme.accent}30` }}
             >
               <svg className="h-[20px] w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path
@@ -558,7 +560,7 @@ export default function Home() {
             }`}
           >
             <div
-              className={`${GLASS_OUTPUT_CARD} min-h-[200px] max-h-none overflow-visible`}
+              className={`${GLASS_OUTPUT_CARD} min-h-[200px] max-h-none overflow-visible !p-4`}
               style={
                 {
                   ["--scroll-thumb" as string]: `${theme.accent}88`,
@@ -567,11 +569,11 @@ export default function Home() {
                 } as CSSProperties
               }
             >
-              <p className="mb-1 text-[9px] font-medium uppercase tracking-wider text-white/40">Original</p>
+              <p className="mb-1 text-[10px] uppercase tracking-wider text-white/50">Original</p>
               <p className="mb-2 whitespace-pre-wrap break-words text-[11px] leading-snug text-white/80">
                 {originalText.trim() || "—"}
               </p>
-              <p className="mb-0.5 text-[9px] font-medium uppercase tracking-wider text-white/40">Street</p>
+              <p className="mb-0.5 text-[10px] uppercase tracking-wider text-white/50">Street</p>
               <div className="min-h-0 text-sm font-bold leading-snug">
                 {loading ? (
                   <p className="animate-pulse text-xs font-semibold" style={{ color: theme.accent }}>
@@ -580,13 +582,16 @@ export default function Home() {
                 ) : error ? (
                   <p className="text-[11px] font-normal text-red-400">{error}</p>
                 ) : translatedText.trim() ? (
-                  <p className="leading-snug [overflow-wrap:anywhere]" style={{ color: theme.accent }}>
+                  <p
+                    className="text-[13px] leading-relaxed [overflow-wrap:anywhere]"
+                    style={{ color: theme.accent }}
+                  >
                     {translatedText.split(/(\s+)/).map((token, i) =>
                       token.trim() ? (
                         <span
                           key={i}
                           onClick={(e) => void handleWordClick(token, e)}
-                          className="cursor-pointer rounded px-0.5 text-[11px] transition-all duration-150 hover:bg-white/10 active:bg-white/20"
+                          className="cursor-pointer rounded px-0.5 transition-all duration-150 hover:bg-white/10 active:bg-white/20"
                         >
                           {token}
                         </span>
@@ -601,7 +606,7 @@ export default function Home() {
                 {dictionaryPills.map((pill, i) => (
                   <span
                     key={`${pill}-${i}`}
-                    className="whitespace-pre-wrap break-words rounded-full border px-2 py-0.5 text-[10px] font-medium leading-tight transition-all duration-500"
+                    className="whitespace-pre-wrap break-words rounded-full border px-3 py-1 text-[11px] font-medium leading-tight transition-all duration-500"
                     style={{
                       borderColor: `${theme.accent}55`,
                       color: theme.accent,
