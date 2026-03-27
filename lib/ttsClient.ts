@@ -1,3 +1,8 @@
+import { resolveGoogleVoiceForDialect } from "@/lib/googleTtsVoiceConfig";
+import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
+import { isPremiumSlang } from "@/lib/streetVibeTheme";
+import { getStoredTtsGender, MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
+
 /** BCP-47 locale for Web Speech API synthesis per output dialect. */
 export function getDialectLocaleForTts(outputLang: string): string {
   const map: Record<string, string> = {
@@ -47,6 +52,21 @@ const CONTEXT_TUNING: Record<string, { speed: number; emotion: string }> = {
   default: { speed: 0.85, emotion: "neutral" },
 };
 
+/** Mirrors server `resolvedEngine` in `app/api/tts/route.ts` for logging. */
+function getEffectiveTtsEngine(
+  engine: "minimax" | "google" | "native",
+  dialect: string
+): "minimax" | "google" | "native" {
+  if (engine === "native") return "native";
+  if (engine === "minimax" && !isPremiumSlang(dialect)) return "google";
+  return engine;
+}
+
+function textPreview(text: string, max = 200): string {
+  const t = text.trim();
+  return t.length <= max ? t : `${t.slice(0, max)}…`;
+}
+
 /** Poll Replicate until TTS prediction completes; returns playable URL (https or data:). `null` when engine is native (playback via Web Speech API). */
 export async function fetchTtsAudioUrl(
   text: string,
@@ -55,55 +75,152 @@ export async function fetchTtsAudioUrl(
   context?: string
 ): Promise<string | null> {
   if (engine === "native") {
+    console.info("[TTS]", "Starting TTS request", {
+      engineLabel: "Native (browser Web Speech API)",
+      engine: "native" as const,
+      dialect,
+      textLength: text.length,
+      textPreview: textPreview(text),
+    });
     await speakNativeTts(text, dialect);
     return null;
   }
 
   const tuning = CONTEXT_TUNING[context ?? "default"] ?? CONTEXT_TUNING.default;
+  const ttsGender = getStoredTtsGender();
+  const effectiveEngine = getEffectiveTtsEngine(engine, dialect);
 
-  const startRes = await fetch("/api/tts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, dialect, engine, tuning }),
-  });
-  const startData = (await startRes.json()) as {
-    audioBase64?: string;
-    engine?: string;
-    predictionId?: string;
-    error?: string;
-  };
-  if (!startRes.ok) {
-    throw new Error(startData.error || "TTS request failed");
-  }
-  if (startData.audioBase64) {
-    return `data:audio/mp3;base64,${startData.audioBase64}`;
-  }
-  const predictionId = startData.predictionId;
-  if (!predictionId) throw new Error("No prediction ID from TTS");
+  const requestBody = { text, dialect, engine, tuning, ttsGender };
 
-  const maxAttempts = 80;
-  for (let i = 0; i < maxAttempts; i++) {
-    const pollRes = await fetch("/api/tts-poll", {
+  const engineLabel =
+    effectiveEngine === "google"
+      ? "Google Cloud Text-to-Speech (via POST /api/tts)"
+      : "MiniMax / Replicate speech-2.8-turbo (via POST /api/tts)";
+
+  if (effectiveEngine === "google") {
+    const voice = resolveGoogleVoiceForDialect(dialect);
+    const speakingRate =
+      typeof tuning.speed === "number" ? tuning.speed : voice.speakingRate;
+    console.info("[TTS]", "Starting TTS request", {
+      engineLabel,
+      requestedEngine: engine,
+      effectiveEngine,
+      dialect,
+      ttsGender,
+      tuning,
+      clientPayloadToApiRoute: {
+        textLength: text.length,
+        textPreview: textPreview(text),
+        dialect,
+        engine,
+        tuning,
+        ttsGender,
+      },
+      googleTextSynthesizeBodyPreview: {
+        input: { text: textPreview(text, 500) },
+        voice: { languageCode: voice.languageCode, name: voice.name },
+        audioConfig: {
+          audioEncoding: "MP3",
+          speakingRate,
+          pitch: voice.pitch,
+        },
+      },
+    });
+  } else {
+    const voiceId = MINIMAX_VOICE_ID_BY_GENDER[ttsGender];
+    console.info("[TTS]", "Starting TTS request", {
+      engineLabel,
+      requestedEngine: engine,
+      effectiveEngine,
+      dialect,
+      ttsGender,
+      tuning,
+      clientPayloadToApiRoute: {
+        textLength: text.length,
+        textPreview: textPreview(text),
+        dialect,
+        engine,
+        tuning,
+        ttsGender,
+      },
+      minimaxReplicateInputPreview: {
+        voice_id: voiceId,
+        speed: tuning.speed,
+        pitch: 0,
+        language_boost: resolveMinimaxLanguageBoost(dialect),
+        english_normalization: true,
+      },
+    });
+  }
+
+  try {
+    const startRes = await fetch("/api/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ predictionId }),
+      body: JSON.stringify(requestBody),
     });
-    const data = (await pollRes.json()) as {
-      status?: string;
-      output?: string | string[] | null;
-      error?: string | null;
+    const startData = (await startRes.json()) as {
+      audioBase64?: string;
+      engine?: string;
+      predictionId?: string;
+      error?: string;
     };
+    if (!startRes.ok) {
+      throw new Error(startData.error || "TTS request failed");
+    }
+    if (startData.audioBase64) {
+      console.info("[TTS]", "TTS request completed (inline audio)", {
+        reportedEngine: startData.engine ?? "(unknown)",
+      });
+      return `data:audio/mp3;base64,${startData.audioBase64}`;
+    }
+    const predictionId = startData.predictionId;
+    if (!predictionId) throw new Error("No prediction ID from TTS");
 
-    if (data.status === "succeeded") {
-      const out = data.output;
-      if (typeof out === "string" && out.startsWith("http")) return out;
-      if (Array.isArray(out) && out[0] && typeof out[0] === "string") return out[0];
-      throw new Error("TTS returned no audio URL");
+    const maxAttempts = 80;
+    for (let i = 0; i < maxAttempts; i++) {
+      const pollRes = await fetch("/api/tts-poll", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ predictionId }),
+      });
+      const data = (await pollRes.json()) as {
+        status?: string;
+        output?: string | string[] | null;
+        error?: string | null;
+      };
+
+      if (data.status === "succeeded") {
+        const out = data.output;
+        if (typeof out === "string" && out.startsWith("http")) {
+          console.info("[TTS]", "TTS request completed (poll URL)", {
+            predictionId,
+            urlPreview: `${out.slice(0, 80)}…`,
+          });
+          return out;
+        }
+        if (Array.isArray(out) && out[0] && typeof out[0] === "string") {
+          console.info("[TTS]", "TTS request completed (poll URL array)", {
+            predictionId,
+            urlPreview: `${out[0].slice(0, 80)}…`,
+          });
+          return out[0];
+        }
+        throw new Error("TTS returned no audio URL");
+      }
+      if (data.status === "failed" || data.error) {
+        throw new Error(typeof data.error === "string" ? data.error : "TTS failed");
+      }
+      await new Promise((r) => setTimeout(r, 500));
     }
-    if (data.status === "failed" || data.error) {
-      throw new Error(typeof data.error === "string" ? data.error : "TTS failed");
-    }
-    await new Promise((r) => setTimeout(r, 500));
+    throw new Error("TTS timed out");
+  } catch (e) {
+    console.warn("[TTS]", "API engine failed; falling back to Native browser TTS", {
+      requestedEngine: engine,
+      effectiveEngine,
+      error: e instanceof Error ? e.message : String(e),
+    });
+    await speakNativeTts(text, dialect);
+    return null;
   }
-  throw new Error("TTS timed out");
 }

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { GOOGLE_VOICE_DEFAULT, GOOGLE_VOICE_MAP } from "@/lib/googleTtsVoiceConfig";
+import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
+import { MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 
 const corsHeaders = {
@@ -10,13 +13,16 @@ const corsHeaders = {
 /** Replicate MiniMax model — speech-2.8-turbo */
 const REPLICATE_MINIMAX_VERSION = "minimax/speech-2.8-turbo";
 
-/** Default MiniMax input when demographic tuning is off; client `tuning` may override speed/emotion. */
+/** Base MiniMax defaults; `voice_id` is set from client `ttsGender`. Client `tuning` overrides speed (Vibe presets). */
 const MINIMAX_DEFAULTS = {
-  voice_id: "Casual_Guy",
   emotion: "auto" as string,
-  speed: 1.0,
+  speed: 0.85,
   pitch: 0,
 };
+
+function parseTtsGender(v: unknown): "male" | "female" {
+  return v === "female" ? "female" : "male";
+}
 
 const LANGUAGE_BOOST_MAP: Record<string, string> = {
   "London Roadman": "English",
@@ -28,73 +34,6 @@ const LANGUAGE_BOOST_MAP: Record<string, string> = {
   "Mexico City Barrio": "Spanish",
   "Rio Favela": "Portuguese",
   "Israeli Street": "Hebrew",
-};
-
-const GOOGLE_VOICE_MAP: Record<
-  string,
-  { languageCode: string; name: string; pitch: number; speakingRate: number }
-> = {
-  "London Roadman": {
-    languageCode: "en-GB",
-    name: "en-GB-Neural2-D",
-    pitch: -1.5,
-    speakingRate: 0.95,
-  },
-  "Jamaican Patois": {
-    languageCode: "en-GB",
-    name: "en-GB-Neural2-B",
-    pitch: -1.5,
-    speakingRate: 0.9,
-  },
-  "New York Brooklyn": {
-    languageCode: "en-US",
-    name: "en-US-Journey-D",
-    pitch: 0,
-    speakingRate: 0.95,
-  },
-  "Tokyo Gyaru": {
-    languageCode: "ja-JP",
-    name: "ja-JP-Neural2-B",
-    pitch: 0.5,
-    speakingRate: 1.0,
-  },
-  "Paris Banlieue": {
-    languageCode: "fr-FR",
-    name: "fr-FR-Neural2-D",
-    pitch: -1.5,
-    speakingRate: 0.95,
-  },
-  "Russian Street": {
-    languageCode: "ru-RU",
-    name: "ru-RU-Standard-D",
-    pitch: -1.5,
-    speakingRate: 0.9,
-  },
-  "Mexico City Barrio": {
-    languageCode: "es-US",
-    name: "es-US-Neural2-B",
-    pitch: -1.5,
-    speakingRate: 0.95,
-  },
-  "Rio Favela": {
-    languageCode: "pt-BR",
-    name: "pt-BR-Neural2-B",
-    pitch: -1.5,
-    speakingRate: 0.95,
-  },
-  "Israeli Street": {
-    languageCode: "he-IL",
-    name: "he-IL-Neural2-B",
-    pitch: 0,
-    speakingRate: 0.95,
-  },
-};
-
-const GOOGLE_VOICE_DEFAULT = {
-  languageCode: "en-US",
-  name: "en-US-Journey-F",
-  pitch: 0,
-  speakingRate: 0.9,
 };
 
 export async function OPTIONS() {
@@ -193,6 +132,8 @@ export async function POST(req: NextRequest) {
     typeof tuning?.speed === "number" ? tuning.speed : MINIMAX_DEFAULTS.speed;
   const pitch =
     typeof tuning?.pitch === "number" ? tuning.pitch : MINIMAX_DEFAULTS.pitch;
+  const genderKey = parseTtsGender(body.ttsGender);
+  const voiceId = MINIMAX_VOICE_ID_BY_GENDER[genderKey];
 
   try {
     const minimaxRes = await fetch("https://api.replicate.com/v1/predictions", {
@@ -205,12 +146,12 @@ export async function POST(req: NextRequest) {
         version: REPLICATE_MINIMAX_VERSION,
         input: {
           text,
-          voice_id: MINIMAX_DEFAULTS.voice_id,
+          voice_id: voiceId,
           speed,
           pitch,
           emotion: MINIMAX_DEFAULTS.emotion,
           volume: (tuning?.volume as number | undefined) ?? 1.0,
-          language_boost: LANGUAGE_BOOST_MAP[dialect as string ?? ""] ?? "Automatic",
+          language_boost: resolveMinimaxLanguageBoost(typeof dialect === "string" ? dialect : ""),
           english_normalization: true,
         },
       }),
