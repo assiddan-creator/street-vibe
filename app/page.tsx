@@ -476,7 +476,7 @@ export default function Home() {
               <img
                 src={cityTheme.bg.wide}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover opacity-50"
+                className="absolute inset-0 h-full w-full object-cover opacity-75"
                 draggable={false}
               />
             ) : null}

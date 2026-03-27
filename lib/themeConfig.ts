@@ -10,58 +10,18 @@ export type CityThemeTokens = {
   micBall?: string | null;
 };
 
-/** Per-dialect hero images: `wide` (desktop), `long` (phone). Same path in both until split assets exist. */
+/** Per-dialect hero images: `wide` (desktop), `long` (phone). Ball art aligned with micBall. */
 const IMG = {
-  /** JP Tokyo — White & Crimson Red */
-  tokyo: {
-    wide: "/images/Abstract_flat_lay_202603261907.jpeg",
-    long: "/images/Abstract_flat_lay_202603261907.jpeg",
-  },
-  /** RU Moscow — Royal Blue, Crimson Red, White */
-  moscow: {
-    wide: "/images/Abstract_flat_lay_202603261911.jpeg",
-    long: "/images/Abstract_flat_lay_202603261911.jpeg",
-  },
-  /** MX Mexico City — Emerald Green, White, Crimson Red */
-  mexicoCity: {
-    wide: "/images/Abstract_flat_lay_202603261912.jpeg",
-    long: "/images/Abstract_flat_lay_202603261912.jpeg",
-  },
-  /** PT Lisbon — Red & Green */
-  lisbon: {
-    wide: "/images/Abstract_flat_lay_202603261914.jpeg",
-    long: "/images/Abstract_flat_lay_202603261914.jpeg",
-  },
-  /** BR Rio — Emerald Green, Gold Yellow, Royal Blue */
-  rio: {
-    wide: "/images/Abstract_flat_lay_202603261915.jpeg",
-    long: "/images/Abstract_flat_lay_202603261915.jpeg",
-  },
-  /** JM Kingston — Lime Green & Gold */
-  kingston: {
-    wide: "/images/kingston wide.jpeg",
-    long: "/images/kingston long.jpeg",
-  },
-  /** US Brooklyn — Royal Blue, Crimson Red, White */
-  brooklyn: {
-    wide: "/images/brooklyn wide.jpeg",
-    long: "/images/brooklyn long.jpeg",
-  },
-  /** FR Paris — Tricolour Blue, White, Crimson Red */
-  paris: {
-    wide: "/images/DJ_headphones_with_202603261909.jpeg",
-    long: "/images/DJ_headphones_with_202603261909.jpeg",
-  },
-  /** IL Israel — Royal Blue & Pure White */
-  israel: {
-    wide: "/images/DJ_headphones_with_202603261917.jpeg",
-    long: "/images/DJ_headphones_with_202603261917.jpeg",
-  },
-  /** UK London — Royal Blue, Crimson Red, White */
-  london: {
-    wide: "/images/london wide.jpeg",
-    long: "/images/london long.jpeg",
-  },
+  london: { wide: "/images/england.jpeg", long: "/images/england.jpeg" },
+  brooklyn: { wide: "/images/usa.jpeg", long: "/images/usa.jpeg" },
+  kingston: { wide: "/images/jamaika.jpeg", long: "/images/jamaika.jpeg" },
+  tokyo: { wide: "/images/japan.jpeg", long: "/images/japan.jpeg" },
+  paris: { wide: "/images/france.jpeg", long: "/images/france.jpeg" },
+  moscow: { wide: "/images/russia.jpeg", long: "/images/russia.jpeg" },
+  mexico: { wide: "/images/mexico.jpeg", long: "/images/mexico.jpeg" },
+  rio: { wide: "/images/brasil.jpeg", long: "/images/brasil.jpeg" },
+  israel: { wide: "/images/israel.jpeg", long: "/images/israel.jpeg" },
+  lisbon: { wide: "", long: "" },
 } as const;
 
 /**
@@ -90,7 +50,7 @@ export const CITY_THEME_BY_DIALECT_ID: Record<string, CityThemeTokens> = {
     button: "#006847",
     buttonBorder: "#CE1126",
     accent: "#006847",
-    bg: IMG.mexicoCity,
+    bg: IMG.mexico,
     micBall: "/images/mexico.jpeg",
   },
   "Lisbon Street": {
