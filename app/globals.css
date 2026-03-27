@@ -39,7 +39,26 @@ body {
   animation: mic-pulse 1s ease-in-out infinite;
 }
 
+@keyframes pulse-slow {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.04);
+    filter: brightness(1.15);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-pulse-slow {
+    animation: none;
+  }
   .city-theme-ambient {
     background-image: none !important;
     transition: none !important;

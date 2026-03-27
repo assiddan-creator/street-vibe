@@ -194,6 +194,7 @@ export default function Home() {
   const cityTheme = getCityThemeForDialect(outputLang);
   const micBall = cityTheme.micBall ?? null;
   const isActive = inputText.trim().length > 0 || originalText.trim().length > 0;
+  const isIdle = !isActive;
 
   return (
     <>
@@ -223,15 +224,28 @@ export default function Home() {
         onClick={() => setPopupWord(null)}
       >
         <header className="mb-4 flex shrink-0 items-center justify-center">
-          <span
-            className="text-3xl text-white drop-shadow-lg"
-            style={{
-              fontFamily: "'Permanent Marker', cursive",
-              textShadow: `0 0 20px ${theme.accent}88, 0 2px 4px rgba(0,0,0,0.8)`,
-            }}
-          >
-            StreetVibe
-          </span>
+          {isIdle ? (
+            <span
+              className="text-xl text-white"
+              style={{
+                fontFamily: "'Permanent Marker', cursive",
+                opacity: 0.7,
+                letterSpacing: "0.05em",
+              }}
+            >
+              StreetVibe
+            </span>
+          ) : (
+            <span
+              className="text-3xl text-white drop-shadow-lg"
+              style={{
+                fontFamily: "'Permanent Marker', cursive",
+                textShadow: `0 0 20px ${theme.accent}88, 0 2px 4px rgba(0,0,0,0.8)`,
+              }}
+            >
+              StreetVibe
+            </span>
+          )}
         </header>
 
         <StreetVibeNav />
@@ -239,16 +253,20 @@ export default function Home() {
         <div className="mb-4 flex flex-col gap-0.5">
           <label
             htmlFor="input-lang"
-            className="text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
+            className={
+              isIdle
+                ? "text-center text-[8px] uppercase tracking-widest text-white/25"
+                : "text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
+            }
           >
             🗣️ I Speak
           </label>
-          <div style={{ "--accent": theme.accent } as CSSProperties}>
+          {isIdle ? (
             <select
               id="input-lang"
               value={inputLanguage}
               onChange={(e) => setInputLanguage(e.target.value)}
-              className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-center text-[11px] leading-tight`}
+              className="w-full border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none rounded-none"
             >
               {INPUT_LANGUAGES.map((opt) => (
                 <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -256,22 +274,41 @@ export default function Home() {
                 </option>
               ))}
             </select>
-          </div>
+          ) : (
+            <div style={{ "--accent": theme.accent } as CSSProperties}>
+              <select
+                id="input-lang"
+                value={inputLanguage}
+                onChange={(e) => setInputLanguage(e.target.value)}
+                className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-center text-[11px] leading-tight`}
+              >
+                {INPUT_LANGUAGES.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="mb-4 flex flex-col gap-0.5">
           <label
             htmlFor="output-lang"
-            className="text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
+            className={
+              isIdle
+                ? "text-center text-[8px] uppercase tracking-widest text-white/25"
+                : "text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
+            }
           >
             🌍 Translate To
           </label>
-          <div style={{ "--accent": theme.accent } as CSSProperties}>
+          {isIdle ? (
             <select
               id="output-lang"
               value={outputLang}
               onChange={(e) => setOutputLang(e.target.value)}
-              className={`${GLASS_SELECT} px-2.5 py-2 text-center text-xs`}
+              className="w-full border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none rounded-none"
             >
               <optgroup label="💎 Premium Slangs" className="bg-zinc-900 text-white">
                 {OUTPUT_PREMIUM_OPTIONS.map((o) => (
@@ -288,7 +325,31 @@ export default function Home() {
                 ))}
               </optgroup>
             </select>
-          </div>
+          ) : (
+            <div style={{ "--accent": theme.accent } as CSSProperties}>
+              <select
+                id="output-lang"
+                value={outputLang}
+                onChange={(e) => setOutputLang(e.target.value)}
+                className={`${GLASS_SELECT} px-2.5 py-2 text-center text-xs`}
+              >
+                <optgroup label="💎 Premium Slangs" className="bg-zinc-900 text-white">
+                  {OUTPUT_PREMIUM_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="🌐 Standard Languages" className="bg-zinc-900 text-white">
+                  {OUTPUT_STANDARD_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+          )}
         </div>
 
         <div className={`flex flex-col items-center transition-all duration-500 ${isActive ? "mb-4 mt-0" : "mb-8 mt-8"}`}>
@@ -297,8 +358,8 @@ export default function Home() {
             onClick={toggleMic}
             aria-label={isListening ? "Stop listening" : "Tap to speak"}
             className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full shadow-2xl transition-all duration-500 ease-in-out active:scale-95 ${
-              isActive ? "h-24 w-24" : "h-40 w-40"
-            } ${isListening ? "mic-pulse border-transparent" : ""}`}
+              isActive ? "h-24 w-24" : "h-48 w-48"
+            } ${isListening ? "mic-pulse border-transparent" : isIdle ? "animate-pulse-slow" : ""}`}
             style={
               isListening
                 ? {
@@ -312,7 +373,7 @@ export default function Home() {
               <img src={micBall} alt="mic" className="h-full w-full rounded-full object-cover" draggable={false} />
             ) : (
               <svg
-                className={`${isActive ? "h-10 w-10" : "h-16 w-16"} ${isListening ? "text-black/90" : "text-white"}`}
+                className={`${isActive ? "h-10 w-10" : "h-24 w-24"} ${isListening ? "text-black/90" : "text-white"}`}
                 fill="currentColor"
                 viewBox="0 0 24 24"
                 aria-hidden
@@ -321,12 +382,30 @@ export default function Home() {
               </svg>
             )}
           </button>
-          <span
-            className={`mt-2 text-center text-[11px] transition-all duration-300 ${isListening ? "" : "text-white/40"}`}
-            style={isListening ? { color: theme.accent } : undefined}
-          >
-            {isListening ? "listening..." : isActive ? "tap to speak again" : "tap to speak"}
-          </span>
+          {isListening ? (
+            <span
+              className="mt-2 text-center text-[11px] transition-all duration-300"
+              style={{ color: theme.accent }}
+            >
+              listening...
+            </span>
+          ) : isActive ? (
+            <span className="mt-2 text-center text-[11px] text-white/40 transition-all duration-300">
+              tap to speak again
+            </span>
+          ) : (
+            <>
+              <span
+                className="mt-3 text-center text-base uppercase tracking-widest"
+                style={{ color: theme.accent, opacity: 0.7, letterSpacing: "0.15em" }}
+              >
+                tap to speak
+              </span>
+              <p className="mt-1 text-center text-[9px] tracking-wider text-white/25">
+                speak or type in any language
+              </p>
+            </>
+          )}
           {micError ? <p className="mt-1 text-center text-[10px] text-red-400">{micError}</p> : null}
         </div>
 

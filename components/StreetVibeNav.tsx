@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const linkBase =
-  "rounded-full border px-3 py-1.5 text-[10px] font-semibold backdrop-blur-md transition-colors duration-300";
+  "rounded-full border px-3 py-1 text-[11px] font-semibold opacity-60 backdrop-blur-md transition-colors duration-300";
 
 export function StreetVibeNav() {
   const pathname = usePathname();
