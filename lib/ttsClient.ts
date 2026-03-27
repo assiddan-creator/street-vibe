@@ -3,6 +3,7 @@ import {
   resolveGoogleChirp3HdVoiceName,
   resolveGoogleVoiceForDialect,
 } from "@/lib/googleTtsVoiceConfig";
+import { resolveMinimaxEmotionFromVibe } from "@/lib/minimaxTtsEmotion";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 import { getStoredTtsGender, MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
@@ -48,12 +49,13 @@ export function speakNativeTts(text: string, dialect: string): Promise<void> {
   });
 }
 
-const CONTEXT_TUNING: Record<string, { speed: number; emotion: string }> = {
-  dm: { speed: 0.85, emotion: "neutral" },
-  flirt: { speed: 0.8, emotion: "happy" },
-  angry: { speed: 1.0, emotion: "angry" },
-  stoned: { speed: 0.8, emotion: "calm" },
-  default: { speed: 0.85, emotion: "neutral" },
+/** Speed by Vibe; MiniMax `emotion` is set server-side from `context` via `minimaxTtsEmotion`. */
+const CONTEXT_TUNING: Record<string, { speed: number }> = {
+  dm: { speed: 0.85 },
+  flirt: { speed: 0.8 },
+  angry: { speed: 1.0 },
+  stoned: { speed: 0.8 },
+  default: { speed: 0.85 },
 };
 
 /** Mirrors server `resolvedEngine` in `app/api/tts/route.ts` for logging. */
@@ -94,7 +96,15 @@ export async function fetchTtsAudioUrl(
   const ttsGender = getStoredTtsGender();
   const effectiveEngine = getEffectiveTtsEngine(engine, dialect);
 
-  const requestBody = { text, dialect, engine, tuning, ttsGender };
+  const vibeKey = context ?? "default";
+  const requestBody = {
+    text,
+    dialect,
+    engine,
+    tuning,
+    ttsGender,
+    context: vibeKey,
+  };
 
   const engineLabel =
     effectiveEngine === "google"
@@ -147,11 +157,13 @@ export async function fetchTtsAudioUrl(
         engine,
         tuning,
         ttsGender,
+        context: vibeKey,
       },
       minimaxReplicateInputPreview: {
         voice_id: voiceId,
         speed: tuning.speed,
         pitch: 0,
+        emotion: resolveMinimaxEmotionFromVibe(context),
         language_boost: resolveMinimaxLanguageBoost(dialect),
         english_normalization: true,
       },

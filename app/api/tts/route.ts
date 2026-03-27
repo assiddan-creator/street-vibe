@@ -5,6 +5,7 @@ import {
   isGoogleChirpVoiceName,
   resolveGoogleChirp3HdVoiceName,
 } from "@/lib/googleTtsVoiceConfig";
+import { resolveMinimaxEmotionFromVibe } from "@/lib/minimaxTtsEmotion";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
@@ -18,9 +19,8 @@ const corsHeaders = {
 /** Replicate MiniMax model — speech-2.8-turbo */
 const REPLICATE_MINIMAX_VERSION = "minimax/speech-2.8-turbo";
 
-/** Base MiniMax defaults; `voice_id` is set from client `ttsGender`. Client `tuning` overrides speed (Vibe presets). */
+/** Base MiniMax defaults; `voice_id` from `ttsGender`; `emotion` from Vibe via `resolveMinimaxEmotionFromVibe`. Client `tuning` overrides speed. */
 const MINIMAX_DEFAULTS = {
-  emotion: "auto" as string,
   speed: 0.85,
   pitch: 0,
 };
@@ -135,6 +135,8 @@ export async function POST(req: NextRequest) {
     typeof tuning?.pitch === "number" ? tuning.pitch : MINIMAX_DEFAULTS.pitch;
   const genderKey = parseTtsGender(body.ttsGender);
   const voiceId = MINIMAX_VOICE_ID_BY_GENDER[genderKey];
+  const vibeContext = typeof body.context === "string" ? body.context : undefined;
+  const emotion = resolveMinimaxEmotionFromVibe(vibeContext);
 
   try {
     const minimaxRes = await fetch("https://api.replicate.com/v1/predictions", {
@@ -150,7 +152,7 @@ export async function POST(req: NextRequest) {
           voice_id: voiceId,
           speed,
           pitch,
-          emotion: MINIMAX_DEFAULTS.emotion,
+          emotion,
           volume: (tuning?.volume as number | undefined) ?? 1.0,
           language_boost: resolveMinimaxLanguageBoost(typeof dialect === "string" ? dialect : ""),
           english_normalization: true,
