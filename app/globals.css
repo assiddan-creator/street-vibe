@@ -39,6 +39,13 @@ body {
   animation: mic-pulse 1s ease-in-out infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .city-theme-ambient {
+    background-image: none !important;
+    transition: none !important;
+  }
+}
+
 /* Translation output card — thin dark scrollbar, thumb uses --scroll-thumb (theme accent) */
 .output-card-scroll {
   scrollbar-width: thin;

@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
+import { MicBallContent } from "@/components/theme/MicBallContent";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -29,6 +30,7 @@ import {
   resolveTheme,
   splitTranslationAndDictionary,
 } from "@/lib/streetVibeTheme";
+import { getCityThemeForDialect } from "@/lib/themeConfig";
 
 type DuoTurn = "me" | "them";
 
@@ -303,6 +305,9 @@ export default function SpeakPage() {
     `flex-1 rounded-lg border px-2 py-1.5 text-center text-[11px] font-semibold transition-all duration-300 ${
       on ? "text-black" : "border-white/10 bg-black/25 text-white/90 backdrop-blur-md"
     }`;
+
+  const cityTheme = getCityThemeForDialect(outputLang);
+  const micBall = cityTheme.micBall ?? null;
 
   return (
     <>
@@ -663,7 +668,7 @@ export default function SpeakPage() {
                 type="button"
                 onClick={toggleMic}
                 aria-label={isListening ? "Stop listening" : "Tap to speak"}
-                className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
+                className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-xl transition-all duration-500 ease-in-out active:scale-95 ${
                   isListening ? "mic-pulse border-transparent" : THEME_MIC_IDLE
                 }`}
                 style={
@@ -675,14 +680,7 @@ export default function SpeakPage() {
                     : undefined
                 }
               >
-                <svg
-                  className={`h-10 w-10 ${isListening ? "text-black/90" : "text-white"}`}
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden
-                >
-                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14C5.52 16.16 8.53 19 12 19s6.48-2.84 6.93-6.86c.09-.6-.39-1.14-1-1.14z" />
-                </svg>
+                <MicBallContent micBall={micBall} isListening={isListening} iconClassName="h-10 w-10" />
               </button>
               <span
                 className={`mt-1.5 text-center text-[10px] transition-colors duration-300 ${isListening ? "" : "text-white/50"}`}

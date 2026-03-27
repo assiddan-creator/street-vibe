@@ -49,8 +49,14 @@ export function CityThemeProvider({ children }: { children: ReactNode }) {
   return (
     <CityThemeContext.Provider value={value}>
       <div
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{ backgroundColor: "#000000" }}
+        className="city-theme-ambient pointer-events-none fixed inset-0 z-0 transition-[background-image] duration-700 ease-out"
+        style={{
+          backgroundColor: "#000000",
+          backgroundImage: `
+            radial-gradient(ellipse 90% 65% at 92% 0%, color-mix(in srgb, var(--theme-glow) 7%, transparent) 0%, transparent 58%),
+            radial-gradient(ellipse 88% 62% at 8% 100%, color-mix(in srgb, var(--accent) 6%, transparent) 0%, transparent 55%)
+          `,
+        }}
         aria-hidden
       />
       <div className="relative z-10 min-h-[100vh] min-h-[100dvh] overflow-y-auto text-white">{children}</div>
