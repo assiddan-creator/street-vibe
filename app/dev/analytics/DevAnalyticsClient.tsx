@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildAnalyticsSnapshotExport,
   clearStoredAnalyticsEvents,
@@ -37,13 +37,32 @@ function formatTop(rows: { label: string; count: number }[]) {
   return rows.map((r) => `${r.label} (${r.count})`).join(" · ");
 }
 
+/** Dashboard poll interval — visible rollup only; export stays click-fresh. */
+const DASHBOARD_POLL_MS = 4000;
+
 export function DevAnalyticsClient() {
   const [tick, setTick] = useState(0);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(() => new Date());
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const rollup: DevAnalyticsRollup = useMemo(() => {
     void tick;
     return readDevAnalyticsRollup();
   }, [tick]);
+
+  useEffect(() => {
+    setLastRefreshedAt(new Date());
+  }, [tick]);
+
+  useEffect(() => {
+    const onFocus = () => setTick((t) => t + 1);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((t) => t + 1), DASHBOARD_POLL_MS);
+    return () => window.clearInterval(id);
+  }, []);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
@@ -93,6 +112,15 @@ export function DevAnalyticsClient() {
         <p className="text-[12px] leading-relaxed text-white/45">
           Aggregated counts from <span className="font-mono text-white/55">localStorage</span> only. No message
           content.
+        </p>
+        <p className="text-[11px] leading-relaxed text-white/38">
+          On-screen totals update on manual Refresh, window focus, or every {DASHBOARD_POLL_MS / 1000}s; until then
+          they can lag behind other tabs. <span className="text-white/55">Copy JSON</span> and{" "}
+          <span className="text-white/55">Download JSON</span> always read the latest local data at click time.
+        </p>
+        <p className="text-[11px] text-white/50">
+          <span className="text-white/35">Last refreshed:</span>{" "}
+          <span className="font-mono text-emerald-200/85">{lastRefreshedAt.toLocaleString()}</span>
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           <button
