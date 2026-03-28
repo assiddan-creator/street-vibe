@@ -66,11 +66,12 @@ function buildPrompt({
   };
 
   const CONTEXT_INSTRUCTIONS: Record<string, string> = {
-    dm: "This is a casual text message between close friends.",
+    dm: "This is a private DM between close friends — blunt, casual, low polish. Shortest honest way to say it; skip softening you'd use in flirt. Friend energy: real and direct, not smooth and not a caption.",
     post: "This is a social media post meant to be public and punchy.",
     reply: "This is a reply in an argument or comeback situation — keep it sharp.",
     hype: "This is a hype message — energetic, loud, encouraging.",
-    flirt: "This is a flirtatious message — smooth, charming, confident.",
+    flirt:
+      "This is a one-on-one flirty message — warmer, a bit softer, genuinely interested (curiosity, a real compliment). When it fits the input, one specific detail beats a generic opener. Charming and human, not aggressive, not a pickup-line slogan.",
     angry: "This is an angry message — direct, aggressive, no filter, street attitude.",
     stoned: "This is a relaxed chill message — slow energy, hazy, mellow, like texting after smoking.",
     default: "This is a casual message between friends.",
@@ -150,6 +151,41 @@ function buildPrompt({
       ? formatDialectPackPromptAppendix(buildDialectPackPromptHints(dialectId))
       : "";
 
+  /** Premium street dialects: keep distinctive voice — do not dilute toward generic American internet filler. */
+  const premiumDistinctiveReminder =
+    slangRequested && isKnownPremiumDialect(dialectId)
+      ? `
+
+PREMIUM DIALECT (${dialectId}): Keep a distinctive, culturally tuned voice — not generic hype English. Preserve depth and local authenticity; flirt should feel warmer than DM, DM blunter than flirt.
+`
+      : "";
+
+  /** Tuning: US English standard output — consistent register, less meme-template phrasing; clearer flirt vs DM (see CONTEXT above). */
+  const englishStandardVoiceBlock =
+    dialectId === "English (Standard)" && slangRequested
+      ? `
+
+ENGLISH (STANDARD) — U.S. casual texting (mandatory):
+- Keep ONE consistent register per message: natural General American casual. Do not mix British/street-UK words (e.g. "proper", "bruv", "mandem") with American slang in the same message unless the source text already mixes them.
+- Avoid tired viral catchphrases that sound copy-pasted: e.g. "hit different", "it's giving", "understood the assignment", "no thoughts just vibes". Say the same idea in plain, human words.
+- Do not end thoughts with "hit different" / "hit me different" / "lookin different" / "whole vibe just X different" — those are the same template in new words.
+- STANDARD (non-premium) GOAL: believable, sendable General American casual — natural and clear. Do not try to match premium street-dialect intensity; usability and voice consistency beat performance.
+- FLIRT (when context is flirt): warmer and interested; smooth, not stiff — still like a real person, not a script.
+- DM (when context is dm): more direct and friend-chaotic than flirt; less polish, more shorthand.
+`
+      : "";
+
+  /** Tuning: NYC voice — avoid meme-style "…different" closers; keep flirt softer than DM. */
+  const newYorkBrooklynVoiceBlock =
+    dialectId === "New York Brooklyn" && slangRequested
+      ? `
+
+NEW YORK BROOKLYN — street English (mandatory):
+- Do not end on a hollow "different" punchline (e.g. "your energy different", "that shit different", "vibe different", or any sentence that ends on "...different") — that reads like a viral template. Close with a concrete line, a question, or plain words.
+- FLIRT: interested and a little softer than DM. DM: faster and blunter than flirt — less setup, more straight talk.
+`
+      : "";
+
   const russianRule = isRussianLang
     ? `
 CRITICAL RULES FOR RUSSIAN — read carefully:
@@ -175,6 +211,9 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
       `${personalizationBlock}` +
       `${slangControlBlock}` +
       `${dialectPackBlock}` +
+      `${premiumDistinctiveReminder}` +
+      `${englishStandardVoiceBlock}` +
+      `${newYorkBrooklynVoiceBlock}` +
       `${russianRule}\n\n` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +
