@@ -71,6 +71,13 @@ function getEffectiveTtsEngine(
   return engine;
 }
 
+/** Only for dev + `NEXT_PUBLIC_DEBUG_TTS=true`; never log text in production or by default. */
+function isTtsDebugTextPreviewsEnabled(): boolean {
+  return (
+    process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_DEBUG_TTS === "true"
+  );
+}
+
 function textPreview(text: string, max = 200): string {
   const t = text.trim();
   return t.length <= max ? t : `${t.slice(0, max)}…`;
@@ -105,13 +112,22 @@ export async function fetchTtsAudioUrl(
       learnsYouEnabled: learnsYou,
       implicitGuidancePresent,
     });
-    console.info("[TTS]", "Starting TTS request", {
-      engineLabel: "Native (browser Web Speech API)",
-      engine: "native" as const,
-      dialect,
-      textLength: text.length,
-      textPreview: textPreview(text),
-    });
+    if (isTtsDebugTextPreviewsEnabled()) {
+      console.info("[TTS]", "Starting TTS request", {
+        engineLabel: "Native (browser Web Speech API)",
+        engine: "native" as const,
+        dialect,
+        textLength: text.length,
+        textPreview: textPreview(text),
+      });
+    } else {
+      console.info("[TTS]", "Starting TTS request", {
+        engineLabel: "Native (browser Web Speech API)",
+        engine: "native" as const,
+        dialect,
+        textLength: text.length,
+      });
+    }
     try {
       await speakNativeTts(text, dialect);
       trackAnalyticsEvent({
@@ -174,6 +190,11 @@ export async function fetchTtsAudioUrl(
     const googleVoiceName = resolveGoogleChirp3HdVoiceName(voice.languageCode, ttsGender);
     const speakingRate =
       typeof tuning.speed === "number" ? tuning.speed : voice.speakingRate;
+    const audioConfig = {
+      audioEncoding: "MP3" as const,
+      speakingRate,
+      ...(isGoogleChirpVoiceName(googleVoiceName) ? {} : { pitch: voice.pitch }),
+    };
     console.info("[TTS]", "Starting TTS request", {
       engineLabel,
       requestedEngine: engine,
@@ -183,21 +204,23 @@ export async function fetchTtsAudioUrl(
       tuning,
       clientPayloadToApiRoute: {
         textLength: text.length,
-        textPreview: textPreview(text),
         dialect,
         engine,
         tuning,
         ttsGender,
       },
-      googleTextSynthesizeBodyPreview: {
-        input: { text: textPreview(text, 500) },
+      googleRoute: {
         voice: { languageCode: voice.languageCode, name: googleVoiceName },
-        audioConfig: {
-          audioEncoding: "MP3",
-          speakingRate,
-          ...(isGoogleChirpVoiceName(googleVoiceName) ? {} : { pitch: voice.pitch }),
-        },
+        audioConfig,
       },
+      ...(isTtsDebugTextPreviewsEnabled()
+        ? {
+            textPreviewDebug: {
+              clientPayloadSnippet: textPreview(text),
+              googleSynthesizeInputSnippet: textPreview(text, 500),
+            },
+          }
+        : {}),
     });
   } else {
     const voiceId = MINIMAX_VOICE_ID_BY_GENDER[ttsGender];
@@ -210,7 +233,6 @@ export async function fetchTtsAudioUrl(
       tuning,
       clientPayloadToApiRoute: {
         textLength: text.length,
-        textPreview: textPreview(text),
         dialect,
         engine,
         tuning,
@@ -225,6 +247,9 @@ export async function fetchTtsAudioUrl(
         language_boost: resolveMinimaxLanguageBoost(dialect),
         english_normalization: true,
       },
+      ...(isTtsDebugTextPreviewsEnabled()
+        ? { textPreviewDebug: { clientPayloadSnippet: textPreview(text) } }
+        : {}),
     });
   }
 
