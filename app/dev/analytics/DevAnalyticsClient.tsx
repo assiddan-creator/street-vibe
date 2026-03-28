@@ -7,10 +7,14 @@ import {
   ANALYTICS_FAILURE_CATEGORY_ORDER,
   buildAnalyticsSnapshotExport,
   clearStoredAnalyticsEvents,
+  computeDevAnalyticsRollup,
   readDevAnalyticsRollup,
   type AnalyticsFailureCategory,
   type DevAnalyticsRollup,
 } from "@/lib/analyticsEvents";
+
+/** Matches SSR (no localStorage): first paint must match server HTML before reading storage on the client. */
+const EMPTY_DEV_ROLLUP: DevAnalyticsRollup = computeDevAnalyticsRollup([]);
 
 function pct(n: number | null): string {
   if (n === null || Number.isNaN(n)) return "—";
@@ -67,16 +71,23 @@ const DASHBOARD_POLL_MS = 4000;
 
 export function DevAnalyticsClient() {
   const [tick, setTick] = useState(0);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(() => new Date());
+  const [mounted, setMounted] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const rollup: DevAnalyticsRollup = useMemo(() => {
     void tick;
+    if (!mounted) return EMPTY_DEV_ROLLUP;
     return readDevAnalyticsRollup();
-  }, [tick]);
+  }, [mounted, tick]);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     setLastRefreshedAt(new Date());
-  }, [tick]);
+  }, [mounted, tick]);
 
   useEffect(() => {
     const onFocus = () => setTick((t) => t + 1);
@@ -145,7 +156,9 @@ export function DevAnalyticsClient() {
         </p>
         <p className="text-[11px] text-white/50">
           <span className="text-white/35">Last refreshed:</span>{" "}
-          <span className="font-mono text-emerald-200/85">{lastRefreshedAt.toLocaleString()}</span>
+          <span className="font-mono text-emerald-200/85">
+            {lastRefreshedAt ? lastRefreshedAt.toLocaleString() : "—"}
+          </span>
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           <button
