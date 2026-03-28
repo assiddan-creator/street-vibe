@@ -15,6 +15,11 @@ import {
   shouldRetryIsraeliStreetOutput,
 } from "@/lib/hebrewOutputGuard";
 import {
+  applyPersonaPresetToProfile,
+  buildPersonaPresetPromptHints,
+  parseOptionalPersonaPresetId,
+} from "@/lib/personaPresets";
+import {
   buildPersonalizationPromptHints,
   formatPersonalizationBlockForTranslate,
   parseOptionalPersonalProfileFromBody,
@@ -239,7 +244,12 @@ export async function POST(req: NextRequest) {
   }
 
   const profileFromBody = parseOptionalPersonalProfileFromBody(body);
-  const personalizationHints = buildPersonalizationPromptHints(profileFromBody);
+  const personaPresetId = parseOptionalPersonaPresetId(body);
+  const effectiveProfile = applyPersonaPresetToProfile(profileFromBody, personaPresetId);
+  const personalizationHints = [
+    ...buildPersonalizationPromptHints(effectiveProfile),
+    ...buildPersonaPresetPromptHints(personaPresetId),
+  ];
 
   const { prompt, slangRequested } = buildPrompt({
     text: String(text),

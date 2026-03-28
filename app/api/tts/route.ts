@@ -13,6 +13,10 @@ import {
   minimaxInterjectionWasApplied,
   shapeTextForMinimaxTts,
 } from "@/lib/minimaxInterjectionWriter";
+import {
+  applyPersonaPresetToProfile,
+  parseOptionalPersonaPresetId,
+} from "@/lib/personaPresets";
 import { getPreferredVibeFallback, parseOptionalPersonalProfileFromBody } from "@/lib/personalSlangProfile";
 import { shapeTextForGoogleTts } from "@/lib/googleSpeechWriter";
 import { isKnownPremiumDialect } from "@/lib/dialectRegistry";
@@ -63,10 +67,12 @@ export async function POST(req: NextRequest) {
       : null;
 
   const profileFromBody = parseOptionalPersonalProfileFromBody(body);
+  const personaPresetId = parseOptionalPersonaPresetId(body);
+  const effectiveProfile = applyPersonaPresetToProfile(profileFromBody, personaPresetId);
   let vibeContext =
     typeof body.context === "string" && body.context.trim() !== "" ? body.context.trim() : undefined;
-  if (vibeContext === undefined && profileFromBody) {
-    const fb = getPreferredVibeFallback(profileFromBody);
+  if (vibeContext === undefined && effectiveProfile) {
+    const fb = getPreferredVibeFallback(effectiveProfile);
     if (fb) vibeContext = fb;
   }
 
@@ -99,6 +105,7 @@ export async function POST(req: NextRequest) {
       originalLen,
       shapedLen,
       shapingChanged,
+      personaPresetId: personaPresetId ?? null,
       dialectPackLabel: dialectPack?.displayLabel,
       dialectPackTtsHints,
     });
@@ -190,6 +197,7 @@ export async function POST(req: NextRequest) {
     originalLen: text.length,
     shapedLen: minimaxText.length,
     injected: minimaxInterjectionWasApplied(text, minimaxText),
+    personaPresetId: personaPresetId ?? null,
     policy: {
       allowed: interjectionPolicy.allowed,
       maxPerUtterance: interjectionPolicy.maxPerUtterance,
