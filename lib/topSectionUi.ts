@@ -6,6 +6,6 @@
 export const TOP_STACK_CLASS =
   "mx-auto flex w-full max-w-[min(100%,340px)] flex-col items-stretch gap-4";
 
-/** Secondary field captions — low contrast, no emoji (avoids stray green/purple from system emoji). */
+/** Secondary field captions — soft gray so selected values read as primary. */
 export const TOP_HELPER_LABEL_CLASS =
-  "mb-1 block w-full text-center text-[8px] font-normal uppercase tracking-[0.22em] text-white/26";
+  "mb-1 block w-full text-center text-[8px] font-normal uppercase tracking-[0.22em] text-zinc-500";
