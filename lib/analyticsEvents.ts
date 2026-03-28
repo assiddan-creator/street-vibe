@@ -280,7 +280,6 @@ export type AnalyticsEventPayload =
       name: typeof ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED;
       mode: StreetVibeMode;
       targetDialect: string;
-      errorCode: string;
       failureCategory: AnalyticsFailureCategory;
       learnsYouEnabled: boolean;
       durationMs: number;
@@ -312,7 +311,6 @@ export type AnalyticsEventPayload =
       mode: typeof ANALYTICS_MODE.SPEAK;
       effectiveEngine: AnalyticsTtsEngine;
       dialect: string;
-      errorCode: string;
       failureCategory: AnalyticsFailureCategory;
       durationMs: number;
       durationBucket: AnalyticsDurationBucket;
@@ -382,11 +380,6 @@ export function buildAnalyticsContext(input: {
   implicitGuidancePresent: boolean;
 }): typeof input {
   return { ...input };
-}
-
-/** Keeps `errorCode` on failure events bounded (same default as historical client usage). */
-export function clipAnalyticsErrorCode(message: string, maxLen = 120): string {
-  return message.slice(0, maxLen);
 }
 
 export function readStoredAnalyticsEvents(): StreetVibeAnalyticsEvent[] {

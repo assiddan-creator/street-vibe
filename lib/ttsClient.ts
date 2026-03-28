@@ -152,7 +152,6 @@ export async function fetchTtsAudioUrl(
         ...ANALYTICS_TTS_EVENT_MODE,
         effectiveEngine: ANALYTICS_ENGINE.NATIVE,
         dialect,
-        errorCode: e instanceof Error ? e.message.slice(0, 120) : "native_tts_error",
         failureCategory: categorizeTtsAnalyticsFailure(e),
         ...analyticsDurationFieldsFromStart(ttsPerfStart),
       });
@@ -375,7 +374,6 @@ export async function fetchTtsAudioUrl(
         ...ANALYTICS_TTS_EVENT_MODE,
         effectiveEngine,
         dialect,
-        errorCode: `${e instanceof Error ? e.message.slice(0, 60) : "api"}|${e2 instanceof Error ? e2.message.slice(0, 60) : "native"}`,
         failureCategory: categorizeTtsAnalyticsFailure(e, e2),
         ...analyticsDurationFieldsFromStart(ttsPerfStart),
       });

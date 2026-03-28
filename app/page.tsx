@@ -30,7 +30,6 @@ import {
   ANALYTICS_MODE,
   analyticsDurationFieldsFromStart,
   categorizeTranslateAnalyticsFailure,
-  clipAnalyticsErrorCode,
   trackAnalyticsEvent,
 } from "@/lib/analyticsEvents";
 import {
@@ -184,7 +183,6 @@ export default function Home() {
         name: ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED,
         mode: ANALYTICS_MODE.TEXT,
         targetDialect: dialect,
-        errorCode: clipAnalyticsErrorCode(e instanceof Error ? e.message : "translate_error"),
         failureCategory: categorizeTranslateAnalyticsFailure(e),
         learnsYouEnabled: getLearnsYouEnabled(),
         ...analyticsDurationFieldsFromStart(translatePerfStart),
