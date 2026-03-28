@@ -9,6 +9,7 @@ import {
   TtsPlaySkeleton,
 } from "@/components/ui/Skeleton";
 import { LearnsYouControls } from "@/components/LearnsYouControls";
+import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
@@ -30,7 +31,7 @@ import {
   recordInteractionSignal,
 } from "@/lib/implicitPreferenceEngine";
 import { fetchTtsAudioUrl } from "@/lib/ttsClient";
-import { getStoredTtsGender } from "@/lib/ttsVoiceGender";
+import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
 export default function SpeakPage() {
   const [outputLang, setOutputLang] = useState("Jamaican Patois");
@@ -57,6 +58,11 @@ export default function SpeakPage() {
     y: number;
   } | null>(null);
   const [popupLoading, setPopupLoading] = useState(false);
+  const [ttsGender, setTtsGender] = useState<TtsVoiceGender>("male");
+
+  useEffect(() => {
+    setTtsGender(getStoredTtsGender());
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -118,7 +124,7 @@ export default function SpeakPage() {
             dialectId: dialect,
             slangLevel,
             context,
-            ttsGender: getStoredTtsGender(),
+            ttsGender,
             inputLanguage: inputLanguage,
             timestampMs: Date.now(),
           },
@@ -280,17 +286,16 @@ export default function SpeakPage() {
 
         <StreetVibeNav />
 
-        <LearnsYouControls idle={isIdle} />
-
         {/* I SPEAK */}
-        <div className="mb-3 flex flex-col gap-0.5">
+        <div className="mb-5 flex flex-col gap-1">
           <label
             htmlFor="input-lang"
             className={
               isIdle
-                ? "text-center text-[8px] uppercase tracking-widest text-white/25"
-                : "text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
+                ? "text-center text-[9px] font-medium uppercase tracking-[0.2em] text-white/42"
+                : "text-center text-[10px] font-semibold uppercase tracking-[0.18em]"
             }
+            style={!isIdle ? { color: theme.accent, opacity: 0.88 } : undefined}
           >
             🗣️ I Speak
           </label>
@@ -309,7 +314,7 @@ export default function SpeakPage() {
                   });
                 }
               }}
-              className="w-full rounded-none border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none"
+              className="w-full rounded-none border-0 border-b border-white/14 bg-transparent py-1.5 text-center text-[11px] text-white/58 outline-none"
             >
               {INPUT_LANGUAGES.map((opt) => (
                 <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -333,7 +338,7 @@ export default function SpeakPage() {
                     });
                   }
                 }}
-                className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-center text-[11px] leading-tight`}
+                className={`${GLASS_SELECT_COMPACT} px-2.5 py-1.5 text-center text-[12px] leading-tight`}
               >
                 {INPUT_LANGUAGES.map((opt) => (
                   <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -346,14 +351,15 @@ export default function SpeakPage() {
         </div>
 
         {/* TRANSLATE TO */}
-        <div className="mb-4 flex flex-col gap-0.5">
+        <div className="mb-5 flex flex-col gap-1">
           <label
             htmlFor="output-lang"
             className={
               isIdle
-                ? "text-center text-[8px] uppercase tracking-widest text-white/25"
-                : "text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
+                ? "text-center text-[9px] font-medium uppercase tracking-[0.2em] text-white/42"
+                : "text-center text-[10px] font-semibold uppercase tracking-[0.18em]"
             }
+            style={!isIdle ? { color: theme.accent, opacity: 0.88 } : undefined}
           >
             🌍 Translate To
           </label>
@@ -368,7 +374,7 @@ export default function SpeakPage() {
                   recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                 }
               }}
-              className="w-full rounded-none border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none"
+              className="w-full rounded-none border-0 border-b border-white/14 bg-transparent py-1.5 text-center text-[11px] text-white/58 outline-none"
             >
               <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
                 {OUTPUT_PREMIUM_OPTIONS.map((o) => (
@@ -397,7 +403,7 @@ export default function SpeakPage() {
                     recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                   }
                 }}
-                className={`${GLASS_SELECT} px-2.5 py-2 text-center text-xs`}
+                className={`${GLASS_SELECT} px-3 py-2.5 text-center text-[13px] leading-snug`}
               >
                 <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
                   {OUTPUT_PREMIUM_OPTIONS.map((o) => (
@@ -416,6 +422,26 @@ export default function SpeakPage() {
               </select>
             </div>
           )}
+        </div>
+
+        <div className="mb-2 flex w-full flex-wrap items-center justify-center gap-x-5 gap-y-1">
+          <VoiceGenderSegment
+            accent={theme.accent}
+            idle={isIdle}
+            value={ttsGender}
+            onChange={(value) => {
+              setTtsGender(value);
+              setStoredTtsGender(value);
+              if (getLearnsYouEnabled()) {
+                recordInteractionSignal({
+                  type: "tts_gender_select",
+                  gender: value,
+                  timestampMs: Date.now(),
+                });
+              }
+            }}
+          />
+          <LearnsYouControls accent={theme.accent} idle={isIdle} />
         </div>
 
         {/* כדור מיקרופון */}

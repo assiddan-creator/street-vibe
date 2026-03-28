@@ -8,11 +8,16 @@ import {
 } from "@/lib/implicitPreferenceEngine";
 
 type Props = {
-  /** Muted label styling when idle (e.g. home idle state). */
+  /** Dialect theme accent — subtle tint when on. */
+  accent: string;
+  /** Softer label when the screen is in idle / hero state. */
   idle?: boolean;
 };
 
-export function LearnsYouControls({ idle = false }: Props) {
+/**
+ * Secondary utility — below language + voice in hierarchy; smaller than primary flow.
+ */
+export function LearnsYouControls({ accent, idle = false }: Props) {
   const [on, setOn] = useState(false);
 
   useEffect(() => {
@@ -30,25 +35,32 @@ export function LearnsYouControls({ idle = false }: Props) {
   }, []);
 
   const labelClass = idle
-    ? "text-[8px] uppercase tracking-widest text-white/25"
-    : "text-[9px] font-medium uppercase tracking-widest text-white/40";
+    ? "text-[8px] uppercase tracking-wider text-white/28"
+    : "text-[8px] uppercase tracking-wider text-white/36";
 
   return (
-    <div className="flex flex-col items-center gap-1.5 border-t border-white/5 pt-3">
-      <div className="flex w-full items-center justify-between gap-2 px-0.5">
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="flex w-full max-w-[8.25rem] items-center justify-between gap-2">
         <span className={labelClass}>Learns You</span>
         <button
           type="button"
           role="switch"
+          aria-label="Learns You mode"
           aria-checked={on}
           onClick={toggle}
-          className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors ${
-            on ? "border-emerald-500/60 bg-emerald-500/20" : "border-white/15 bg-black/30"
-          }`}
+          className="relative h-4 w-8 shrink-0 rounded-full border transition-colors"
+          style={
+            on
+              ? {
+                  borderColor: `${accent}40`,
+                  backgroundColor: `${accent}10`,
+                }
+              : { borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(0,0,0,0.22)" }
+          }
         >
           <span
-            className={`absolute top-0.5 h-6 w-6 rounded-full bg-white/90 shadow transition-transform ${
-              on ? "translate-x-5" : "translate-x-0.5"
+            className={`absolute top-px h-3 w-3 rounded-full bg-white/80 shadow-sm transition-transform ${
+              on ? "translate-x-[17px]" : "translate-x-0.5"
             }`}
           />
         </button>
@@ -56,9 +68,10 @@ export function LearnsYouControls({ idle = false }: Props) {
       <button
         type="button"
         onClick={reset}
-        className="text-[9px] text-white/35 underline-offset-2 hover:text-white/55 hover:underline"
+        title="Reset learned preferences"
+        className="max-w-[8.25rem] text-center text-[8px] text-white/25 hover:text-white/40"
       >
-        Reset learned preferences
+        Reset
       </button>
     </div>
   );

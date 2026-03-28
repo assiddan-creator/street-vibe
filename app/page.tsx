@@ -6,6 +6,7 @@ import { FlipButtonSkeleton, PopupWordSkeleton, TranslationBlockSkeleton } from 
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { LearnsYouControls } from "@/components/LearnsYouControls";
+import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { Toast } from "@/components/Toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import {
@@ -275,16 +276,15 @@ export default function Home() {
 
         <StreetVibeNav />
 
-        <LearnsYouControls idle={isIdle} />
-
-        <div className="mb-4 flex flex-col gap-0.5">
+        <div className="mb-5 flex flex-col gap-1">
           <label
             htmlFor="input-lang"
             className={
               isIdle
-                ? "text-center text-[8px] uppercase tracking-widest text-white/25"
-                : "text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
+                ? "text-center text-[9px] font-medium uppercase tracking-[0.2em] text-white/42"
+                : "text-center text-[10px] font-semibold uppercase tracking-[0.18em]"
             }
+            style={!isIdle ? { color: theme.accent, opacity: 0.88 } : undefined}
           >
             🗣️ I Speak
           </label>
@@ -303,7 +303,7 @@ export default function Home() {
                   });
                 }
               }}
-              className="w-full border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none rounded-none"
+              className="w-full border-0 border-b border-white/14 bg-transparent py-1.5 text-center text-[11px] text-white/58 outline-none rounded-none"
             >
               {INPUT_LANGUAGES.map((opt) => (
                 <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -327,7 +327,7 @@ export default function Home() {
                     });
                   }
                 }}
-                className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-center text-[11px] leading-tight`}
+                className={`${GLASS_SELECT_COMPACT} px-2.5 py-1.5 text-center text-[12px] leading-tight`}
               >
                 {INPUT_LANGUAGES.map((opt) => (
                   <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -339,14 +339,15 @@ export default function Home() {
           )}
         </div>
 
-        <div className="mb-4 flex flex-col gap-0.5">
+        <div className="mb-5 flex flex-col gap-1">
           <label
             htmlFor="output-lang"
             className={
               isIdle
-                ? "text-center text-[8px] uppercase tracking-widest text-white/25"
-                : "text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
+                ? "text-center text-[9px] font-medium uppercase tracking-[0.2em] text-white/42"
+                : "text-center text-[10px] font-semibold uppercase tracking-[0.18em]"
             }
+            style={!isIdle ? { color: theme.accent, opacity: 0.88 } : undefined}
           >
             🌍 Translate To
           </label>
@@ -361,7 +362,7 @@ export default function Home() {
                   recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                 }
               }}
-              className="w-full border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none rounded-none"
+              className="w-full border-0 border-b border-white/14 bg-transparent py-1.5 text-center text-[11px] text-white/58 outline-none rounded-none"
             >
               <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
                 {OUTPUT_PREMIUM_OPTIONS.map((o) => (
@@ -390,7 +391,7 @@ export default function Home() {
                     recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                   }
                 }}
-                className={`${GLASS_SELECT} px-2.5 py-2 text-center text-xs`}
+                className={`${GLASS_SELECT} px-3 py-2.5 text-center text-[13px] leading-snug`}
               >
                 <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
                   {OUTPUT_PREMIUM_OPTIONS.map((o) => (
@@ -411,54 +412,24 @@ export default function Home() {
           )}
         </div>
 
-        <div className="mb-3 flex flex-col gap-1">
-          <p
-            className={
-              isIdle
-                ? "text-center text-[8px] uppercase tracking-widest text-white/25"
-                : "text-center text-[9px] font-medium uppercase tracking-widest text-white/40"
-            }
-          >
-            🔊 Voice (TTS)
-          </p>
-          <div className="flex items-center justify-center gap-1">
-            {(
-              [
-                { value: "male" as const, label: "Male" },
-                { value: "female" as const, label: "Female" },
-              ] as const
-            ).map(({ value, label }) => {
-              const on = ttsGender === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    setTtsGender(value);
-                    setStoredTtsGender(value);
-                    if (getLearnsYouEnabled()) {
-                      recordInteractionSignal({
-                        type: "tts_gender_select",
-                        gender: value,
-                        timestampMs: Date.now(),
-                      });
-                    }
-                  }}
-                  aria-pressed={on}
-                  className={`min-w-[5.25rem] rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
-                    on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
-                  }`}
-                  style={
-                    on
-                      ? { borderColor: theme.accent, color: theme.accent, backgroundColor: `${theme.accent}18` }
-                      : undefined
-                  }
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+        <div className="mb-2 flex w-full flex-wrap items-center justify-center gap-x-5 gap-y-1">
+          <VoiceGenderSegment
+            accent={theme.accent}
+            idle={isIdle}
+            value={ttsGender}
+            onChange={(value) => {
+              setTtsGender(value);
+              setStoredTtsGender(value);
+              if (getLearnsYouEnabled()) {
+                recordInteractionSignal({
+                  type: "tts_gender_select",
+                  gender: value,
+                  timestampMs: Date.now(),
+                });
+              }
+            }}
+          />
+          <LearnsYouControls accent={theme.accent} idle={isIdle} />
         </div>
 
         <div className={`flex flex-col items-center transition-all duration-500 ${isActive ? "mb-4 mt-0" : "mb-8 mt-8"}`}>
