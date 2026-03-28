@@ -8,6 +8,7 @@ import {
   TranslationBlockSkeleton,
   TtsPlaySkeleton,
 } from "@/components/ui/Skeleton";
+import { LearnsYouControls } from "@/components/LearnsYouControls";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
@@ -23,7 +24,13 @@ import {
 } from "@/lib/streetVibeTheme";
 import { getCityThemeForDialect } from "@/lib/themeConfig";
 import { lookupSlang } from "@/lib/slangDictionary";
+import {
+  getImplicitSoftExtrasForRequests,
+  getLearnsYouEnabled,
+  recordInteractionSignal,
+} from "@/lib/implicitPreferenceEngine";
 import { fetchTtsAudioUrl } from "@/lib/ttsClient";
+import { getStoredTtsGender } from "@/lib/ttsVoiceGender";
 
 export default function SpeakPage() {
   const [outputLang, setOutputLang] = useState("Jamaican Patois");
@@ -87,6 +94,7 @@ export default function SpeakPage() {
     setTranslatedText("");
     setDictionaryPills([]);
     try {
+      const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,10 +106,24 @@ export default function SpeakPage() {
           isPremiumSelected: true,
           context,
           previousMessage: null,
+          ...implicitExtras,
         }),
       });
       const data = (await res.json()) as { fullText?: string; error?: string };
       if (!res.ok) throw new Error(data.error || "Translation failed");
+      if (getLearnsYouEnabled()) {
+        recordInteractionSignal({
+          type: "translate_success",
+          snapshot: {
+            dialectId: dialect,
+            slangLevel,
+            context,
+            ttsGender: getStoredTtsGender(),
+            inputLanguage: inputLanguage,
+            timestampMs: Date.now(),
+          },
+        });
+      }
       const fullText = String(data.fullText ?? "").trim();
       const { translated, dictRaw } = splitTranslationAndDictionary(fullText);
       setTranslatedText(translated);
@@ -149,7 +171,8 @@ export default function SpeakPage() {
     setTtsError(null);
     try {
       if (ttsEngine === "native") setTtsPlaying(true);
-      const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context);
+      const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
+      const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context, implicitExtras);
       if (url === null) {
         setTtsPlaying(false);
         return;
@@ -257,6 +280,8 @@ export default function SpeakPage() {
 
         <StreetVibeNav />
 
+        <LearnsYouControls idle={isIdle} />
+
         {/* I SPEAK */}
         <div className="mb-3 flex flex-col gap-0.5">
           <label
@@ -273,7 +298,17 @@ export default function SpeakPage() {
             <select
               id="input-lang"
               value={inputLanguage}
-              onChange={(e) => setInputLanguage(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setInputLanguage(v);
+                if (getLearnsYouEnabled()) {
+                  recordInteractionSignal({
+                    type: "input_language_select",
+                    inputLanguage: v,
+                    timestampMs: Date.now(),
+                  });
+                }
+              }}
               className="w-full rounded-none border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none"
             >
               {INPUT_LANGUAGES.map((opt) => (
@@ -287,7 +322,17 @@ export default function SpeakPage() {
               <select
                 id="input-lang"
                 value={inputLanguage}
-                onChange={(e) => setInputLanguage(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setInputLanguage(v);
+                  if (getLearnsYouEnabled()) {
+                    recordInteractionSignal({
+                      type: "input_language_select",
+                      inputLanguage: v,
+                      timestampMs: Date.now(),
+                    });
+                  }
+                }}
                 className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-center text-[11px] leading-tight`}
               >
                 {INPUT_LANGUAGES.map((opt) => (
@@ -316,7 +361,13 @@ export default function SpeakPage() {
             <select
               id="output-lang"
               value={outputLang}
-              onChange={(e) => setOutputLang(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setOutputLang(v);
+                if (getLearnsYouEnabled()) {
+                  recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
+                }
+              }}
               className="w-full rounded-none border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none"
             >
               <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
@@ -339,7 +390,13 @@ export default function SpeakPage() {
               <select
                 id="output-lang"
                 value={outputLang}
-                onChange={(e) => setOutputLang(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setOutputLang(v);
+                  if (getLearnsYouEnabled()) {
+                    recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
+                  }
+                }}
                 className={`${GLASS_SELECT} px-2.5 py-2 text-center text-xs`}
               >
                 <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
@@ -448,7 +505,16 @@ export default function SpeakPage() {
                   <button
                     key={level}
                     type="button"
-                    onClick={() => setSlangLevel(level)}
+                    onClick={() => {
+                      setSlangLevel(level);
+                      if (getLearnsYouEnabled()) {
+                        recordInteractionSignal({
+                          type: "slang_level_select",
+                          level,
+                          timestampMs: Date.now(),
+                        });
+                      }
+                    }}
                     className={`shrink-0 rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
                       on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
                     }`}
@@ -482,7 +548,16 @@ export default function SpeakPage() {
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setContext(value)}
+                    onClick={() => {
+                      setContext(value);
+                      if (getLearnsYouEnabled()) {
+                        recordInteractionSignal({
+                          type: "context_select",
+                          context: value,
+                          timestampMs: Date.now(),
+                        });
+                      }
+                    }}
                     className={`shrink-0 rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
                       on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
                     }`}

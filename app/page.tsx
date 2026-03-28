@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlipButtonSkeleton, PopupWordSkeleton, TranslationBlockSkeleton } from "@/components/ui/Skeleton";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
+import { LearnsYouControls } from "@/components/LearnsYouControls";
 import { Toast } from "@/components/Toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import {
@@ -23,6 +24,11 @@ import {
 } from "@/lib/streetVibeTheme";
 import { getCityThemeForDialect } from "@/lib/themeConfig";
 import { lookupSlang } from "@/lib/slangDictionary";
+import {
+  getImplicitSoftExtrasForRequests,
+  getLearnsYouEnabled,
+  recordInteractionSignal,
+} from "@/lib/implicitPreferenceEngine";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
 export default function Home() {
@@ -93,6 +99,7 @@ export default function Home() {
     setDictionaryPills([]);
 
     try {
+      const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -104,12 +111,27 @@ export default function Home() {
           isPremiumSelected: true,
           context,
           previousMessage: null,
+          ...implicitExtras,
         }),
       });
 
       const data = (await res.json()) as { fullText?: string; error?: string };
       if (!res.ok) {
         throw new Error(data.error || "Translation failed");
+      }
+
+      if (getLearnsYouEnabled()) {
+        recordInteractionSignal({
+          type: "translate_success",
+          snapshot: {
+            dialectId: dialect,
+            slangLevel,
+            context,
+            ttsGender,
+            inputLanguage: selectedInputLang,
+            timestampMs: Date.now(),
+          },
+        });
       }
 
       const fullText = String(data.fullText ?? "").trim();
@@ -253,6 +275,8 @@ export default function Home() {
 
         <StreetVibeNav />
 
+        <LearnsYouControls idle={isIdle} />
+
         <div className="mb-4 flex flex-col gap-0.5">
           <label
             htmlFor="input-lang"
@@ -268,7 +292,17 @@ export default function Home() {
             <select
               id="input-lang"
               value={inputLanguage}
-              onChange={(e) => setInputLanguage(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setInputLanguage(v);
+                if (getLearnsYouEnabled()) {
+                  recordInteractionSignal({
+                    type: "input_language_select",
+                    inputLanguage: v,
+                    timestampMs: Date.now(),
+                  });
+                }
+              }}
               className="w-full border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none rounded-none"
             >
               {INPUT_LANGUAGES.map((opt) => (
@@ -282,7 +316,17 @@ export default function Home() {
               <select
                 id="input-lang"
                 value={inputLanguage}
-                onChange={(e) => setInputLanguage(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setInputLanguage(v);
+                  if (getLearnsYouEnabled()) {
+                    recordInteractionSignal({
+                      type: "input_language_select",
+                      inputLanguage: v,
+                      timestampMs: Date.now(),
+                    });
+                  }
+                }}
                 className={`${GLASS_SELECT_COMPACT} px-2 py-1 text-center text-[11px] leading-tight`}
               >
                 {INPUT_LANGUAGES.map((opt) => (
@@ -310,7 +354,13 @@ export default function Home() {
             <select
               id="output-lang"
               value={outputLang}
-              onChange={(e) => setOutputLang(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setOutputLang(v);
+                if (getLearnsYouEnabled()) {
+                  recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
+                }
+              }}
               className="w-full border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/50 outline-none rounded-none"
             >
               <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
@@ -333,7 +383,13 @@ export default function Home() {
               <select
                 id="output-lang"
                 value={outputLang}
-                onChange={(e) => setOutputLang(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setOutputLang(v);
+                  if (getLearnsYouEnabled()) {
+                    recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
+                  }
+                }}
                 className={`${GLASS_SELECT} px-2.5 py-2 text-center text-xs`}
               >
                 <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
@@ -380,6 +436,13 @@ export default function Home() {
                   onClick={() => {
                     setTtsGender(value);
                     setStoredTtsGender(value);
+                    if (getLearnsYouEnabled()) {
+                      recordInteractionSignal({
+                        type: "tts_gender_select",
+                        gender: value,
+                        timestampMs: Date.now(),
+                      });
+                    }
                   }}
                   aria-pressed={on}
                   className={`min-w-[5.25rem] rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
@@ -488,7 +551,16 @@ export default function Home() {
                   <button
                     key={level}
                     type="button"
-                    onClick={() => setSlangLevel(level)}
+                    onClick={() => {
+                      setSlangLevel(level);
+                      if (getLearnsYouEnabled()) {
+                        recordInteractionSignal({
+                          type: "slang_level_select",
+                          level,
+                          timestampMs: Date.now(),
+                        });
+                      }
+                    }}
                     className={`shrink-0 rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
                       on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
                     }`}
@@ -521,7 +593,16 @@ export default function Home() {
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setContext(value)}
+                    onClick={() => {
+                      setContext(value);
+                      if (getLearnsYouEnabled()) {
+                        recordInteractionSignal({
+                          type: "context_select",
+                          context: value,
+                          timestampMs: Date.now(),
+                        });
+                      }
+                    }}
                     className={`shrink-0 rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
                       on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
                     }`}

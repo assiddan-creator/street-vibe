@@ -1,3 +1,4 @@
+import type { ImplicitTranslateExtras } from "@/lib/implicitPreferenceEngine";
 import {
   isGoogleChirpVoiceName,
   resolveGoogleChirp3HdVoiceName,
@@ -78,7 +79,8 @@ export async function fetchTtsAudioUrl(
   text: string,
   dialect: string,
   engine: "minimax" | "google" | "native" = "minimax",
-  context?: string
+  context?: string,
+  implicitExtras?: ImplicitTranslateExtras
 ): Promise<string | null> {
   if (engine === "native") {
     console.info("[TTS]", "Starting TTS request", {
@@ -104,6 +106,10 @@ export async function fetchTtsAudioUrl(
     tuning,
     ttsGender,
     context: vibeKey,
+    ...(implicitExtras?.personalSlangProfile
+      ? { personalSlangProfile: implicitExtras.personalSlangProfile }
+      : {}),
+    ...(implicitExtras?.personaPresetId ? { personaPresetId: implicitExtras.personaPresetId } : {}),
   };
 
   const engineLabel =
