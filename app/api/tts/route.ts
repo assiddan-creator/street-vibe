@@ -7,7 +7,8 @@ import {
 } from "@/lib/googleTtsVoiceConfig";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { resolveMinimaxTtsTuning } from "@/lib/vibeSpeechConfig";
-import { MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
+import { buildMinimaxPronunciationDictForReplicate } from "@/lib/minimaxSlangPronunciation";
+import { resolveMinimaxVoiceIdForTts } from "@/lib/minimaxReplicateVoiceResolve";
 import {
   getInterjectionPolicy,
   minimaxInterjectionWasApplied,
@@ -66,6 +67,9 @@ export async function POST(req: NextRequest) {
       ? (body.tuning as Record<string, unknown>)
       : null;
 
+  /** Dev-only: send `text` to engines without Google/MiniMax speech shaping (slang engine QA). Ignored outside development. */
+  const devRawTts = process.env.NODE_ENV === "development" && body.devRawTts === true;
+
   const profileFromBody = parseOptionalPersonalProfileFromBody(body);
   const personaPresetId = parseOptionalPersonaPresetId(body);
   const effectiveProfile = applyPersonaPresetToProfile(profileFromBody, personaPresetId);
@@ -92,16 +96,19 @@ export async function POST(req: NextRequest) {
     const speakingRate =
       typeof tuning?.speed === "number" ? tuning.speed : voice.speakingRate;
 
-    const shapedText = shapeTextForGoogleTts(text, {
-      vibe: vibeContext,
-      dialectId: dialectKey || undefined,
-    });
+    const shapedText = devRawTts
+      ? text.trim()
+      : shapeTextForGoogleTts(text, {
+          vibe: vibeContext,
+          dialectId: dialectKey || undefined,
+        });
     const originalLen = text.length;
     const shapedLen = shapedText.length;
-    const shapingChanged = shapedText !== text;
+    const shapingChanged = !devRawTts && shapedText !== text;
     const dialectPack = isKnownPremiumDialect(dialectKey) ? getDialectPack(dialectKey) : undefined;
     const dialectPackTtsHints = isKnownPremiumDialect(dialectKey) ? getDialectPackTtsHints(dialectKey) : [];
     console.info("[tts][google] speech shaping", {
+      devRawTts,
       originalLen,
       shapedLen,
       shapingChanged,
@@ -183,20 +190,35 @@ export async function POST(req: NextRequest) {
       ? tuning.volume
       : (mmTuning.minimaxVolume ?? MINIMAX_FALLBACK.volume);
   const genderKey = parseTtsGender(body.ttsGender);
-  const voiceId = MINIMAX_VOICE_ID_BY_GENDER[genderKey];
-  const emotion = mmTuning.minimaxEmotion || MINIMAX_FALLBACK.emotion;
+  const voiceId = resolveMinimaxVoiceIdForTts(tuning, genderKey);
+  const emotion =
+    typeof tuning?.emotion === "string" && tuning.emotion.trim() !== ""
+      ? tuning.emotion.trim()
+      : (mmTuning.minimaxEmotion || MINIMAX_FALLBACK.emotion);
 
-  const minimaxText = shapeTextForMinimaxTts(text, {
-    vibe: vibeContext,
-    dialectId: dialectKeyMm || undefined,
-  });
+  const minimaxText = devRawTts
+    ? text.trim()
+    : shapeTextForMinimaxTts(text, {
+        vibe: vibeContext,
+        dialectId: dialectKeyMm || undefined,
+      });
+
+  let ttsInput = minimaxText;
+  if (
+    process.env.NODE_ENV === "development" &&
+    tuning?.devSlangPauseAfterDeadass === true
+  ) {
+    ttsInput = minimaxText.replace(/\bdeadass\b/gi, "deadass,");
+  }
+
   const interjectionPolicy = getInterjectionPolicy(vibeContext, dialectKeyMm || undefined);
   const dialectPackMm = isKnownPremiumDialect(dialectKeyMm) ? getDialectPack(dialectKeyMm) : undefined;
   const dialectPackTtsHintsMm = isKnownPremiumDialect(dialectKeyMm) ? getDialectPackTtsHints(dialectKeyMm) : [];
   console.info("[tts][minimax] interjection shaping", {
+    devRawTts,
     originalLen: text.length,
     shapedLen: minimaxText.length,
-    injected: minimaxInterjectionWasApplied(text, minimaxText),
+    injected: devRawTts ? false : minimaxInterjectionWasApplied(text, minimaxText),
     personaPresetId: personaPresetId ?? null,
     policy: {
       allowed: interjectionPolicy.allowed,
@@ -208,6 +230,34 @@ export async function POST(req: NextRequest) {
     dialectPackTtsHints: dialectPackTtsHintsMm,
   });
 
+  const slangPronunciationEnabled = tuning?.slangPronunciation === true;
+  const pronunciationDict = buildMinimaxPronunciationDictForReplicate(slangPronunciationEnabled);
+  const englishNormalization =
+    typeof tuning?.english_normalization === "boolean" ? tuning.english_normalization : true;
+
+  const minimaxInput: Record<string, unknown> = {
+    text: ttsInput,
+    voice_id: voiceId,
+    speed,
+    pitch,
+    emotion,
+    volume,
+    language_boost: resolveMinimaxLanguageBoost(typeof dialect === "string" ? dialect : ""),
+    english_normalization: englishNormalization,
+  };
+  if (pronunciationDict) {
+    minimaxInput.pronunciation_dict = pronunciationDict;
+  }
+
+  console.info("[tts][minimax] replicate input extras", {
+    voiceId,
+    slangPronunciationEnabled,
+    englishNormalization,
+    pronunciationToneCount: pronunciationDict?.tone.length ?? 0,
+    devSlangPauseAfterDeadass: tuning?.devSlangPauseAfterDeadass === true,
+    ttsInputDiffers: ttsInput !== minimaxText,
+  });
+
   try {
     const minimaxRes = await fetch("https://api.replicate.com/v1/predictions", {
       method: "POST",
@@ -217,16 +267,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         version: REPLICATE_MINIMAX_VERSION,
-        input: {
-          text: minimaxText,
-          voice_id: voiceId,
-          speed,
-          pitch,
-          emotion,
-          volume,
-          language_boost: resolveMinimaxLanguageBoost(typeof dialect === "string" ? dialect : ""),
-          english_normalization: true,
-        },
+        input: minimaxInput,
       }),
     });
 
