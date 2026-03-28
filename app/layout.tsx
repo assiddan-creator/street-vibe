@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { AnalyticsBoot } from "@/components/AnalyticsBoot";
 import { CityThemeProvider } from "@/components/theme/CityThemeProvider";
 import "./globals.css";
 
@@ -35,7 +36,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-[100dvh] antialiased`}
       >
-        <CityThemeProvider>{children}</CityThemeProvider>
+        <CityThemeProvider>
+          <AnalyticsBoot />
+          {children}
+        </CityThemeProvider>
       </body>
     </html>
   );

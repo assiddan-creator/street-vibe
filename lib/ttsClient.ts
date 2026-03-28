@@ -1,4 +1,6 @@
+import { trackAnalyticsEvent } from "@/lib/analyticsEvents";
 import type { ImplicitTranslateExtras } from "@/lib/implicitPreferenceEngine";
+import { getImplicitSoftExtrasForRequests, getLearnsYouEnabled } from "@/lib/implicitPreferenceEngine";
 import {
   isGoogleChirpVoiceName,
   resolveGoogleChirp3HdVoiceName,
@@ -82,7 +84,27 @@ export async function fetchTtsAudioUrl(
   context?: string,
   implicitExtras?: ImplicitTranslateExtras
 ): Promise<string | null> {
+  const learnsYou = getLearnsYouEnabled();
+  const implicitExtrasForLog = implicitExtras ?? getImplicitSoftExtrasForRequests(learnsYou, false, undefined);
+  const implicitGuidancePresent = Boolean(
+    implicitExtrasForLog?.personalSlangProfile || implicitExtrasForLog?.personaPresetId
+  );
+  const ttsGender = getStoredTtsGender();
+  const vibeKeyForLog = context ?? "default";
+
   if (engine === "native") {
+    trackAnalyticsEvent({
+      name: "tts_requested",
+      mode: "speak",
+      requestedEngine: "native",
+      effectiveEngine: "native",
+      dialect,
+      ttsGender,
+      vibe: vibeKeyForLog,
+      textLengthChars: text.length,
+      learnsYouEnabled: learnsYou,
+      implicitGuidancePresent,
+    });
     console.info("[TTS]", "Starting TTS request", {
       engineLabel: "Native (browser Web Speech API)",
       engine: "native" as const,
@@ -90,15 +112,45 @@ export async function fetchTtsAudioUrl(
       textLength: text.length,
       textPreview: textPreview(text),
     });
-    await speakNativeTts(text, dialect);
+    try {
+      await speakNativeTts(text, dialect);
+      trackAnalyticsEvent({
+        name: "tts_succeeded",
+        mode: "speak",
+        effectiveEngine: "native",
+        dialect,
+        usedFallbackNative: false,
+      });
+    } catch (e) {
+      trackAnalyticsEvent({
+        name: "tts_failed",
+        mode: "speak",
+        effectiveEngine: "native",
+        dialect,
+        errorCode: e instanceof Error ? e.message.slice(0, 120) : "native_tts_error",
+      });
+      throw e;
+    }
     return null;
   }
 
   const tuning = CONTEXT_TUNING[context ?? "default"] ?? CONTEXT_TUNING.default;
-  const ttsGender = getStoredTtsGender();
   const effectiveEngine = getEffectiveTtsEngine(engine, dialect);
 
   const vibeKey = context ?? "default";
+
+  trackAnalyticsEvent({
+    name: "tts_requested",
+    mode: "speak",
+    requestedEngine: engine,
+    effectiveEngine,
+    dialect,
+    ttsGender,
+    vibe: vibeKey,
+    textLengthChars: text.length,
+    learnsYouEnabled: learnsYou,
+    implicitGuidancePresent,
+  });
   const requestBody = {
     text,
     dialect,
@@ -195,6 +247,13 @@ export async function fetchTtsAudioUrl(
       console.info("[TTS]", "TTS request completed (inline audio)", {
         reportedEngine: startData.engine ?? "(unknown)",
       });
+      trackAnalyticsEvent({
+        name: "tts_succeeded",
+        mode: "speak",
+        effectiveEngine,
+        dialect,
+        usedFallbackNative: false,
+      });
       return `data:audio/mp3;base64,${startData.audioBase64}`;
     }
     const predictionId = startData.predictionId;
@@ -220,12 +279,26 @@ export async function fetchTtsAudioUrl(
             predictionId,
             urlPreview: `${out.slice(0, 80)}…`,
           });
+          trackAnalyticsEvent({
+            name: "tts_succeeded",
+            mode: "speak",
+            effectiveEngine,
+            dialect,
+            usedFallbackNative: false,
+          });
           return out;
         }
         if (Array.isArray(out) && out[0] && typeof out[0] === "string") {
           console.info("[TTS]", "TTS request completed (poll URL array)", {
             predictionId,
             urlPreview: `${out[0].slice(0, 80)}…`,
+          });
+          trackAnalyticsEvent({
+            name: "tts_succeeded",
+            mode: "speak",
+            effectiveEngine,
+            dialect,
+            usedFallbackNative: false,
           });
           return out[0];
         }
@@ -243,7 +316,25 @@ export async function fetchTtsAudioUrl(
       effectiveEngine,
       error: e instanceof Error ? e.message : String(e),
     });
-    await speakNativeTts(text, dialect);
-    return null;
+    try {
+      await speakNativeTts(text, dialect);
+      trackAnalyticsEvent({
+        name: "tts_succeeded",
+        mode: "speak",
+        effectiveEngine: "native",
+        dialect,
+        usedFallbackNative: true,
+      });
+      return null;
+    } catch (e2) {
+      trackAnalyticsEvent({
+        name: "tts_failed",
+        mode: "speak",
+        effectiveEngine,
+        dialect,
+        errorCode: `${e instanceof Error ? e.message.slice(0, 60) : "api"}|${e2 instanceof Error ? e2.message.slice(0, 60) : "native"}`,
+      });
+      throw e2;
+    }
   }
 }

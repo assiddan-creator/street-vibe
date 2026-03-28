@@ -25,6 +25,7 @@ import {
 } from "@/lib/streetVibeTheme";
 import { getCityThemeForDialect } from "@/lib/themeConfig";
 import { lookupSlang } from "@/lib/slangDictionary";
+import { trackAnalyticsEvent } from "@/lib/analyticsEvents";
 import {
   getImplicitSoftExtrasForRequests,
   getLearnsYouEnabled,
@@ -101,8 +102,24 @@ export default function Home() {
     setTranslatedText("");
     setDictionaryPills([]);
 
+    const learnsYouOn = getLearnsYouEnabled();
+    const implicitExtras = getImplicitSoftExtrasForRequests(learnsYouOn, false, undefined);
+    const implicitPresent = Boolean(
+      implicitExtras?.personalSlangProfile || implicitExtras?.personaPresetId
+    );
+    trackAnalyticsEvent({
+      name: "translate_requested",
+      mode: "text",
+      targetDialect: dialect,
+      sourceLanguage: selectedInputLang,
+      slangLevel,
+      vibe: context,
+      textLengthChars: trimmed.length,
+      learnsYouEnabled: learnsYouOn,
+      implicitGuidancePresent: implicitPresent,
+    });
+
     try {
-      const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,6 +139,14 @@ export default function Home() {
       if (!res.ok) {
         throw new Error(data.error || "Translation failed");
       }
+
+      trackAnalyticsEvent({
+        name: "translate_succeeded",
+        mode: "text",
+        targetDialect: dialect,
+        learnsYouEnabled: learnsYouOn,
+        implicitGuidancePresent: implicitPresent,
+      });
 
       if (getLearnsYouEnabled()) {
         recordInteractionSignal({
@@ -144,6 +169,13 @@ export default function Home() {
       setTranslatedText(translated);
       setDictionaryPills(pills);
     } catch (e) {
+      trackAnalyticsEvent({
+        name: "translate_failed",
+        mode: "text",
+        targetDialect: dialect,
+        errorCode: (e instanceof Error ? e.message : "translate_error").slice(0, 120),
+        learnsYouEnabled: getLearnsYouEnabled(),
+      });
       setError(e instanceof Error ? e.message : "Translation failed");
       setTranslatedText("");
       setDictionaryPills([]);
@@ -294,6 +326,7 @@ export default function Home() {
               onChange={(e) => {
                 const v = e.target.value;
                 setInputLanguage(v);
+                trackAnalyticsEvent({ name: "source_language_selected", sourceLanguage: v, mode: "text" });
                 if (getLearnsYouEnabled()) {
                   recordInteractionSignal({
                     type: "input_language_select",
@@ -319,6 +352,7 @@ export default function Home() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setInputLanguage(v);
+                  trackAnalyticsEvent({ name: "source_language_selected", sourceLanguage: v, mode: "text" });
                   if (getLearnsYouEnabled()) {
                     recordInteractionSignal({
                       type: "input_language_select",
@@ -354,6 +388,7 @@ export default function Home() {
               onChange={(e) => {
                 const v = e.target.value;
                 setOutputLang(v);
+                trackAnalyticsEvent({ name: "target_dialect_selected", targetDialect: v, mode: "text" });
                 if (getLearnsYouEnabled()) {
                   recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                 }
@@ -384,6 +419,7 @@ export default function Home() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setOutputLang(v);
+                  trackAnalyticsEvent({ name: "target_dialect_selected", targetDialect: v, mode: "text" });
                   if (getLearnsYouEnabled()) {
                     recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                   }
@@ -417,6 +453,7 @@ export default function Home() {
             onChange={(value) => {
               setTtsGender(value);
               setStoredTtsGender(value);
+              trackAnalyticsEvent({ name: "voice_gender_selected", ttsGender: value, mode: "text" });
               if (getLearnsYouEnabled()) {
                 recordInteractionSignal({
                   type: "tts_gender_select",
@@ -525,6 +562,7 @@ export default function Home() {
                     type="button"
                     onClick={() => {
                       setSlangLevel(level);
+                      trackAnalyticsEvent({ name: "slang_level_selected", slangLevel: level, mode: "text" });
                       if (getLearnsYouEnabled()) {
                         recordInteractionSignal({
                           type: "slang_level_select",
@@ -567,6 +605,7 @@ export default function Home() {
                     type="button"
                     onClick={() => {
                       setContext(value);
+                      trackAnalyticsEvent({ name: "vibe_selected", vibe: value, mode: "text" });
                       if (getLearnsYouEnabled()) {
                         recordInteractionSignal({
                           type: "context_select",

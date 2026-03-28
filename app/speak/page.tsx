@@ -32,6 +32,7 @@ import {
 } from "@/lib/implicitPreferenceEngine";
 import { themeAccentAlpha } from "@/lib/themeAccent";
 import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
+import { trackAnalyticsEvent } from "@/lib/analyticsEvents";
 import { fetchTtsAudioUrl } from "@/lib/ttsClient";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
@@ -52,6 +53,8 @@ export default function SpeakPage() {
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  /** Resets when `translatedText` changes; first play = 1, replays ≥2. */
+  const ttsPlayAttemptForCurrentTranslationRef = useRef(0);
   const [popupWord, setPopupWord] = useState<{
     word: string;
     meaning: string;
@@ -93,6 +96,10 @@ export default function SpeakPage() {
     setDialect(outputLang);
   }, [outputLang, setDialect]);
 
+  useEffect(() => {
+    ttsPlayAttemptForCurrentTranslationRef.current = 0;
+  }, [translatedText]);
+
   const translateText = async (text: string, dialect: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -101,8 +108,25 @@ export default function SpeakPage() {
     setOriginalText(trimmed);
     setTranslatedText("");
     setDictionaryPills([]);
+
+    const learnsYouOn = getLearnsYouEnabled();
+    const implicitExtras = getImplicitSoftExtrasForRequests(learnsYouOn, false, undefined);
+    const implicitPresent = Boolean(
+      implicitExtras?.personalSlangProfile || implicitExtras?.personaPresetId
+    );
+    trackAnalyticsEvent({
+      name: "translate_requested",
+      mode: "speak",
+      targetDialect: dialect,
+      sourceLanguage: inputLanguage,
+      slangLevel,
+      vibe: context,
+      textLengthChars: trimmed.length,
+      learnsYouEnabled: learnsYouOn,
+      implicitGuidancePresent: implicitPresent,
+    });
+
     try {
-      const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,6 +143,15 @@ export default function SpeakPage() {
       });
       const data = (await res.json()) as { fullText?: string; error?: string };
       if (!res.ok) throw new Error(data.error || "Translation failed");
+
+      trackAnalyticsEvent({
+        name: "translate_succeeded",
+        mode: "speak",
+        targetDialect: dialect,
+        learnsYouEnabled: learnsYouOn,
+        implicitGuidancePresent: implicitPresent,
+      });
+
       if (getLearnsYouEnabled()) {
         recordInteractionSignal({
           type: "translate_success",
@@ -137,6 +170,13 @@ export default function SpeakPage() {
       setTranslatedText(translated);
       setDictionaryPills(parseDictionaryPills(dictRaw));
     } catch (e) {
+      trackAnalyticsEvent({
+        name: "translate_failed",
+        mode: "speak",
+        targetDialect: dialect,
+        errorCode: (e instanceof Error ? e.message : "translate_error").slice(0, 120),
+        learnsYouEnabled: getLearnsYouEnabled(),
+      });
       setError(e instanceof Error ? e.message : "Translation failed");
       setTranslatedText("");
       setDictionaryPills([]);
@@ -175,6 +215,15 @@ export default function SpeakPage() {
   const handlePlay = async () => {
     const text = translatedText.trim();
     if (!text) return;
+    ttsPlayAttemptForCurrentTranslationRef.current += 1;
+    if (ttsPlayAttemptForCurrentTranslationRef.current > 1) {
+      trackAnalyticsEvent({
+        name: "tts_replayed",
+        mode: "speak",
+        dialect: outputLang,
+        requestedEngine: ttsEngine,
+      });
+    }
     setTtsLoading(true);
     setTtsError(null);
     try {
@@ -304,6 +353,7 @@ export default function SpeakPage() {
               onChange={(e) => {
                 const v = e.target.value;
                 setInputLanguage(v);
+                trackAnalyticsEvent({ name: "source_language_selected", sourceLanguage: v, mode: "speak" });
                 if (getLearnsYouEnabled()) {
                   recordInteractionSignal({
                     type: "input_language_select",
@@ -329,6 +379,7 @@ export default function SpeakPage() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setInputLanguage(v);
+                  trackAnalyticsEvent({ name: "source_language_selected", sourceLanguage: v, mode: "speak" });
                   if (getLearnsYouEnabled()) {
                     recordInteractionSignal({
                       type: "input_language_select",
@@ -364,6 +415,7 @@ export default function SpeakPage() {
               onChange={(e) => {
                 const v = e.target.value;
                 setOutputLang(v);
+                trackAnalyticsEvent({ name: "target_dialect_selected", targetDialect: v, mode: "speak" });
                 if (getLearnsYouEnabled()) {
                   recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                 }
@@ -394,6 +446,7 @@ export default function SpeakPage() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setOutputLang(v);
+                  trackAnalyticsEvent({ name: "target_dialect_selected", targetDialect: v, mode: "speak" });
                   if (getLearnsYouEnabled()) {
                     recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                   }
@@ -427,6 +480,7 @@ export default function SpeakPage() {
             onChange={(value) => {
               setTtsGender(value);
               setStoredTtsGender(value);
+              trackAnalyticsEvent({ name: "voice_gender_selected", ttsGender: value, mode: "speak" });
               if (getLearnsYouEnabled()) {
                 recordInteractionSignal({
                   type: "tts_gender_select",
@@ -532,6 +586,7 @@ export default function SpeakPage() {
                     type="button"
                     onClick={() => {
                       setSlangLevel(level);
+                      trackAnalyticsEvent({ name: "slang_level_selected", slangLevel: level, mode: "speak" });
                       if (getLearnsYouEnabled()) {
                         recordInteractionSignal({
                           type: "slang_level_select",
@@ -575,6 +630,7 @@ export default function SpeakPage() {
                     type="button"
                     onClick={() => {
                       setContext(value);
+                      trackAnalyticsEvent({ name: "vibe_selected", vibe: value, mode: "speak" });
                       if (getLearnsYouEnabled()) {
                         recordInteractionSignal({
                           type: "context_select",
