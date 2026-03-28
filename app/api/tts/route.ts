@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
     process.env.NODE_ENV === "development" &&
     tuning?.devSlangPauseAfterDeadass === true
   ) {
-    ttsInput = minimaxText.replace(/\bdeadass\b/gi, "deadass,");
+    ttsInput = ttsInput.replace(/\bdeadass\b/gi, "deadass,");
   }
 
   const interjectionPolicy = getInterjectionPolicy(vibeContext, dialectKeyMm || undefined);
