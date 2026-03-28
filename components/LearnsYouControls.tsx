@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { trackAnalyticsEvent } from "@/lib/analyticsEvents";
+import { ANALYTICS_EVENT_NAMES, trackAnalyticsEvent } from "@/lib/analyticsEvents";
 import {
   clearLearnedPreferenceStorage,
   getLearnsYouEnabled,
@@ -31,12 +31,12 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false }: P
     const next = !getLearnsYouEnabled();
     setLearnsYouEnabled(next);
     setOn(next);
-    trackAnalyticsEvent({ name: "learns_you_toggled", enabled: next });
+    trackAnalyticsEvent({ name: ANALYTICS_EVENT_NAMES.LEARNS_YOU_TOGGLED, enabled: next });
   }, []);
 
   const reset = useCallback(() => {
     clearLearnedPreferenceStorage();
-    trackAnalyticsEvent({ name: "learned_preferences_reset" });
+    trackAnalyticsEvent({ name: ANALYTICS_EVENT_NAMES.LEARNED_PREFERENCES_RESET });
   }, []);
 
   const labelClass = belowHero

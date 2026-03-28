@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { trackAnalyticsEvent } from "@/lib/analyticsEvents";
+import { ANALYTICS_EVENT_NAMES, ANALYTICS_MODE, trackAnalyticsEvent } from "@/lib/analyticsEvents";
 
 const linkBase =
   "rounded-full border px-3 py-1 text-[11px] font-semibold opacity-60 backdrop-blur-md transition-colors duration-300";
@@ -12,10 +12,10 @@ export function StreetVibeNav() {
   const isText = pathname === "/" || pathname === "";
   const isSpeak = pathname === "/speak";
 
-  const trackModeNav = (target: "text" | "speak") => {
-    const from = pathname === "/speak" ? "speak" : "text";
+  const trackModeNav = (target: typeof ANALYTICS_MODE.TEXT | typeof ANALYTICS_MODE.SPEAK) => {
+    const from = pathname === "/speak" ? ANALYTICS_MODE.SPEAK : ANALYTICS_MODE.TEXT;
     if (from === target) return;
-    trackAnalyticsEvent({ name: "mode_switched", from, to: target });
+    trackAnalyticsEvent({ name: ANALYTICS_EVENT_NAMES.MODE_SWITCHED, from, to: target });
   };
 
   return (
@@ -25,7 +25,7 @@ export function StreetVibeNav() {
     >
       <Link
         href="/"
-        onClick={() => trackModeNav("text")}
+        onClick={() => trackModeNav(ANALYTICS_MODE.TEXT)}
         className={`${linkBase} border-themeButtonBorder bg-themeButton/20 text-white shadow-glow-theme hover:bg-themeButton/30 ${
           isText ? "bg-themeButton/40 ring-1 ring-themeButtonBorder" : ""
         }`}
@@ -34,7 +34,7 @@ export function StreetVibeNav() {
       </Link>
       <Link
         href="/speak"
-        onClick={() => trackModeNav("speak")}
+        onClick={() => trackModeNav(ANALYTICS_MODE.SPEAK)}
         className={`${linkBase} border-themeButtonBorder bg-themeButton/20 text-white shadow-glow-theme hover:bg-themeButton/30 ${
           isSpeak ? "bg-themeButton/40 ring-1 ring-themeButtonBorder" : ""
         }`}

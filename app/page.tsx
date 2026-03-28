@@ -25,7 +25,12 @@ import {
 } from "@/lib/streetVibeTheme";
 import { getCityThemeForDialect } from "@/lib/themeConfig";
 import { lookupSlang } from "@/lib/slangDictionary";
-import { trackAnalyticsEvent } from "@/lib/analyticsEvents";
+import {
+  ANALYTICS_EVENT_NAMES,
+  ANALYTICS_MODE,
+  clipAnalyticsErrorCode,
+  trackAnalyticsEvent,
+} from "@/lib/analyticsEvents";
 import {
   getImplicitSoftExtrasForRequests,
   getLearnsYouEnabled,
@@ -108,8 +113,8 @@ export default function Home() {
       implicitExtras?.personalSlangProfile || implicitExtras?.personaPresetId
     );
     trackAnalyticsEvent({
-      name: "translate_requested",
-      mode: "text",
+      name: ANALYTICS_EVENT_NAMES.TRANSLATE_REQUESTED,
+      mode: ANALYTICS_MODE.TEXT,
       targetDialect: dialect,
       sourceLanguage: selectedInputLang,
       slangLevel,
@@ -141,8 +146,8 @@ export default function Home() {
       }
 
       trackAnalyticsEvent({
-        name: "translate_succeeded",
-        mode: "text",
+        name: ANALYTICS_EVENT_NAMES.TRANSLATE_SUCCEEDED,
+        mode: ANALYTICS_MODE.TEXT,
         targetDialect: dialect,
         learnsYouEnabled: learnsYouOn,
         implicitGuidancePresent: implicitPresent,
@@ -170,10 +175,10 @@ export default function Home() {
       setDictionaryPills(pills);
     } catch (e) {
       trackAnalyticsEvent({
-        name: "translate_failed",
-        mode: "text",
+        name: ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED,
+        mode: ANALYTICS_MODE.TEXT,
         targetDialect: dialect,
-        errorCode: (e instanceof Error ? e.message : "translate_error").slice(0, 120),
+        errorCode: clipAnalyticsErrorCode(e instanceof Error ? e.message : "translate_error"),
         learnsYouEnabled: getLearnsYouEnabled(),
       });
       setError(e instanceof Error ? e.message : "Translation failed");
@@ -326,7 +331,11 @@ export default function Home() {
               onChange={(e) => {
                 const v = e.target.value;
                 setInputLanguage(v);
-                trackAnalyticsEvent({ name: "source_language_selected", sourceLanguage: v, mode: "text" });
+                trackAnalyticsEvent({
+                  name: ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED,
+                  sourceLanguage: v,
+                  mode: ANALYTICS_MODE.TEXT,
+                });
                 if (getLearnsYouEnabled()) {
                   recordInteractionSignal({
                     type: "input_language_select",
@@ -352,7 +361,11 @@ export default function Home() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setInputLanguage(v);
-                  trackAnalyticsEvent({ name: "source_language_selected", sourceLanguage: v, mode: "text" });
+                  trackAnalyticsEvent({
+                    name: ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED,
+                    sourceLanguage: v,
+                    mode: ANALYTICS_MODE.TEXT,
+                  });
                   if (getLearnsYouEnabled()) {
                     recordInteractionSignal({
                       type: "input_language_select",
@@ -388,7 +401,11 @@ export default function Home() {
               onChange={(e) => {
                 const v = e.target.value;
                 setOutputLang(v);
-                trackAnalyticsEvent({ name: "target_dialect_selected", targetDialect: v, mode: "text" });
+                trackAnalyticsEvent({
+                  name: ANALYTICS_EVENT_NAMES.TARGET_DIALECT_SELECTED,
+                  targetDialect: v,
+                  mode: ANALYTICS_MODE.TEXT,
+                });
                 if (getLearnsYouEnabled()) {
                   recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                 }
@@ -419,7 +436,11 @@ export default function Home() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setOutputLang(v);
-                  trackAnalyticsEvent({ name: "target_dialect_selected", targetDialect: v, mode: "text" });
+                  trackAnalyticsEvent({
+                    name: ANALYTICS_EVENT_NAMES.TARGET_DIALECT_SELECTED,
+                    targetDialect: v,
+                    mode: ANALYTICS_MODE.TEXT,
+                  });
                   if (getLearnsYouEnabled()) {
                     recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                   }
@@ -453,7 +474,11 @@ export default function Home() {
             onChange={(value) => {
               setTtsGender(value);
               setStoredTtsGender(value);
-              trackAnalyticsEvent({ name: "voice_gender_selected", ttsGender: value, mode: "text" });
+              trackAnalyticsEvent({
+              name: ANALYTICS_EVENT_NAMES.VOICE_GENDER_SELECTED,
+              ttsGender: value,
+              mode: ANALYTICS_MODE.TEXT,
+            });
               if (getLearnsYouEnabled()) {
                 recordInteractionSignal({
                   type: "tts_gender_select",
@@ -562,7 +587,11 @@ export default function Home() {
                     type="button"
                     onClick={() => {
                       setSlangLevel(level);
-                      trackAnalyticsEvent({ name: "slang_level_selected", slangLevel: level, mode: "text" });
+                      trackAnalyticsEvent({
+                      name: ANALYTICS_EVENT_NAMES.SLANG_LEVEL_SELECTED,
+                      slangLevel: level,
+                      mode: ANALYTICS_MODE.TEXT,
+                    });
                       if (getLearnsYouEnabled()) {
                         recordInteractionSignal({
                           type: "slang_level_select",
@@ -605,7 +634,11 @@ export default function Home() {
                     type="button"
                     onClick={() => {
                       setContext(value);
-                      trackAnalyticsEvent({ name: "vibe_selected", vibe: value, mode: "text" });
+                      trackAnalyticsEvent({
+                      name: ANALYTICS_EVENT_NAMES.VIBE_SELECTED,
+                      vibe: value,
+                      mode: ANALYTICS_MODE.TEXT,
+                    });
                       if (getLearnsYouEnabled()) {
                         recordInteractionSignal({
                           type: "context_select",

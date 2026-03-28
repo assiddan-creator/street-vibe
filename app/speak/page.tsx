@@ -32,7 +32,12 @@ import {
 } from "@/lib/implicitPreferenceEngine";
 import { themeAccentAlpha } from "@/lib/themeAccent";
 import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
-import { trackAnalyticsEvent } from "@/lib/analyticsEvents";
+import {
+  ANALYTICS_EVENT_NAMES,
+  ANALYTICS_MODE,
+  clipAnalyticsErrorCode,
+  trackAnalyticsEvent,
+} from "@/lib/analyticsEvents";
 import { fetchTtsAudioUrl } from "@/lib/ttsClient";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
@@ -115,8 +120,8 @@ export default function SpeakPage() {
       implicitExtras?.personalSlangProfile || implicitExtras?.personaPresetId
     );
     trackAnalyticsEvent({
-      name: "translate_requested",
-      mode: "speak",
+      name: ANALYTICS_EVENT_NAMES.TRANSLATE_REQUESTED,
+      mode: ANALYTICS_MODE.SPEAK,
       targetDialect: dialect,
       sourceLanguage: inputLanguage,
       slangLevel,
@@ -145,8 +150,8 @@ export default function SpeakPage() {
       if (!res.ok) throw new Error(data.error || "Translation failed");
 
       trackAnalyticsEvent({
-        name: "translate_succeeded",
-        mode: "speak",
+        name: ANALYTICS_EVENT_NAMES.TRANSLATE_SUCCEEDED,
+        mode: ANALYTICS_MODE.SPEAK,
         targetDialect: dialect,
         learnsYouEnabled: learnsYouOn,
         implicitGuidancePresent: implicitPresent,
@@ -171,10 +176,10 @@ export default function SpeakPage() {
       setDictionaryPills(parseDictionaryPills(dictRaw));
     } catch (e) {
       trackAnalyticsEvent({
-        name: "translate_failed",
-        mode: "speak",
+        name: ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED,
+        mode: ANALYTICS_MODE.SPEAK,
         targetDialect: dialect,
-        errorCode: (e instanceof Error ? e.message : "translate_error").slice(0, 120),
+        errorCode: clipAnalyticsErrorCode(e instanceof Error ? e.message : "translate_error"),
         learnsYouEnabled: getLearnsYouEnabled(),
       });
       setError(e instanceof Error ? e.message : "Translation failed");
@@ -218,8 +223,8 @@ export default function SpeakPage() {
     ttsPlayAttemptForCurrentTranslationRef.current += 1;
     if (ttsPlayAttemptForCurrentTranslationRef.current > 1) {
       trackAnalyticsEvent({
-        name: "tts_replayed",
-        mode: "speak",
+        name: ANALYTICS_EVENT_NAMES.TTS_REPLAYED,
+        mode: ANALYTICS_MODE.SPEAK,
         dialect: outputLang,
         requestedEngine: ttsEngine,
       });
@@ -353,7 +358,11 @@ export default function SpeakPage() {
               onChange={(e) => {
                 const v = e.target.value;
                 setInputLanguage(v);
-                trackAnalyticsEvent({ name: "source_language_selected", sourceLanguage: v, mode: "speak" });
+                trackAnalyticsEvent({
+                  name: ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED,
+                  sourceLanguage: v,
+                  mode: ANALYTICS_MODE.SPEAK,
+                });
                 if (getLearnsYouEnabled()) {
                   recordInteractionSignal({
                     type: "input_language_select",
@@ -379,7 +388,11 @@ export default function SpeakPage() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setInputLanguage(v);
-                  trackAnalyticsEvent({ name: "source_language_selected", sourceLanguage: v, mode: "speak" });
+                  trackAnalyticsEvent({
+                    name: ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED,
+                    sourceLanguage: v,
+                    mode: ANALYTICS_MODE.SPEAK,
+                  });
                   if (getLearnsYouEnabled()) {
                     recordInteractionSignal({
                       type: "input_language_select",
@@ -415,7 +428,11 @@ export default function SpeakPage() {
               onChange={(e) => {
                 const v = e.target.value;
                 setOutputLang(v);
-                trackAnalyticsEvent({ name: "target_dialect_selected", targetDialect: v, mode: "speak" });
+                trackAnalyticsEvent({
+                  name: ANALYTICS_EVENT_NAMES.TARGET_DIALECT_SELECTED,
+                  targetDialect: v,
+                  mode: ANALYTICS_MODE.SPEAK,
+                });
                 if (getLearnsYouEnabled()) {
                   recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                 }
@@ -446,7 +463,11 @@ export default function SpeakPage() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setOutputLang(v);
-                  trackAnalyticsEvent({ name: "target_dialect_selected", targetDialect: v, mode: "speak" });
+                  trackAnalyticsEvent({
+                    name: ANALYTICS_EVENT_NAMES.TARGET_DIALECT_SELECTED,
+                    targetDialect: v,
+                    mode: ANALYTICS_MODE.SPEAK,
+                  });
                   if (getLearnsYouEnabled()) {
                     recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                   }
@@ -480,7 +501,11 @@ export default function SpeakPage() {
             onChange={(value) => {
               setTtsGender(value);
               setStoredTtsGender(value);
-              trackAnalyticsEvent({ name: "voice_gender_selected", ttsGender: value, mode: "speak" });
+              trackAnalyticsEvent({
+              name: ANALYTICS_EVENT_NAMES.VOICE_GENDER_SELECTED,
+              ttsGender: value,
+              mode: ANALYTICS_MODE.SPEAK,
+            });
               if (getLearnsYouEnabled()) {
                 recordInteractionSignal({
                   type: "tts_gender_select",
@@ -586,7 +611,11 @@ export default function SpeakPage() {
                     type="button"
                     onClick={() => {
                       setSlangLevel(level);
-                      trackAnalyticsEvent({ name: "slang_level_selected", slangLevel: level, mode: "speak" });
+                      trackAnalyticsEvent({
+                      name: ANALYTICS_EVENT_NAMES.SLANG_LEVEL_SELECTED,
+                      slangLevel: level,
+                      mode: ANALYTICS_MODE.SPEAK,
+                    });
                       if (getLearnsYouEnabled()) {
                         recordInteractionSignal({
                           type: "slang_level_select",
@@ -630,7 +659,11 @@ export default function SpeakPage() {
                     type="button"
                     onClick={() => {
                       setContext(value);
-                      trackAnalyticsEvent({ name: "vibe_selected", vibe: value, mode: "speak" });
+                      trackAnalyticsEvent({
+                      name: ANALYTICS_EVENT_NAMES.VIBE_SELECTED,
+                      vibe: value,
+                      mode: ANALYTICS_MODE.SPEAK,
+                    });
                       if (getLearnsYouEnabled()) {
                         recordInteractionSignal({
                           type: "context_select",

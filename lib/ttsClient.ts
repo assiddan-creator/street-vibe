@@ -1,4 +1,9 @@
-import { trackAnalyticsEvent } from "@/lib/analyticsEvents";
+import {
+  ANALYTICS_ENGINE,
+  ANALYTICS_EVENT_NAMES,
+  ANALYTICS_TTS_EVENT_MODE,
+  trackAnalyticsEvent,
+} from "@/lib/analyticsEvents";
 import type { ImplicitTranslateExtras } from "@/lib/implicitPreferenceEngine";
 import { getImplicitSoftExtrasForRequests, getLearnsYouEnabled } from "@/lib/implicitPreferenceEngine";
 import {
@@ -101,10 +106,10 @@ export async function fetchTtsAudioUrl(
 
   if (engine === "native") {
     trackAnalyticsEvent({
-      name: "tts_requested",
-      mode: "speak",
-      requestedEngine: "native",
-      effectiveEngine: "native",
+      name: ANALYTICS_EVENT_NAMES.TTS_REQUESTED,
+      ...ANALYTICS_TTS_EVENT_MODE,
+      requestedEngine: ANALYTICS_ENGINE.NATIVE,
+      effectiveEngine: ANALYTICS_ENGINE.NATIVE,
       dialect,
       ttsGender,
       vibe: vibeKeyForLog,
@@ -131,17 +136,17 @@ export async function fetchTtsAudioUrl(
     try {
       await speakNativeTts(text, dialect);
       trackAnalyticsEvent({
-        name: "tts_succeeded",
-        mode: "speak",
-        effectiveEngine: "native",
+        name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,
+        ...ANALYTICS_TTS_EVENT_MODE,
+        effectiveEngine: ANALYTICS_ENGINE.NATIVE,
         dialect,
         usedFallbackNative: false,
       });
     } catch (e) {
       trackAnalyticsEvent({
-        name: "tts_failed",
-        mode: "speak",
-        effectiveEngine: "native",
+        name: ANALYTICS_EVENT_NAMES.TTS_FAILED,
+        ...ANALYTICS_TTS_EVENT_MODE,
+        effectiveEngine: ANALYTICS_ENGINE.NATIVE,
         dialect,
         errorCode: e instanceof Error ? e.message.slice(0, 120) : "native_tts_error",
       });
@@ -156,8 +161,8 @@ export async function fetchTtsAudioUrl(
   const vibeKey = context ?? "default";
 
   trackAnalyticsEvent({
-    name: "tts_requested",
-    mode: "speak",
+    name: ANALYTICS_EVENT_NAMES.TTS_REQUESTED,
+    ...ANALYTICS_TTS_EVENT_MODE,
     requestedEngine: engine,
     effectiveEngine,
     dialect,
@@ -273,8 +278,8 @@ export async function fetchTtsAudioUrl(
         reportedEngine: startData.engine ?? "(unknown)",
       });
       trackAnalyticsEvent({
-        name: "tts_succeeded",
-        mode: "speak",
+        name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,
+        ...ANALYTICS_TTS_EVENT_MODE,
         effectiveEngine,
         dialect,
         usedFallbackNative: false,
@@ -305,8 +310,8 @@ export async function fetchTtsAudioUrl(
             urlPreview: `${out.slice(0, 80)}…`,
           });
           trackAnalyticsEvent({
-            name: "tts_succeeded",
-            mode: "speak",
+            name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,
+            ...ANALYTICS_TTS_EVENT_MODE,
             effectiveEngine,
             dialect,
             usedFallbackNative: false,
@@ -319,8 +324,8 @@ export async function fetchTtsAudioUrl(
             urlPreview: `${out[0].slice(0, 80)}…`,
           });
           trackAnalyticsEvent({
-            name: "tts_succeeded",
-            mode: "speak",
+            name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,
+            ...ANALYTICS_TTS_EVENT_MODE,
             effectiveEngine,
             dialect,
             usedFallbackNative: false,
@@ -344,17 +349,17 @@ export async function fetchTtsAudioUrl(
     try {
       await speakNativeTts(text, dialect);
       trackAnalyticsEvent({
-        name: "tts_succeeded",
-        mode: "speak",
-        effectiveEngine: "native",
+        name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,
+        ...ANALYTICS_TTS_EVENT_MODE,
+        effectiveEngine: ANALYTICS_ENGINE.NATIVE,
         dialect,
         usedFallbackNative: true,
       });
       return null;
     } catch (e2) {
       trackAnalyticsEvent({
-        name: "tts_failed",
-        mode: "speak",
+        name: ANALYTICS_EVENT_NAMES.TTS_FAILED,
+        ...ANALYTICS_TTS_EVENT_MODE,
         effectiveEngine,
         dialect,
         errorCode: `${e instanceof Error ? e.message.slice(0, 60) : "api"}|${e2 instanceof Error ? e2.message.slice(0, 60) : "native"}`,

@@ -1,38 +1,76 @@
 /**
- * Local-only analytics (client storage). No API changes; no PII / message bodies by default.
+ * Local-first analytics (client storage). No API changes; no PII / message bodies by default.
+ * Constants below are the single source of truth for event names and analytics-safe enums.
  */
 
-export type StreetVibeMode = "text" | "speak";
+// --- Source of truth: modes (text vs speak flows) ---
 
-export type AnalyticsEventName =
-  | "app_opened"
-  | "mode_switched"
-  | "source_language_selected"
-  | "target_dialect_selected"
-  | "voice_gender_selected"
-  | "slang_level_selected"
-  | "vibe_selected"
-  | "translate_requested"
-  | "translate_succeeded"
-  | "translate_failed"
-  | "tts_requested"
-  | "tts_succeeded"
-  | "tts_failed"
-  | "tts_replayed"
-  | "learns_you_toggled"
-  | "learned_preferences_reset";
+export const ANALYTICS_MODE = {
+  TEXT: "text",
+  SPEAK: "speak",
+} as const;
+
+export type StreetVibeMode = (typeof ANALYTICS_MODE)[keyof typeof ANALYTICS_MODE];
+
+/** Every TTS analytics event uses speak flow mode. */
+export const ANALYTICS_TTS_EVENT_MODE = { mode: ANALYTICS_MODE.SPEAK } as const;
+
+// --- Source of truth: TTS engine labels (mirror client engine selector; not server routing logic) ---
+
+export const ANALYTICS_ENGINE = {
+  MINIMAX: "minimax",
+  GOOGLE: "google",
+  NATIVE: "native",
+} as const;
+
+export type AnalyticsTtsEngine = (typeof ANALYTICS_ENGINE)[keyof typeof ANALYTICS_ENGINE];
+
+// --- Source of truth: voice gender (analytics only) ---
+
+export const ANALYTICS_TTS_GENDER = {
+  MALE: "male",
+  FEMALE: "female",
+} as const;
+
+export type AnalyticsTtsGender = (typeof ANALYTICS_TTS_GENDER)[keyof typeof ANALYTICS_TTS_GENDER];
+
+// --- Source of truth: event names ---
+
+export const ANALYTICS_EVENT_NAMES = {
+  APP_OPENED: "app_opened",
+  MODE_SWITCHED: "mode_switched",
+  SOURCE_LANGUAGE_SELECTED: "source_language_selected",
+  TARGET_DIALECT_SELECTED: "target_dialect_selected",
+  VOICE_GENDER_SELECTED: "voice_gender_selected",
+  SLANG_LEVEL_SELECTED: "slang_level_selected",
+  VIBE_SELECTED: "vibe_selected",
+  TRANSLATE_REQUESTED: "translate_requested",
+  TRANSLATE_SUCCEEDED: "translate_succeeded",
+  TRANSLATE_FAILED: "translate_failed",
+  TTS_REQUESTED: "tts_requested",
+  TTS_SUCCEEDED: "tts_succeeded",
+  TTS_FAILED: "tts_failed",
+  TTS_REPLAYED: "tts_replayed",
+  LEARNS_YOU_TOGGLED: "learns_you_toggled",
+  LEARNED_PREFERENCES_RESET: "learned_preferences_reset",
+} as const;
+
+export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[keyof typeof ANALYTICS_EVENT_NAMES];
+
+/** Dev/export snapshot schema; bump when aggregate shape changes. */
+export const ANALYTICS_SNAPSHOT_SCHEMA_VERSION = "1" as const;
 
 /** Per-event payloads — no raw user message / translation text. */
 export type AnalyticsEventPayload =
-  | { name: "app_opened"; mode: StreetVibeMode }
-  | { name: "mode_switched"; from: StreetVibeMode; to: StreetVibeMode }
-  | { name: "source_language_selected"; sourceLanguage: string; mode: StreetVibeMode }
-  | { name: "target_dialect_selected"; targetDialect: string; mode: StreetVibeMode }
-  | { name: "voice_gender_selected"; ttsGender: "male" | "female"; mode: StreetVibeMode }
-  | { name: "slang_level_selected"; slangLevel: 1 | 2 | 3; mode: StreetVibeMode }
-  | { name: "vibe_selected"; vibe: string; mode: StreetVibeMode }
+  | { name: typeof ANALYTICS_EVENT_NAMES.APP_OPENED; mode: StreetVibeMode }
+  | { name: typeof ANALYTICS_EVENT_NAMES.MODE_SWITCHED; from: StreetVibeMode; to: StreetVibeMode }
+  | { name: typeof ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED; sourceLanguage: string; mode: StreetVibeMode }
+  | { name: typeof ANALYTICS_EVENT_NAMES.TARGET_DIALECT_SELECTED; targetDialect: string; mode: StreetVibeMode }
+  | { name: typeof ANALYTICS_EVENT_NAMES.VOICE_GENDER_SELECTED; ttsGender: AnalyticsTtsGender; mode: StreetVibeMode }
+  | { name: typeof ANALYTICS_EVENT_NAMES.SLANG_LEVEL_SELECTED; slangLevel: 1 | 2 | 3; mode: StreetVibeMode }
+  | { name: typeof ANALYTICS_EVENT_NAMES.VIBE_SELECTED; vibe: string; mode: StreetVibeMode }
   | {
-      name: "translate_requested";
+      name: typeof ANALYTICS_EVENT_NAMES.TRANSLATE_REQUESTED;
       mode: StreetVibeMode;
       targetDialect: string;
       sourceLanguage: string;
@@ -43,53 +81,53 @@ export type AnalyticsEventPayload =
       implicitGuidancePresent: boolean;
     }
   | {
-      name: "translate_succeeded";
+      name: typeof ANALYTICS_EVENT_NAMES.TRANSLATE_SUCCEEDED;
       mode: StreetVibeMode;
       targetDialect: string;
       learnsYouEnabled: boolean;
       implicitGuidancePresent: boolean;
     }
   | {
-      name: "translate_failed";
+      name: typeof ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED;
       mode: StreetVibeMode;
       targetDialect: string;
       errorCode: string;
       learnsYouEnabled: boolean;
     }
   | {
-      name: "tts_requested";
-      mode: "speak";
-      requestedEngine: "minimax" | "google" | "native";
-      effectiveEngine: "minimax" | "google" | "native";
+      name: typeof ANALYTICS_EVENT_NAMES.TTS_REQUESTED;
+      mode: typeof ANALYTICS_MODE.SPEAK;
+      requestedEngine: AnalyticsTtsEngine;
+      effectiveEngine: AnalyticsTtsEngine;
       dialect: string;
-      ttsGender: "male" | "female";
+      ttsGender: AnalyticsTtsGender;
       vibe: string;
       textLengthChars: number;
       learnsYouEnabled: boolean;
       implicitGuidancePresent: boolean;
     }
   | {
-      name: "tts_succeeded";
-      mode: "speak";
-      effectiveEngine: "minimax" | "google" | "native";
+      name: typeof ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED;
+      mode: typeof ANALYTICS_MODE.SPEAK;
+      effectiveEngine: AnalyticsTtsEngine;
       dialect: string;
       usedFallbackNative: boolean;
     }
   | {
-      name: "tts_failed";
-      mode: "speak";
-      effectiveEngine: "minimax" | "google" | "native";
+      name: typeof ANALYTICS_EVENT_NAMES.TTS_FAILED;
+      mode: typeof ANALYTICS_MODE.SPEAK;
+      effectiveEngine: AnalyticsTtsEngine;
       dialect: string;
       errorCode: string;
     }
   | {
-      name: "tts_replayed";
-      mode: "speak";
+      name: typeof ANALYTICS_EVENT_NAMES.TTS_REPLAYED;
+      mode: typeof ANALYTICS_MODE.SPEAK;
       dialect: string;
-      requestedEngine: "minimax" | "google" | "native";
+      requestedEngine: AnalyticsTtsEngine;
     }
-  | { name: "learns_you_toggled"; enabled: boolean }
-  | { name: "learned_preferences_reset" };
+  | { name: typeof ANALYTICS_EVENT_NAMES.LEARNS_YOU_TOGGLED; enabled: boolean }
+  | { name: typeof ANALYTICS_EVENT_NAMES.LEARNED_PREFERENCES_RESET };
 
 export type StreetVibeAnalyticsEvent = {
   id: string;
@@ -110,6 +148,31 @@ function newId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** Optional future sink (e.g. HTTPS batch). Default null — never blocks local storage. */
+export interface AnalyticsRemoteSink {
+  send(event: StreetVibeAnalyticsEvent): void | Promise<void>;
+}
+
+let analyticsRemoteSink: AnalyticsRemoteSink | null = null;
+
+export function setAnalyticsRemoteSink(sink: AnalyticsRemoteSink | null): void {
+  analyticsRemoteSink = sink;
+}
+
+/** No-op unless `setAnalyticsRemoteSink` was called; safe to fire after local persist. */
+export function sendAnalyticsEventToRemote(event: StreetVibeAnalyticsEvent): void {
+  const sink = analyticsRemoteSink;
+  if (!sink) return;
+  try {
+    const out = sink.send(event);
+    if (out && typeof (out as Promise<void>).then === "function") {
+      void (out as Promise<void>).catch(() => {});
+    }
+  } catch {
+    /* remote failures must not surface to the app */
+  }
+}
+
 /** Build a consistent context object for logging (no content). */
 export function buildAnalyticsContext(input: {
   mode: StreetVibeMode;
@@ -117,11 +180,16 @@ export function buildAnalyticsContext(input: {
   targetDialect: string;
   vibe: string;
   slangLevel: 1 | 2 | 3;
-  ttsGender: "male" | "female";
+  ttsGender: AnalyticsTtsGender;
   learnsYouEnabled: boolean;
   implicitGuidancePresent: boolean;
 }): typeof input {
   return { ...input };
+}
+
+/** Keeps `errorCode` on failure events bounded (same default as historical client usage). */
+export function clipAnalyticsErrorCode(message: string, maxLen = 120): string {
+  return message.slice(0, maxLen);
 }
 
 export function readStoredAnalyticsEvents(): StreetVibeAnalyticsEvent[] {
@@ -163,9 +231,9 @@ export type DevAnalyticsRollup = {
   topVibes: { vibe: string; count: number }[];
   topVoices: { voice: string; count: number }[];
   /** effectiveEngine from TTS events */
-  engineEffectiveCounts: Partial<Record<"minimax" | "google" | "native", number>>;
+  engineEffectiveCounts: Partial<Record<AnalyticsTtsEngine, number>>;
   /** requestedEngine from tts_requested */
-  engineRequestedCounts: Partial<Record<"minimax" | "google" | "native", number>>;
+  engineRequestedCounts: Partial<Record<AnalyticsTtsEngine, number>>;
   /** translate_requested counts */
   translateFlowSplit: { text: number; speak: number };
   /** app_opened counts */
@@ -203,6 +271,10 @@ function topNFromMap(m: Map<string, number>, n: number): { key: string; count: n
     .map(([key, count]) => ({ key, count }));
 }
 
+function isAnalyticsEngine(x: string): x is AnalyticsTtsEngine {
+  return x === ANALYTICS_ENGINE.MINIMAX || x === ANALYTICS_ENGINE.GOOGLE || x === ANALYTICS_ENGINE.NATIVE;
+}
+
 /**
  * Single-pass aggregation from stored-shaped events (no network).
  * Call with `readStoredAnalyticsEvents()` on the client.
@@ -212,8 +284,8 @@ export function computeDevAnalyticsRollup(events: StreetVibeAnalyticsEvent[]): D
   const dialectCounts = new Map<string, number>();
   const vibeCounts = new Map<string, number>();
   const voiceCounts = new Map<string, number>();
-  const engineEff: Partial<Record<"minimax" | "google" | "native", number>> = {};
-  const engineReq: Partial<Record<"minimax" | "google" | "native", number>> = {};
+  const engineEff: Partial<Record<AnalyticsTtsEngine, number>> = {};
+  const engineReq: Partial<Record<AnalyticsTtsEngine, number>> = {};
 
   let translateText = 0;
   let translateSpeak = 0;
@@ -230,59 +302,59 @@ export function computeDevAnalyticsRollup(events: StreetVibeAnalyticsEvent[]): D
     const d = dialectFromEvent(e);
     if (d) bumpMap(dialectCounts, d);
 
-    if (e.name === "vibe_selected" && "vibe" in e && typeof e.vibe === "string") {
+    if (e.name === ANALYTICS_EVENT_NAMES.VIBE_SELECTED && "vibe" in e && typeof e.vibe === "string") {
       bumpMap(vibeCounts, e.vibe);
     }
-    if (e.name === "translate_requested" && "vibe" in e && typeof e.vibe === "string") {
+    if (e.name === ANALYTICS_EVENT_NAMES.TRANSLATE_REQUESTED && "vibe" in e && typeof e.vibe === "string") {
       bumpMap(vibeCounts, e.vibe);
     }
-    if (e.name === "tts_requested" && "vibe" in e && typeof e.vibe === "string") {
+    if (e.name === ANALYTICS_EVENT_NAMES.TTS_REQUESTED && "vibe" in e && typeof e.vibe === "string") {
       bumpMap(vibeCounts, e.vibe);
     }
 
-    if (e.name === "voice_gender_selected" && "ttsGender" in e) {
+    if (e.name === ANALYTICS_EVENT_NAMES.VOICE_GENDER_SELECTED && "ttsGender" in e) {
       bumpMap(voiceCounts, String(e.ttsGender));
     }
-    if (e.name === "tts_requested" && "ttsGender" in e) {
+    if (e.name === ANALYTICS_EVENT_NAMES.TTS_REQUESTED && "ttsGender" in e) {
       bumpMap(voiceCounts, String(e.ttsGender));
     }
 
-    if (e.name === "tts_requested") {
+    if (e.name === ANALYTICS_EVENT_NAMES.TTS_REQUESTED) {
       const tr = e as StreetVibeAnalyticsEvent & { requestedEngine?: string; effectiveEngine?: string };
-      if (tr.requestedEngine === "minimax" || tr.requestedEngine === "google" || tr.requestedEngine === "native") {
+      if (typeof tr.requestedEngine === "string" && isAnalyticsEngine(tr.requestedEngine)) {
         engineReq[tr.requestedEngine] = (engineReq[tr.requestedEngine] ?? 0) + 1;
       }
-      if (tr.effectiveEngine === "minimax" || tr.effectiveEngine === "google" || tr.effectiveEngine === "native") {
+      if (typeof tr.effectiveEngine === "string" && isAnalyticsEngine(tr.effectiveEngine)) {
         engineEff[tr.effectiveEngine] = (engineEff[tr.effectiveEngine] ?? 0) + 1;
       }
     }
 
-    if (e.name === "translate_requested" && "mode" in e) {
-      if (e.mode === "text") translateText += 1;
-      if (e.mode === "speak") translateSpeak += 1;
+    if (e.name === ANALYTICS_EVENT_NAMES.TRANSLATE_REQUESTED && "mode" in e) {
+      if (e.mode === ANALYTICS_MODE.TEXT) translateText += 1;
+      if (e.mode === ANALYTICS_MODE.SPEAK) translateSpeak += 1;
       if ("learnsYouEnabled" in e && typeof e.learnsYouEnabled === "boolean") {
         if (e.learnsYouEnabled) translateWithLearnsYouOn += 1;
         else translateWithLearnsYouOff += 1;
       }
     }
 
-    if (e.name === "app_opened" && "mode" in e) {
-      if (e.mode === "text") appText += 1;
-      if (e.mode === "speak") appSpeak += 1;
+    if (e.name === ANALYTICS_EVENT_NAMES.APP_OPENED && "mode" in e) {
+      if (e.mode === ANALYTICS_MODE.TEXT) appText += 1;
+      if (e.mode === ANALYTICS_MODE.SPEAK) appSpeak += 1;
     }
 
-    if (e.name === "learns_you_toggled" && "enabled" in e && typeof e.enabled === "boolean") {
+    if (e.name === ANALYTICS_EVENT_NAMES.LEARNS_YOU_TOGGLED && "enabled" in e && typeof e.enabled === "boolean") {
       if (e.enabled) learnsYouToggleOn += 1;
       else learnsYouToggleOff += 1;
     }
   }
 
-  const tr = countsByName.translate_requested ?? 0;
-  const replay = countsByName.tts_replayed ?? 0;
-  const ttsOk = countsByName.tts_succeeded ?? 0;
-  const ttsBad = countsByName.tts_failed ?? 0;
-  const txOk = countsByName.translate_succeeded ?? 0;
-  const txBad = countsByName.translate_failed ?? 0;
+  const tr = countsByName[ANALYTICS_EVENT_NAMES.TTS_REQUESTED] ?? 0;
+  const replay = countsByName[ANALYTICS_EVENT_NAMES.TTS_REPLAYED] ?? 0;
+  const ttsOk = countsByName[ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED] ?? 0;
+  const ttsBad = countsByName[ANALYTICS_EVENT_NAMES.TTS_FAILED] ?? 0;
+  const txOk = countsByName[ANALYTICS_EVENT_NAMES.TRANSLATE_SUCCEEDED] ?? 0;
+  const txBad = countsByName[ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED] ?? 0;
 
   const ttsReplayRate = tr > 0 ? replay / tr : null;
   const translateFailureRate =
@@ -340,7 +412,7 @@ export function readDevAnalyticsRollup(): DevAnalyticsRollup {
 
 /** Snapshot for copy/download — aggregates only; no event payloads or textLengthChars. */
 export type AnalyticsSnapshotExport = {
-  schemaVersion: "1";
+  schemaVersion: typeof ANALYTICS_SNAPSHOT_SCHEMA_VERSION;
   generatedAt: string;
   totalEvents: number;
   translateFlowSplit: DevAnalyticsRollup["translateFlowSplit"];
@@ -368,7 +440,7 @@ export type AnalyticsSnapshotExport = {
 export function buildAnalyticsSnapshotExport(): AnalyticsSnapshotExport {
   const r = readDevAnalyticsRollup();
   return {
-    schemaVersion: "1",
+    schemaVersion: ANALYTICS_SNAPSHOT_SCHEMA_VERSION,
     generatedAt: new Date().toISOString(),
     totalEvents: r.totalEvents,
     translateFlowSplit: r.translateFlowSplit,
@@ -406,6 +478,7 @@ export function trackAnalyticsEvent<P extends AnalyticsEventPayload>(payload: P)
     prev.push(event);
     const trimmed = prev.slice(-MAX_EVENTS);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    sendAnalyticsEventToRemote(event);
   } catch {
     /* non-blocking */
   }
