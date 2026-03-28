@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ANALYTICS_DURATION_BUCKET,
   buildAnalyticsSnapshotExport,
   clearStoredAnalyticsEvents,
   readDevAnalyticsRollup,
@@ -35,6 +36,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function formatTop(rows: { label: string; count: number }[]) {
   if (rows.length === 0) return "—";
   return rows.map((r) => `${r.label} (${r.count})`).join(" · ");
+}
+
+function fmtAvgMs(ms: number | null): string {
+  if (ms === null || Number.isNaN(ms)) return "—";
+  return `${ms.toFixed(0)} ms`;
+}
+
+/** Stable bucket key order for display. */
+const DURATION_BUCKET_ORDER = [
+  ANALYTICS_DURATION_BUCKET.UNDER_1S,
+  ANALYTICS_DURATION_BUCKET.ONE_TO_3S,
+  ANALYTICS_DURATION_BUCKET.THREE_TO_7S,
+  ANALYTICS_DURATION_BUCKET.SEVEN_PLUS,
+] as const;
+
+function formatDurationBuckets(b: DevAnalyticsRollup["translateSuccessByBucket"]): string {
+  return DURATION_BUCKET_ORDER.map((k) => `${k}:${b[k]}`).join(" · ");
 }
 
 /** Dashboard poll interval — visible rollup only; export stays click-fresh. */
@@ -206,6 +224,29 @@ export function DevAnalyticsClient() {
           <Row label="Failure rate" value={pct(r.ttsFailureRate)} />
           <Row label="Replay events / replay ÷ TTS requests" value={`${r.ttsReplayCount} / ${pct(r.ttsReplayRate)}`} />
           <p className="mt-2 text-[10px] text-white/30">Replay rate uses tts_replayed ÷ tts_requested.</p>
+        </Section>
+
+        <Section title="Performance (request → outcome)">
+          <p className="mb-2 text-[10px] leading-relaxed text-white/35">
+            Averages include only events with <span className="font-mono text-white/45">durationMs</span> (newer
+            sessions). Buckets: &lt;1s · 1–3s · 3–7s · 7s+.
+          </p>
+          <Row label="Translate success avg / failure avg" value={`${fmtAvgMs(r.translateSuccessAvgMs)} / ${fmtAvgMs(r.translateFailureAvgMs)}`} />
+          <Row label="TTS success avg / failure avg" value={`${fmtAvgMs(r.ttsSuccessAvgMs)} / ${fmtAvgMs(r.ttsFailureAvgMs)}`} />
+          <p className="mt-2 text-[10px] font-medium uppercase tracking-wider text-white/30">Translate buckets</p>
+          <p className="font-mono text-[10px] leading-relaxed text-white/65">
+            ok: {formatDurationBuckets(r.translateSuccessByBucket)}
+          </p>
+          <p className="mt-1 font-mono text-[10px] leading-relaxed text-white/65">
+            fail: {formatDurationBuckets(r.translateFailureByBucket)}
+          </p>
+          <p className="mt-2 text-[10px] font-medium uppercase tracking-wider text-white/30">TTS buckets</p>
+          <p className="font-mono text-[10px] leading-relaxed text-white/65">
+            ok: {formatDurationBuckets(r.ttsSuccessByBucket)}
+          </p>
+          <p className="mt-1 font-mono text-[10px] leading-relaxed text-white/65">
+            fail: {formatDurationBuckets(r.ttsFailureByBucket)}
+          </p>
         </Section>
 
         <Section title="Learns You toggles">

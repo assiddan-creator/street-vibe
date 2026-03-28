@@ -2,6 +2,7 @@ import {
   ANALYTICS_ENGINE,
   ANALYTICS_EVENT_NAMES,
   ANALYTICS_TTS_EVENT_MODE,
+  analyticsDurationFieldsFromStart,
   trackAnalyticsEvent,
 } from "@/lib/analyticsEvents";
 import type { ImplicitTranslateExtras } from "@/lib/implicitPreferenceEngine";
@@ -105,6 +106,7 @@ export async function fetchTtsAudioUrl(
   const vibeKeyForLog = context ?? "default";
 
   if (engine === "native") {
+    const ttsPerfStart = performance.now();
     trackAnalyticsEvent({
       name: ANALYTICS_EVENT_NAMES.TTS_REQUESTED,
       ...ANALYTICS_TTS_EVENT_MODE,
@@ -141,6 +143,7 @@ export async function fetchTtsAudioUrl(
         effectiveEngine: ANALYTICS_ENGINE.NATIVE,
         dialect,
         usedFallbackNative: false,
+        ...analyticsDurationFieldsFromStart(ttsPerfStart),
       });
     } catch (e) {
       trackAnalyticsEvent({
@@ -149,6 +152,7 @@ export async function fetchTtsAudioUrl(
         effectiveEngine: ANALYTICS_ENGINE.NATIVE,
         dialect,
         errorCode: e instanceof Error ? e.message.slice(0, 120) : "native_tts_error",
+        ...analyticsDurationFieldsFromStart(ttsPerfStart),
       });
       throw e;
     }
@@ -160,6 +164,7 @@ export async function fetchTtsAudioUrl(
 
   const vibeKey = context ?? "default";
 
+  const ttsPerfStart = performance.now();
   trackAnalyticsEvent({
     name: ANALYTICS_EVENT_NAMES.TTS_REQUESTED,
     ...ANALYTICS_TTS_EVENT_MODE,
@@ -283,6 +288,7 @@ export async function fetchTtsAudioUrl(
         effectiveEngine,
         dialect,
         usedFallbackNative: false,
+        ...analyticsDurationFieldsFromStart(ttsPerfStart),
       });
       return `data:audio/mp3;base64,${startData.audioBase64}`;
     }
@@ -315,6 +321,7 @@ export async function fetchTtsAudioUrl(
             effectiveEngine,
             dialect,
             usedFallbackNative: false,
+            ...analyticsDurationFieldsFromStart(ttsPerfStart),
           });
           return out;
         }
@@ -329,6 +336,7 @@ export async function fetchTtsAudioUrl(
             effectiveEngine,
             dialect,
             usedFallbackNative: false,
+            ...analyticsDurationFieldsFromStart(ttsPerfStart),
           });
           return out[0];
         }
@@ -354,6 +362,7 @@ export async function fetchTtsAudioUrl(
         effectiveEngine: ANALYTICS_ENGINE.NATIVE,
         dialect,
         usedFallbackNative: true,
+        ...analyticsDurationFieldsFromStart(ttsPerfStart),
       });
       return null;
     } catch (e2) {
@@ -363,6 +372,7 @@ export async function fetchTtsAudioUrl(
         effectiveEngine,
         dialect,
         errorCode: `${e instanceof Error ? e.message.slice(0, 60) : "api"}|${e2 instanceof Error ? e2.message.slice(0, 60) : "native"}`,
+        ...analyticsDurationFieldsFromStart(ttsPerfStart),
       });
       throw e2;
     }

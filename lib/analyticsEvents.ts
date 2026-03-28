@@ -58,7 +58,53 @@ export const ANALYTICS_EVENT_NAMES = {
 export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[keyof typeof ANALYTICS_EVENT_NAMES];
 
 /** Dev/export snapshot schema; bump when aggregate shape changes. */
-export const ANALYTICS_SNAPSHOT_SCHEMA_VERSION = "1" as const;
+export const ANALYTICS_SNAPSHOT_SCHEMA_VERSION = "2" as const;
+
+/** Rollup-friendly duration buckets (request start → success/failure outcome). */
+export const ANALYTICS_DURATION_BUCKET = {
+  UNDER_1S: "under_1s",
+  ONE_TO_3S: "1_to_3s",
+  THREE_TO_7S: "3_to_7s",
+  SEVEN_PLUS: "7s_plus",
+} as const;
+
+export type AnalyticsDurationBucket =
+  (typeof ANALYTICS_DURATION_BUCKET)[keyof typeof ANALYTICS_DURATION_BUCKET];
+
+export function durationBucketFromMs(ms: number): AnalyticsDurationBucket {
+  const m = Math.max(0, ms);
+  if (m < 1000) return ANALYTICS_DURATION_BUCKET.UNDER_1S;
+  if (m < 3000) return ANALYTICS_DURATION_BUCKET.ONE_TO_3S;
+  if (m < 7000) return ANALYTICS_DURATION_BUCKET.THREE_TO_7S;
+  return ANALYTICS_DURATION_BUCKET.SEVEN_PLUS;
+}
+
+/** Client timing helper: call `performance.now()` at request start, then pass that value here on outcome. */
+export function analyticsDurationFieldsFromStart(perfStart: number): {
+  durationMs: number;
+  durationBucket: AnalyticsDurationBucket;
+} {
+  const durationMs = Math.round(performance.now() - perfStart);
+  return { durationMs, durationBucket: durationBucketFromMs(durationMs) };
+}
+
+function isAnalyticsDurationBucket(x: unknown): x is AnalyticsDurationBucket {
+  return (
+    x === ANALYTICS_DURATION_BUCKET.UNDER_1S ||
+    x === ANALYTICS_DURATION_BUCKET.ONE_TO_3S ||
+    x === ANALYTICS_DURATION_BUCKET.THREE_TO_7S ||
+    x === ANALYTICS_DURATION_BUCKET.SEVEN_PLUS
+  );
+}
+
+function emptyDurationBuckets(): Record<AnalyticsDurationBucket, number> {
+  return {
+    [ANALYTICS_DURATION_BUCKET.UNDER_1S]: 0,
+    [ANALYTICS_DURATION_BUCKET.ONE_TO_3S]: 0,
+    [ANALYTICS_DURATION_BUCKET.THREE_TO_7S]: 0,
+    [ANALYTICS_DURATION_BUCKET.SEVEN_PLUS]: 0,
+  };
+}
 
 /** Per-event payloads — no raw user message / translation text. */
 export type AnalyticsEventPayload =
@@ -86,6 +132,8 @@ export type AnalyticsEventPayload =
       targetDialect: string;
       learnsYouEnabled: boolean;
       implicitGuidancePresent: boolean;
+      durationMs: number;
+      durationBucket: AnalyticsDurationBucket;
     }
   | {
       name: typeof ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED;
@@ -93,6 +141,8 @@ export type AnalyticsEventPayload =
       targetDialect: string;
       errorCode: string;
       learnsYouEnabled: boolean;
+      durationMs: number;
+      durationBucket: AnalyticsDurationBucket;
     }
   | {
       name: typeof ANALYTICS_EVENT_NAMES.TTS_REQUESTED;
@@ -112,6 +162,8 @@ export type AnalyticsEventPayload =
       effectiveEngine: AnalyticsTtsEngine;
       dialect: string;
       usedFallbackNative: boolean;
+      durationMs: number;
+      durationBucket: AnalyticsDurationBucket;
     }
   | {
       name: typeof ANALYTICS_EVENT_NAMES.TTS_FAILED;
@@ -119,6 +171,8 @@ export type AnalyticsEventPayload =
       effectiveEngine: AnalyticsTtsEngine;
       dialect: string;
       errorCode: string;
+      durationMs: number;
+      durationBucket: AnalyticsDurationBucket;
     }
   | {
       name: typeof ANALYTICS_EVENT_NAMES.TTS_REPLAYED;
@@ -251,6 +305,15 @@ export type DevAnalyticsRollup = {
   learnsYouToggleOff: number;
   translateWithLearnsYouOn: number;
   translateWithLearnsYouOff: number;
+  /** Avg duration (ms) where outcome events include `durationMs` (newer buffer only). */
+  translateSuccessAvgMs: number | null;
+  translateFailureAvgMs: number | null;
+  ttsSuccessAvgMs: number | null;
+  ttsFailureAvgMs: number | null;
+  translateSuccessByBucket: Record<AnalyticsDurationBucket, number>;
+  translateFailureByBucket: Record<AnalyticsDurationBucket, number>;
+  ttsSuccessByBucket: Record<AnalyticsDurationBucket, number>;
+  ttsFailureByBucket: Record<AnalyticsDurationBucket, number>;
 };
 
 function dialectFromEvent(e: StreetVibeAnalyticsEvent): string | undefined {
@@ -368,6 +431,43 @@ export function computeDevAnalyticsRollup(events: StreetVibeAnalyticsEvent[]): D
   const topVibes = topNFromMap(vibeCounts, 12).map(({ key: vibe, count }) => ({ vibe, count }));
   const topVoices = topNFromMap(voiceCounts, 8).map(({ key: voice, count }) => ({ voice, count }));
 
+  const translateSuccessByBucket = emptyDurationBuckets();
+  const translateFailureByBucket = emptyDurationBuckets();
+  const ttsSuccessByBucket = emptyDurationBuckets();
+  const ttsFailureByBucket = emptyDurationBuckets();
+  let translateSuccessSum = 0;
+  let translateSuccessN = 0;
+  let translateFailureSum = 0;
+  let translateFailureN = 0;
+  let ttsSuccessSum = 0;
+  let ttsSuccessN = 0;
+  let ttsFailureSum = 0;
+  let ttsFailureN = 0;
+
+  for (const e of events) {
+    const dm = (e as { durationMs?: unknown }).durationMs;
+    const db = (e as { durationBucket?: unknown }).durationBucket;
+    if (typeof dm !== "number" || !isAnalyticsDurationBucket(db)) continue;
+
+    if (e.name === ANALYTICS_EVENT_NAMES.TRANSLATE_SUCCEEDED) {
+      translateSuccessSum += dm;
+      translateSuccessN += 1;
+      translateSuccessByBucket[db] += 1;
+    } else if (e.name === ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED) {
+      translateFailureSum += dm;
+      translateFailureN += 1;
+      translateFailureByBucket[db] += 1;
+    } else if (e.name === ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED) {
+      ttsSuccessSum += dm;
+      ttsSuccessN += 1;
+      ttsSuccessByBucket[db] += 1;
+    } else if (e.name === ANALYTICS_EVENT_NAMES.TTS_FAILED) {
+      ttsFailureSum += dm;
+      ttsFailureN += 1;
+      ttsFailureByBucket[db] += 1;
+    }
+  }
+
   return {
     totalEvents: events.length,
     countsByName,
@@ -390,6 +490,14 @@ export function computeDevAnalyticsRollup(events: StreetVibeAnalyticsEvent[]): D
     learnsYouToggleOff,
     translateWithLearnsYouOn,
     translateWithLearnsYouOff,
+    translateSuccessAvgMs: translateSuccessN > 0 ? translateSuccessSum / translateSuccessN : null,
+    translateFailureAvgMs: translateFailureN > 0 ? translateFailureSum / translateFailureN : null,
+    ttsSuccessAvgMs: ttsSuccessN > 0 ? ttsSuccessSum / ttsSuccessN : null,
+    ttsFailureAvgMs: ttsFailureN > 0 ? ttsFailureSum / ttsFailureN : null,
+    translateSuccessByBucket,
+    translateFailureByBucket,
+    ttsSuccessByBucket,
+    ttsFailureByBucket,
   };
 }
 
@@ -435,6 +543,14 @@ export type AnalyticsSnapshotExport = {
   translateWithLearnsYouOn: number;
   translateWithLearnsYouOff: number;
   countsByName: DevAnalyticsRollup["countsByName"];
+  translateSuccessAvgMs: DevAnalyticsRollup["translateSuccessAvgMs"];
+  translateFailureAvgMs: DevAnalyticsRollup["translateFailureAvgMs"];
+  ttsSuccessAvgMs: DevAnalyticsRollup["ttsSuccessAvgMs"];
+  ttsFailureAvgMs: DevAnalyticsRollup["ttsFailureAvgMs"];
+  translateSuccessByBucket: DevAnalyticsRollup["translateSuccessByBucket"];
+  translateFailureByBucket: DevAnalyticsRollup["translateFailureByBucket"];
+  ttsSuccessByBucket: DevAnalyticsRollup["ttsSuccessByBucket"];
+  ttsFailureByBucket: DevAnalyticsRollup["ttsFailureByBucket"];
 };
 
 export function buildAnalyticsSnapshotExport(): AnalyticsSnapshotExport {
@@ -463,6 +579,14 @@ export function buildAnalyticsSnapshotExport(): AnalyticsSnapshotExport {
     translateWithLearnsYouOn: r.translateWithLearnsYouOn,
     translateWithLearnsYouOff: r.translateWithLearnsYouOff,
     countsByName: r.countsByName,
+    translateSuccessAvgMs: r.translateSuccessAvgMs,
+    translateFailureAvgMs: r.translateFailureAvgMs,
+    ttsSuccessAvgMs: r.ttsSuccessAvgMs,
+    ttsFailureAvgMs: r.ttsFailureAvgMs,
+    translateSuccessByBucket: r.translateSuccessByBucket,
+    translateFailureByBucket: r.translateFailureByBucket,
+    ttsSuccessByBucket: r.ttsSuccessByBucket,
+    ttsFailureByBucket: r.ttsFailureByBucket,
   };
 }
 

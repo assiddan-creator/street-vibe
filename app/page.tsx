@@ -28,6 +28,7 @@ import { lookupSlang } from "@/lib/slangDictionary";
 import {
   ANALYTICS_EVENT_NAMES,
   ANALYTICS_MODE,
+  analyticsDurationFieldsFromStart,
   clipAnalyticsErrorCode,
   trackAnalyticsEvent,
 } from "@/lib/analyticsEvents";
@@ -112,6 +113,7 @@ export default function Home() {
     const implicitPresent = Boolean(
       implicitExtras?.personalSlangProfile || implicitExtras?.personaPresetId
     );
+    const translatePerfStart = performance.now();
     trackAnalyticsEvent({
       name: ANALYTICS_EVENT_NAMES.TRANSLATE_REQUESTED,
       mode: ANALYTICS_MODE.TEXT,
@@ -151,6 +153,7 @@ export default function Home() {
         targetDialect: dialect,
         learnsYouEnabled: learnsYouOn,
         implicitGuidancePresent: implicitPresent,
+        ...analyticsDurationFieldsFromStart(translatePerfStart),
       });
 
       if (getLearnsYouEnabled()) {
@@ -180,6 +183,7 @@ export default function Home() {
         targetDialect: dialect,
         errorCode: clipAnalyticsErrorCode(e instanceof Error ? e.message : "translate_error"),
         learnsYouEnabled: getLearnsYouEnabled(),
+        ...analyticsDurationFieldsFromStart(translatePerfStart),
       });
       setError(e instanceof Error ? e.message : "Translation failed");
       setTranslatedText("");
