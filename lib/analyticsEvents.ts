@@ -338,6 +338,62 @@ export function readDevAnalyticsRollup(): DevAnalyticsRollup {
   return computeDevAnalyticsRollup(readStoredAnalyticsEvents());
 }
 
+/** Snapshot for copy/download — aggregates only; no event payloads or textLengthChars. */
+export type AnalyticsSnapshotExport = {
+  schemaVersion: "1";
+  generatedAt: string;
+  totalEvents: number;
+  translateFlowSplit: DevAnalyticsRollup["translateFlowSplit"];
+  appOpenFlowSplit: DevAnalyticsRollup["appOpenFlowSplit"];
+  topTargetDialects: DevAnalyticsRollup["topTargetDialects"];
+  topVibes: DevAnalyticsRollup["topVibes"];
+  topVoices: DevAnalyticsRollup["topVoices"];
+  engineEffectiveCounts: DevAnalyticsRollup["engineEffectiveCounts"];
+  engineRequestedCounts: DevAnalyticsRollup["engineRequestedCounts"];
+  translateSuccessCount: number;
+  translateFailureCount: number;
+  translateFailureRate: number | null;
+  ttsSuccessCount: number;
+  ttsFailureCount: number;
+  ttsFailureRate: number | null;
+  ttsReplayCount: number;
+  ttsReplayRate: number | null;
+  learnsYouToggleOn: number;
+  learnsYouToggleOff: number;
+  translateWithLearnsYouOn: number;
+  translateWithLearnsYouOff: number;
+  countsByName: DevAnalyticsRollup["countsByName"];
+};
+
+export function buildAnalyticsSnapshotExport(): AnalyticsSnapshotExport {
+  const r = readDevAnalyticsRollup();
+  return {
+    schemaVersion: "1",
+    generatedAt: new Date().toISOString(),
+    totalEvents: r.totalEvents,
+    translateFlowSplit: r.translateFlowSplit,
+    appOpenFlowSplit: r.appOpenFlowSplit,
+    topTargetDialects: r.topTargetDialects,
+    topVibes: r.topVibes,
+    topVoices: r.topVoices,
+    engineEffectiveCounts: r.engineEffectiveCounts,
+    engineRequestedCounts: r.engineRequestedCounts,
+    translateSuccessCount: r.translateSuccessCount,
+    translateFailureCount: r.translateFailureCount,
+    translateFailureRate: r.translateFailureRate,
+    ttsSuccessCount: r.ttsSuccessCount,
+    ttsFailureCount: r.ttsFailureCount,
+    ttsFailureRate: r.ttsFailureRate,
+    ttsReplayCount: r.ttsReplayCount,
+    ttsReplayRate: r.ttsReplayRate,
+    learnsYouToggleOn: r.learnsYouToggleOn,
+    learnsYouToggleOff: r.learnsYouToggleOff,
+    translateWithLearnsYouOn: r.translateWithLearnsYouOn,
+    translateWithLearnsYouOff: r.translateWithLearnsYouOff,
+    countsByName: r.countsByName,
+  };
+}
+
 export function trackAnalyticsEvent<P extends AnalyticsEventPayload>(payload: P): void {
   if (!isBrowser()) return;
   try {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import {
+  buildAnalyticsSnapshotExport,
   clearStoredAnalyticsEvents,
   readDevAnalyticsRollup,
   type DevAnalyticsRollup,
@@ -38,6 +39,7 @@ function formatTop(rows: { label: string; count: number }[]) {
 
 export function DevAnalyticsClient() {
   const [tick, setTick] = useState(0);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const rollup: DevAnalyticsRollup = useMemo(() => {
     void tick;
     return readDevAnalyticsRollup();
@@ -49,6 +51,31 @@ export function DevAnalyticsClient() {
     clearStoredAnalyticsEvents();
     setTick((t) => t + 1);
   }, []);
+
+  const snapshotJson = useMemo(() => JSON.stringify(buildAnalyticsSnapshotExport(), null, 2), [tick]);
+
+  const copySnapshot = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(snapshotJson);
+      setCopyState("copied");
+      window.setTimeout(() => setCopyState("idle"), 2000);
+    } catch {
+      setCopyState("error");
+      window.setTimeout(() => setCopyState("idle"), 2500);
+    }
+  }, [snapshotJson]);
+
+  const downloadSnapshot = useCallback(() => {
+    const blob = new Blob([snapshotJson], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    a.href = url;
+    a.download = `streetvibe-analytics-snapshot-${stamp}.json`;
+    a.rel = "noopener";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [snapshotJson]);
 
   const r = rollup;
   const txTotal = r.translateSuccessCount + r.translateFailureCount;
@@ -88,6 +115,29 @@ export function DevAnalyticsClient() {
           >
             ← Home
           </Link>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-white/[0.08] bg-black/25 p-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Export snapshot</p>
+          <p className="mb-2 text-[11px] leading-relaxed text-white/40">
+            Aggregates only (no raw events). JSON matches the current rollup.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void copySnapshot()}
+              className="rounded-lg border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-1.5 text-[11px] font-medium text-emerald-200/95 transition hover:bg-emerald-500/[0.12]"
+            >
+              {copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy JSON"}
+            </button>
+            <button
+              type="button"
+              onClick={downloadSnapshot}
+              className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/75 transition hover:bg-white/[0.08]"
+            >
+              Download JSON
+            </button>
+          </div>
         </div>
       </div>
 
