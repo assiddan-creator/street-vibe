@@ -52,21 +52,21 @@ export function DevAnalyticsClient() {
     setTick((t) => t + 1);
   }, []);
 
-  const snapshotJson = useMemo(() => JSON.stringify(buildAnalyticsSnapshotExport(), null, 2), [tick]);
-
   const copySnapshot = useCallback(async () => {
+    const json = JSON.stringify(buildAnalyticsSnapshotExport(), null, 2);
     try {
-      await navigator.clipboard.writeText(snapshotJson);
+      await navigator.clipboard.writeText(json);
       setCopyState("copied");
       window.setTimeout(() => setCopyState("idle"), 2000);
     } catch {
       setCopyState("error");
       window.setTimeout(() => setCopyState("idle"), 2500);
     }
-  }, [snapshotJson]);
+  }, []);
 
   const downloadSnapshot = useCallback(() => {
-    const blob = new Blob([snapshotJson], { type: "application/json;charset=utf-8" });
+    const json = JSON.stringify(buildAnalyticsSnapshotExport(), null, 2);
+    const blob = new Blob([json], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -75,7 +75,7 @@ export function DevAnalyticsClient() {
     a.rel = "noopener";
     a.click();
     URL.revokeObjectURL(url);
-  }, [snapshotJson]);
+  }, []);
 
   const r = rollup;
   const txTotal = r.translateSuccessCount + r.translateFailureCount;
@@ -120,7 +120,8 @@ export function DevAnalyticsClient() {
         <div className="mt-4 rounded-xl border border-white/[0.08] bg-black/25 p-3">
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Export snapshot</p>
           <p className="mb-2 text-[11px] leading-relaxed text-white/40">
-            Aggregates only (no raw events). JSON matches the current rollup.
+            Aggregates only (no raw events). Each copy/download re-reads localStorage and sets{" "}
+            <span className="font-mono text-white/50">generatedAt</span> at action time.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
