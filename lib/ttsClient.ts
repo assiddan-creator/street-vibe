@@ -68,8 +68,8 @@ const CONTEXT_TUNING: Record<string, { speed: number }> = {
   default: { speed: 0.85 },
 };
 
-/** Mirrors server `resolvedEngine` in `app/api/tts/route.ts` for logging. */
-function getEffectiveTtsEngine(
+/** Mirrors server `resolvedEngine` in `app/api/tts/route.ts` for logging. Exported for dev evaluation UI only. */
+export function getEffectiveTtsEngine(
   engine: "minimax" | "google" | "native",
   dialect: string
 ): "minimax" | "google" | "native" {
