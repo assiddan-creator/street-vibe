@@ -300,6 +300,10 @@ export default function SpeakPage() {
             🗣️ I Speak
           </label>
           {isIdle ? (
+            <div
+              className="mx-auto w-full rounded-xl border border-white/[0.06] bg-black/20 px-3 py-0.5 backdrop-blur-sm"
+              style={{ boxShadow: `inset 0 0 0 1px ${theme.accent}0f` }}
+            >
             <select
               id="input-lang"
               value={inputLanguage}
@@ -314,7 +318,7 @@ export default function SpeakPage() {
                   });
                 }
               }}
-              className="w-full rounded-none border-0 border-b border-white/14 bg-transparent py-1.5 text-center text-[11px] text-white/58 outline-none"
+              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[11px] text-white/62 outline-none ring-0"
             >
               {INPUT_LANGUAGES.map((opt) => (
                 <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -322,6 +326,7 @@ export default function SpeakPage() {
                 </option>
               ))}
             </select>
+            </div>
           ) : (
             <div style={{ "--accent": theme.accent } as CSSProperties}>
               <select
@@ -364,6 +369,10 @@ export default function SpeakPage() {
             🌍 Translate To
           </label>
           {isIdle ? (
+            <div
+              className="mx-auto w-full rounded-xl border border-white/[0.06] bg-black/20 px-3 py-0.5 backdrop-blur-sm"
+              style={{ boxShadow: `inset 0 0 0 1px ${theme.accent}0f` }}
+            >
             <select
               id="output-lang"
               value={outputLang}
@@ -374,7 +383,7 @@ export default function SpeakPage() {
                   recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                 }
               }}
-              className="w-full rounded-none border-0 border-b border-white/14 bg-transparent py-1.5 text-center text-[11px] text-white/58 outline-none"
+              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[11px] text-white/62 outline-none ring-0"
             >
               <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
                 {OUTPUT_PREMIUM_OPTIONS.map((o) => (
@@ -391,6 +400,7 @@ export default function SpeakPage() {
                 ))}
               </optgroup>
             </select>
+            </div>
           ) : (
             <div style={{ "--accent": theme.accent } as CSSProperties}>
               <select
@@ -424,7 +434,7 @@ export default function SpeakPage() {
           )}
         </div>
 
-        <div className="mb-2 flex w-full flex-wrap items-center justify-center gap-x-5 gap-y-1">
+        <div className="mb-4 flex w-full justify-center">
           <VoiceGenderSegment
             accent={theme.accent}
             idle={isIdle}
@@ -441,7 +451,6 @@ export default function SpeakPage() {
               }
             }}
           />
-          <LearnsYouControls accent={theme.accent} idle={isIdle} />
         </div>
 
         {/* כדור מיקרופון */}
@@ -495,6 +504,10 @@ export default function SpeakPage() {
             </>
           )}
           {micError ? <p className="mt-1 text-center text-[10px] text-red-400">{micError}</p> : null}
+        </div>
+
+        <div className="mx-auto mt-2 flex w-full max-w-[min(100%,390px)] flex-col items-center px-2 pb-1">
+          <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero />
         </div>
 
         {/* שלב B */}
