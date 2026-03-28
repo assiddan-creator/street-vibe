@@ -59,13 +59,13 @@ export function speakNativeTts(text: string, dialect: string): Promise<void> {
   });
 }
 
-/** Speed by Vibe; MiniMax `emotion` is set server-side from `context` via `minimaxTtsEmotion`. */
+/** Speed by Vibe (MiniMax); emotion resolved server-side from `context`. */
 const CONTEXT_TUNING: Record<string, { speed: number }> = {
-  dm: { speed: 0.85 },
-  flirt: { speed: 0.8 },
+  dm: { speed: 1.0 },
+  flirt: { speed: 1.0 },
   angry: { speed: 1.0 },
-  stoned: { speed: 0.8 },
-  default: { speed: 0.85 },
+  stoned: { speed: 1.0 },
+  default: { speed: 1.0 },
 };
 
 /** Mirrors server `resolvedEngine` in `app/api/tts/route.ts` for logging. Exported for dev evaluation UI only. */
@@ -256,7 +256,7 @@ export async function fetchTtsAudioUrl(
         pitch: 0,
         emotion: resolveMinimaxEmotionFromVibe(context),
         language_boost: resolveMinimaxLanguageBoost(dialect),
-        english_normalization: true,
+        english_normalization: false,
       },
       ...(isTtsDebugTextPreviewsEnabled()
         ? { textPreviewDebug: { clientPayloadSnippet: textPreview(text) } }
@@ -352,11 +352,29 @@ export async function fetchTtsAudioUrl(
     }
     throw new Error("TTS timed out");
   } catch (e) {
-    console.warn("[TTS]", "API engine failed; falling back to Native browser TTS", {
-      requestedEngine: engine,
-      effectiveEngine,
-      error: e instanceof Error ? e.message : String(e),
-    });
+    const replicatePathUsed =
+      engine === "minimax" && getEffectiveTtsEngine("minimax", dialect) === "minimax";
+    if (replicatePathUsed) {
+      console.warn("[TTS]", "Replicate/MiniMax failed; falling back to Google Cloud TTS", {
+        requestedEngine: engine,
+        effectiveEngine,
+        dialect,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      try {
+        return await fetchTtsAudioUrl(text, dialect, "google", context, implicitExtras);
+      } catch (eGoogle) {
+        console.warn("[TTS]", "Google TTS fallback failed; falling back to Native browser TTS", {
+          error: eGoogle instanceof Error ? eGoogle.message : String(eGoogle),
+        });
+      }
+    } else {
+      console.warn("[TTS]", "API engine failed; falling back to Native browser TTS", {
+        requestedEngine: engine,
+        effectiveEngine,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
     try {
       await speakNativeTts(text, dialect);
       trackAnalyticsEvent({

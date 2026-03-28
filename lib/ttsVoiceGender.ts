@@ -6,7 +6,7 @@ export type TtsVoiceGender = "male" | "female";
  * Default MiniMax `voice_id` on Replicate by gender — see `lib/minimaxReplicateVoices.ts` for preset list and dev overrides.
  */
 export const MINIMAX_VOICE_ID_BY_GENDER: Record<TtsVoiceGender, string> = {
-  male: "Casual_Guy",
+  male: "Deep_Voice_Man",
   female: "Lively_Girl",
 };
 

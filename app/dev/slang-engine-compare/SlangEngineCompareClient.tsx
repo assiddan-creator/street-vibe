@@ -66,11 +66,10 @@ export function SlangEngineCompareClient() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
   const [minimaxVoiceId, setMinimaxVoiceId] = useState<string>(() =>
-    getStoredTtsGender() === "female" ? "Lively_Girl" : "Casual_Guy"
+    getStoredTtsGender() === "female" ? "Lively_Girl" : "Deep_Voice_Man"
   );
-  const [minimaxSlangPronunciation, setMinimaxSlangPronunciation] = useState(false);
-  const [minimaxEnglishNormalization, setMinimaxEnglishNormalization] = useState(true);
-  const [minimaxDevDeadassPause, setMinimaxDevDeadassPause] = useState(false);
+  const [minimaxSlangPronunciation, setMinimaxSlangPronunciation] = useState(true);
+  const [minimaxEnglishNormalization, setMinimaxEnglishNormalization] = useState(false);
 
   const setCell = useCallback((key: string, partial: Partial<CellState>) => {
     setCells((prev) => {
@@ -92,7 +91,6 @@ export function SlangEngineCompareClient() {
                 voice_id: minimaxVoiceId,
                 slangPronunciation: minimaxSlangPronunciation,
                 english_normalization: minimaxEnglishNormalization,
-                ...(minimaxDevDeadassPause ? { devSlangPauseAfterDeadass: true } : {}),
               }
             : undefined;
         const startRes = await fetch("/api/tts", {
@@ -139,7 +137,7 @@ export function SlangEngineCompareClient() {
         setBusyKey(null);
       }
     },
-    [setCell, minimaxVoiceId, minimaxSlangPronunciation, minimaxEnglishNormalization, minimaxDevDeadassPause]
+    [setCell, minimaxVoiceId, minimaxSlangPronunciation, minimaxEnglishNormalization]
   );
 
   const runNative = useCallback(
@@ -227,15 +225,6 @@ export function SlangEngineCompareClient() {
               className="rounded border-white/30"
             />
             <span>english_normalization</span>
-          </label>
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              checked={minimaxDevDeadassPause}
-              onChange={(e) => setMinimaxDevDeadassPause(e.target.checked)}
-              className="rounded border-white/30"
-            />
-            <span>Pause hint after &quot;deadass&quot; (TTS only)</span>
           </label>
         </div>
         <p className="text-[10px] text-white/35">

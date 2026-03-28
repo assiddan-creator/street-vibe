@@ -91,7 +91,7 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
     warmthLevel: 0.5,
   },
   flirty: {
-    minimaxEmotion: "happy",
+    minimaxEmotion: "auto",
     minimaxSpeed: MINIMAX_BASE_SPEED,
     minimaxPitch: MINIMAX_BASE_PITCH,
     minimaxVolume: MINIMAX_BASE_VOLUME,

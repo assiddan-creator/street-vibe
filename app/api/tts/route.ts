@@ -204,12 +204,7 @@ export async function POST(req: NextRequest) {
       });
 
   let ttsInput = minimaxText;
-  if (
-    process.env.NODE_ENV === "development" &&
-    tuning?.devSlangPauseAfterDeadass === true
-  ) {
-    ttsInput = ttsInput.replace(/\bdeadass\b/gi, "deadass,");
-  }
+  ttsInput = ttsInput.replace(/\bdeadass\b/gi, "deadass,");
 
   const interjectionPolicy = getInterjectionPolicy(vibeContext, dialectKeyMm || undefined);
   const dialectPackMm = isKnownPremiumDialect(dialectKeyMm) ? getDialectPack(dialectKeyMm) : undefined;
@@ -230,10 +225,11 @@ export async function POST(req: NextRequest) {
     dialectPackTtsHints: dialectPackTtsHintsMm,
   });
 
-  const slangPronunciationEnabled = tuning?.slangPronunciation === true;
+  const slangPronunciationEnabled =
+    typeof tuning?.slangPronunciation === "boolean" ? tuning.slangPronunciation : true;
   const pronunciationDict = buildMinimaxPronunciationDictForReplicate(slangPronunciationEnabled);
   const englishNormalization =
-    typeof tuning?.english_normalization === "boolean" ? tuning.english_normalization : true;
+    typeof tuning?.english_normalization === "boolean" ? tuning.english_normalization : false;
 
   const minimaxInput: Record<string, unknown> = {
     text: ttsInput,
@@ -254,7 +250,6 @@ export async function POST(req: NextRequest) {
     slangPronunciationEnabled,
     englishNormalization,
     pronunciationToneCount: pronunciationDict?.tone.length ?? 0,
-    devSlangPauseAfterDeadass: tuning?.devSlangPauseAfterDeadass === true,
     ttsInputDiffers: ttsInput !== minimaxText,
   });
 
