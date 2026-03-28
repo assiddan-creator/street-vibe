@@ -36,6 +36,7 @@ import {
   ANALYTICS_EVENT_NAMES,
   ANALYTICS_MODE,
   analyticsDurationFieldsFromStart,
+  categorizeTranslateAnalyticsFailure,
   clipAnalyticsErrorCode,
   trackAnalyticsEvent,
 } from "@/lib/analyticsEvents";
@@ -149,7 +150,11 @@ export default function SpeakPage() {
         }),
       });
       const data = (await res.json()) as { fullText?: string; error?: string };
-      if (!res.ok) throw new Error(data.error || "Translation failed");
+      if (!res.ok) {
+        const err = new Error(data.error || "Translation failed") as Error & { httpStatus?: number };
+        err.httpStatus = res.status;
+        throw err;
+      }
 
       trackAnalyticsEvent({
         name: ANALYTICS_EVENT_NAMES.TRANSLATE_SUCCEEDED,
@@ -183,6 +188,7 @@ export default function SpeakPage() {
         mode: ANALYTICS_MODE.SPEAK,
         targetDialect: dialect,
         errorCode: clipAnalyticsErrorCode(e instanceof Error ? e.message : "translate_error"),
+        failureCategory: categorizeTranslateAnalyticsFailure(e),
         learnsYouEnabled: getLearnsYouEnabled(),
         ...analyticsDurationFieldsFromStart(translatePerfStart),
       });

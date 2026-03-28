@@ -58,7 +58,148 @@ export const ANALYTICS_EVENT_NAMES = {
 export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[keyof typeof ANALYTICS_EVENT_NAMES];
 
 /** Dev/export snapshot schema; bump when aggregate shape changes. */
-export const ANALYTICS_SNAPSHOT_SCHEMA_VERSION = "2" as const;
+export const ANALYTICS_SNAPSHOT_SCHEMA_VERSION = "3" as const;
+
+// --- Normalized failure categories (translate + TTS analytics; no raw error text in UI/export) ---
+
+export const ANALYTICS_FAILURE_CATEGORY = {
+  NETWORK: "network",
+  TIMEOUT: "timeout",
+  RATE_LIMITED: "rate_limited",
+  PROVIDER_ERROR: "provider_error",
+  VALIDATION: "validation",
+  ABORTED: "aborted",
+  UNKNOWN: "unknown",
+} as const;
+
+export type AnalyticsFailureCategory =
+  (typeof ANALYTICS_FAILURE_CATEGORY)[keyof typeof ANALYTICS_FAILURE_CATEGORY];
+
+const ANALYTICS_FAILURE_CATEGORY_VALUES = new Set<string>(Object.values(ANALYTICS_FAILURE_CATEGORY));
+
+export function isAnalyticsFailureCategory(x: unknown): x is AnalyticsFailureCategory {
+  return typeof x === "string" && ANALYTICS_FAILURE_CATEGORY_VALUES.has(x);
+}
+
+/** Display / export order for failure category keys. */
+export const ANALYTICS_FAILURE_CATEGORY_ORDER = [
+  ANALYTICS_FAILURE_CATEGORY.NETWORK,
+  ANALYTICS_FAILURE_CATEGORY.TIMEOUT,
+  ANALYTICS_FAILURE_CATEGORY.RATE_LIMITED,
+  ANALYTICS_FAILURE_CATEGORY.PROVIDER_ERROR,
+  ANALYTICS_FAILURE_CATEGORY.VALIDATION,
+  ANALYTICS_FAILURE_CATEGORY.ABORTED,
+  ANALYTICS_FAILURE_CATEGORY.UNKNOWN,
+] as const satisfies readonly AnalyticsFailureCategory[];
+
+function emptyFailureCategoryCounts(): Record<AnalyticsFailureCategory, number> {
+  return {
+    [ANALYTICS_FAILURE_CATEGORY.NETWORK]: 0,
+    [ANALYTICS_FAILURE_CATEGORY.TIMEOUT]: 0,
+    [ANALYTICS_FAILURE_CATEGORY.RATE_LIMITED]: 0,
+    [ANALYTICS_FAILURE_CATEGORY.PROVIDER_ERROR]: 0,
+    [ANALYTICS_FAILURE_CATEGORY.VALIDATION]: 0,
+    [ANALYTICS_FAILURE_CATEGORY.ABORTED]: 0,
+    [ANALYTICS_FAILURE_CATEGORY.UNKNOWN]: 0,
+  };
+}
+
+function analyticsFailureSignalString(reason: unknown): string {
+  if (reason instanceof DOMException) return `${reason.name} ${reason.message}`;
+  if (reason instanceof Error) return `${reason.name} ${reason.message}`;
+  if (typeof reason === "string") return reason;
+  return String(reason);
+}
+
+function httpStatusFromReason(reason: unknown): number | undefined {
+  if (reason && typeof reason === "object" && "httpStatus" in reason) {
+    const s = (reason as { httpStatus?: unknown }).httpStatus;
+    if (typeof s === "number" && Number.isFinite(s)) return s;
+  }
+  return undefined;
+}
+
+function categorizeFromHttpStatus(status: number): AnalyticsFailureCategory | null {
+  if (status === 429) return ANALYTICS_FAILURE_CATEGORY.RATE_LIMITED;
+  if (status === 408 || status === 504) return ANALYTICS_FAILURE_CATEGORY.TIMEOUT;
+  if (status === 400 || status === 422) return ANALYTICS_FAILURE_CATEGORY.VALIDATION;
+  if (status >= 500 && status < 600) return ANALYTICS_FAILURE_CATEGORY.PROVIDER_ERROR;
+  return null;
+}
+
+function categorizeFromMessageLower(m: string): AnalyticsFailureCategory {
+  if (m.includes("abort") || m.includes("aborterror")) return ANALYTICS_FAILURE_CATEGORY.ABORTED;
+  if (
+    m.includes("failed to fetch") ||
+    m.includes("networkerror") ||
+    m.includes("network request failed") ||
+    m.includes("load failed") ||
+    m.includes("err_network")
+  ) {
+    return ANALYTICS_FAILURE_CATEGORY.NETWORK;
+  }
+  if (m.includes("timeout") || m.includes("timed out") || m.includes("etimedout")) {
+    return ANALYTICS_FAILURE_CATEGORY.TIMEOUT;
+  }
+  if (m.includes("429") || m.includes("rate limit") || m.includes("too many requests")) {
+    return ANALYTICS_FAILURE_CATEGORY.RATE_LIMITED;
+  }
+  if (/\b(400|422)\b/.test(m) || m.includes("bad request") || m.includes("validation")) {
+    return ANALYTICS_FAILURE_CATEGORY.VALIDATION;
+  }
+  if (
+    /\b(500|502|503)\b/.test(m) ||
+    m.includes("translation failed") ||
+    m.includes("tts request failed") ||
+    m.includes("tts failed") ||
+    m.includes("prediction") ||
+    m.includes("replicate") ||
+    m.includes("speech synthesis")
+  ) {
+    return ANALYTICS_FAILURE_CATEGORY.PROVIDER_ERROR;
+  }
+  return ANALYTICS_FAILURE_CATEGORY.UNKNOWN;
+}
+
+/**
+ * Maps caught errors to a stable analytics category. Uses optional `httpStatus` on `Error` when set by callers.
+ * Does not persist raw message text; only the returned enum is stored on failure events.
+ */
+export function categorizeTranslateAnalyticsFailure(reason: unknown): AnalyticsFailureCategory {
+  const status = httpStatusFromReason(reason);
+  if (status != null) {
+    const fromStatus = categorizeFromHttpStatus(status);
+    if (fromStatus != null) return fromStatus;
+  }
+  const m = analyticsFailureSignalString(reason).toLowerCase();
+  return categorizeFromMessageLower(m);
+}
+
+/**
+ * TTS failures (API + optional native fallback). Pass both errors when both paths failed.
+ */
+export function categorizeTtsAnalyticsFailure(apiOrSingle: unknown, nativeErr?: unknown): AnalyticsFailureCategory {
+  const combined =
+    nativeErr === undefined
+      ? apiOrSingle
+      : `${analyticsFailureSignalString(apiOrSingle)}|${analyticsFailureSignalString(nativeErr)}`;
+
+  const status =
+    httpStatusFromReason(apiOrSingle) ?? (nativeErr !== undefined ? httpStatusFromReason(nativeErr) : undefined);
+  if (status != null) {
+    const fromStatus = categorizeFromHttpStatus(status);
+    if (fromStatus != null) return fromStatus;
+  }
+
+  const m = analyticsFailureSignalString(combined).toLowerCase();
+  if (m.includes("tts timed out")) {
+    return ANALYTICS_FAILURE_CATEGORY.TIMEOUT;
+  }
+  if (m.includes("tts returned no audio") || m.includes("no prediction id")) {
+    return ANALYTICS_FAILURE_CATEGORY.PROVIDER_ERROR;
+  }
+  return categorizeFromMessageLower(m);
+}
 
 /** Rollup-friendly duration buckets (request start → success/failure outcome). */
 export const ANALYTICS_DURATION_BUCKET = {
@@ -140,6 +281,7 @@ export type AnalyticsEventPayload =
       mode: StreetVibeMode;
       targetDialect: string;
       errorCode: string;
+      failureCategory: AnalyticsFailureCategory;
       learnsYouEnabled: boolean;
       durationMs: number;
       durationBucket: AnalyticsDurationBucket;
@@ -171,6 +313,7 @@ export type AnalyticsEventPayload =
       effectiveEngine: AnalyticsTtsEngine;
       dialect: string;
       errorCode: string;
+      failureCategory: AnalyticsFailureCategory;
       durationMs: number;
       durationBucket: AnalyticsDurationBucket;
     }
@@ -314,6 +457,10 @@ export type DevAnalyticsRollup = {
   translateFailureByBucket: Record<AnalyticsDurationBucket, number>;
   ttsSuccessByBucket: Record<AnalyticsDurationBucket, number>;
   ttsFailureByBucket: Record<AnalyticsDurationBucket, number>;
+  /** translate_failed counts by `failureCategory` (events without category omitted). */
+  translateFailureByCategory: Record<AnalyticsFailureCategory, number>;
+  /** tts_failed counts by `failureCategory` (events without category omitted). */
+  ttsFailureByCategory: Record<AnalyticsFailureCategory, number>;
 };
 
 function dialectFromEvent(e: StreetVibeAnalyticsEvent): string | undefined {
@@ -468,6 +615,18 @@ export function computeDevAnalyticsRollup(events: StreetVibeAnalyticsEvent[]): D
     }
   }
 
+  const translateFailureByCategory = emptyFailureCategoryCounts();
+  const ttsFailureByCategory = emptyFailureCategoryCounts();
+  for (const e of events) {
+    if (e.name === ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED) {
+      const fc = (e as { failureCategory?: unknown }).failureCategory;
+      if (isAnalyticsFailureCategory(fc)) translateFailureByCategory[fc] += 1;
+    } else if (e.name === ANALYTICS_EVENT_NAMES.TTS_FAILED) {
+      const fc = (e as { failureCategory?: unknown }).failureCategory;
+      if (isAnalyticsFailureCategory(fc)) ttsFailureByCategory[fc] += 1;
+    }
+  }
+
   return {
     totalEvents: events.length,
     countsByName,
@@ -498,6 +657,8 @@ export function computeDevAnalyticsRollup(events: StreetVibeAnalyticsEvent[]): D
     translateFailureByBucket,
     ttsSuccessByBucket,
     ttsFailureByBucket,
+    translateFailureByCategory,
+    ttsFailureByCategory,
   };
 }
 
@@ -551,6 +712,8 @@ export type AnalyticsSnapshotExport = {
   translateFailureByBucket: DevAnalyticsRollup["translateFailureByBucket"];
   ttsSuccessByBucket: DevAnalyticsRollup["ttsSuccessByBucket"];
   ttsFailureByBucket: DevAnalyticsRollup["ttsFailureByBucket"];
+  translateFailureByCategory: DevAnalyticsRollup["translateFailureByCategory"];
+  ttsFailureByCategory: DevAnalyticsRollup["ttsFailureByCategory"];
 };
 
 export function buildAnalyticsSnapshotExport(): AnalyticsSnapshotExport {
@@ -587,6 +750,8 @@ export function buildAnalyticsSnapshotExport(): AnalyticsSnapshotExport {
     translateFailureByBucket: r.translateFailureByBucket,
     ttsSuccessByBucket: r.ttsSuccessByBucket,
     ttsFailureByBucket: r.ttsFailureByBucket,
+    translateFailureByCategory: r.translateFailureByCategory,
+    ttsFailureByCategory: r.ttsFailureByCategory,
   };
 }
 

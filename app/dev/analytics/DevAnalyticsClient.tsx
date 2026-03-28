@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ANALYTICS_DURATION_BUCKET,
+  ANALYTICS_FAILURE_CATEGORY_ORDER,
   buildAnalyticsSnapshotExport,
   clearStoredAnalyticsEvents,
   readDevAnalyticsRollup,
+  type AnalyticsFailureCategory,
   type DevAnalyticsRollup,
 } from "@/lib/analyticsEvents";
 
@@ -53,6 +55,11 @@ const DURATION_BUCKET_ORDER = [
 
 function formatDurationBuckets(b: DevAnalyticsRollup["translateSuccessByBucket"]): string {
   return DURATION_BUCKET_ORDER.map((k) => `${k}:${b[k]}`).join(" · ");
+}
+
+function formatFailureCategories(m: Record<AnalyticsFailureCategory, number>): string {
+  const parts = ANALYTICS_FAILURE_CATEGORY_ORDER.filter((k) => m[k] > 0).map((k) => `${k}:${m[k]}`);
+  return parts.length ? parts.join(" · ") : "—";
 }
 
 /** Dashboard poll interval — visible rollup only; export stays click-fresh. */
@@ -215,6 +222,7 @@ export function DevAnalyticsClient() {
         <Section title="Translate">
           <Row label="Succeeded / failed" value={`${r.translateSuccessCount} / ${r.translateFailureCount}`} />
           <Row label="Failure rate" value={pct(r.translateFailureRate)} />
+          <Row label="Failures by category (normalized)" value={formatFailureCategories(r.translateFailureByCategory)} />
           <Row label="With Learns You on / off (requests)" value={`${r.translateWithLearnsYouOn} / ${r.translateWithLearnsYouOff}`} />
           <p className="mt-2 text-[10px] text-white/30">Denominator for rate: {txTotal} completed outcomes.</p>
         </Section>
@@ -222,6 +230,7 @@ export function DevAnalyticsClient() {
         <Section title="TTS">
           <Row label="Succeeded / failed" value={`${r.ttsSuccessCount} / ${r.ttsFailureCount}`} />
           <Row label="Failure rate" value={pct(r.ttsFailureRate)} />
+          <Row label="Failures by category (normalized)" value={formatFailureCategories(r.ttsFailureByCategory)} />
           <Row label="Replay events / replay ÷ TTS requests" value={`${r.ttsReplayCount} / ${pct(r.ttsReplayRate)}`} />
           <p className="mt-2 text-[10px] text-white/30">Replay rate uses tts_replayed ÷ tts_requested.</p>
         </Section>

@@ -3,6 +3,7 @@ import {
   ANALYTICS_EVENT_NAMES,
   ANALYTICS_TTS_EVENT_MODE,
   analyticsDurationFieldsFromStart,
+  categorizeTtsAnalyticsFailure,
   trackAnalyticsEvent,
 } from "@/lib/analyticsEvents";
 import type { ImplicitTranslateExtras } from "@/lib/implicitPreferenceEngine";
@@ -152,6 +153,7 @@ export async function fetchTtsAudioUrl(
         effectiveEngine: ANALYTICS_ENGINE.NATIVE,
         dialect,
         errorCode: e instanceof Error ? e.message.slice(0, 120) : "native_tts_error",
+        failureCategory: categorizeTtsAnalyticsFailure(e),
         ...analyticsDurationFieldsFromStart(ttsPerfStart),
       });
       throw e;
@@ -276,7 +278,9 @@ export async function fetchTtsAudioUrl(
       error?: string;
     };
     if (!startRes.ok) {
-      throw new Error(startData.error || "TTS request failed");
+      const err = new Error(startData.error || "TTS request failed") as Error & { httpStatus?: number };
+      err.httpStatus = startRes.status;
+      throw err;
     }
     if (startData.audioBase64) {
       console.info("[TTS]", "TTS request completed (inline audio)", {
@@ -372,6 +376,7 @@ export async function fetchTtsAudioUrl(
         effectiveEngine,
         dialect,
         errorCode: `${e instanceof Error ? e.message.slice(0, 60) : "api"}|${e2 instanceof Error ? e2.message.slice(0, 60) : "native"}`,
+        failureCategory: categorizeTtsAnalyticsFailure(e, e2),
         ...analyticsDurationFieldsFromStart(ttsPerfStart),
       });
       throw e2;

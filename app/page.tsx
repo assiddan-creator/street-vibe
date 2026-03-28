@@ -29,6 +29,7 @@ import {
   ANALYTICS_EVENT_NAMES,
   ANALYTICS_MODE,
   analyticsDurationFieldsFromStart,
+  categorizeTranslateAnalyticsFailure,
   clipAnalyticsErrorCode,
   trackAnalyticsEvent,
 } from "@/lib/analyticsEvents";
@@ -144,7 +145,9 @@ export default function Home() {
 
       const data = (await res.json()) as { fullText?: string; error?: string };
       if (!res.ok) {
-        throw new Error(data.error || "Translation failed");
+        const err = new Error(data.error || "Translation failed") as Error & { httpStatus?: number };
+        err.httpStatus = res.status;
+        throw err;
       }
 
       trackAnalyticsEvent({
@@ -182,6 +185,7 @@ export default function Home() {
         mode: ANALYTICS_MODE.TEXT,
         targetDialect: dialect,
         errorCode: clipAnalyticsErrorCode(e instanceof Error ? e.message : "translate_error"),
+        failureCategory: categorizeTranslateAnalyticsFailure(e),
         learnsYouEnabled: getLearnsYouEnabled(),
         ...analyticsDurationFieldsFromStart(translatePerfStart),
       });
