@@ -30,6 +30,8 @@ import {
   getLearnsYouEnabled,
   recordInteractionSignal,
 } from "@/lib/implicitPreferenceEngine";
+import { themeAccentAlpha } from "@/lib/themeAccent";
+import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
 export default function Home() {
@@ -276,22 +278,15 @@ export default function Home() {
 
         <StreetVibeNav />
 
-        <div className="mb-5 flex flex-col gap-1">
-          <label
-            htmlFor="input-lang"
-            className={
-              isIdle
-                ? "text-center text-[9px] font-medium uppercase tracking-[0.2em] text-white/42"
-                : "text-center text-[10px] font-semibold uppercase tracking-[0.18em]"
-            }
-            style={!isIdle ? { color: theme.accent, opacity: 0.88 } : undefined}
-          >
-            🗣️ I Speak
+        <div className={TOP_STACK_CLASS}>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="input-lang" className={TOP_HELPER_LABEL_CLASS}>
+            I speak
           </label>
           {isIdle ? (
             <div
-              className="mx-auto w-full rounded-xl border border-white/[0.06] bg-black/20 px-3 py-0.5 backdrop-blur-sm"
-              style={{ boxShadow: `inset 0 0 0 1px ${theme.accent}0f` }}
+              className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
+              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.accent, "10")}` }}
             >
             <select
               id="input-lang"
@@ -307,7 +302,7 @@ export default function Home() {
                   });
                 }
               }}
-              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[11px] text-white/62 outline-none ring-0"
+              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[11px] text-white/72 outline-none ring-0"
             >
               {INPUT_LANGUAGES.map((opt) => (
                 <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -332,7 +327,7 @@ export default function Home() {
                     });
                   }
                 }}
-                className={`${GLASS_SELECT_COMPACT} px-2.5 py-1.5 text-center text-[12px] leading-tight`}
+                className={`${GLASS_SELECT_COMPACT} px-2.5 py-1.5 text-center text-[12px] font-medium leading-tight text-white/90`}
               >
                 {INPUT_LANGUAGES.map((opt) => (
                   <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -344,22 +339,14 @@ export default function Home() {
           )}
         </div>
 
-        <div className="mb-5 flex flex-col gap-1">
-          <label
-            htmlFor="output-lang"
-            className={
-              isIdle
-                ? "text-center text-[9px] font-medium uppercase tracking-[0.2em] text-white/42"
-                : "text-center text-[10px] font-semibold uppercase tracking-[0.18em]"
-            }
-            style={!isIdle ? { color: theme.accent, opacity: 0.88 } : undefined}
-          >
-            🌍 Translate To
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="output-lang" className={TOP_HELPER_LABEL_CLASS}>
+            Translate to
           </label>
           {isIdle ? (
             <div
-              className="mx-auto w-full rounded-xl border border-white/[0.06] bg-black/20 px-3 py-0.5 backdrop-blur-sm"
-              style={{ boxShadow: `inset 0 0 0 1px ${theme.accent}0f` }}
+              className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
+              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.accent, "10")}` }}
             >
             <select
               id="output-lang"
@@ -371,16 +358,16 @@ export default function Home() {
                   recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                 }
               }}
-              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[11px] text-white/62 outline-none ring-0"
+              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[11px] text-white/72 outline-none ring-0"
             >
-              <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
+              <optgroup label="Street slang — AI voice" className="bg-zinc-900 text-white">
                 {OUTPUT_PREMIUM_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                     {o.label}
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="🌐 All Languages — Google Voice" className="bg-zinc-900 text-white">
+              <optgroup label="All languages — Google voice" className="bg-zinc-900 text-white">
                 {OUTPUT_STANDARD_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                     {o.label}
@@ -401,16 +388,16 @@ export default function Home() {
                     recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                   }
                 }}
-                className={`${GLASS_SELECT} px-3 py-2.5 text-center text-[13px] leading-snug`}
+                className={`${GLASS_SELECT} px-3 py-2.5 text-center text-[13px] font-medium leading-snug text-white/90`}
               >
-                <optgroup label="💎 Street Slang — AI Voice" className="bg-zinc-900 text-white">
+                <optgroup label="Street slang — AI voice" className="bg-zinc-900 text-white">
                   {OUTPUT_PREMIUM_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                       {o.label}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="🌐 All Languages — Google Voice" className="bg-zinc-900 text-white">
+                <optgroup label="All languages — Google voice" className="bg-zinc-900 text-white">
                   {OUTPUT_STANDARD_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                       {o.label}
@@ -422,7 +409,7 @@ export default function Home() {
           )}
         </div>
 
-        <div className="mb-4 flex w-full justify-center">
+        <div className="flex w-full justify-center">
           <VoiceGenderSegment
             accent={theme.accent}
             idle={isIdle}
@@ -439,6 +426,7 @@ export default function Home() {
               }
             }}
           />
+        </div>
         </div>
 
         <div className={`flex flex-col items-center transition-all duration-500 ${isActive ? "mb-4 mt-0" : "mb-8 mt-8"}`}>

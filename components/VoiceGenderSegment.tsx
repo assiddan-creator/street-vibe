@@ -1,6 +1,8 @@
 "use client";
 
 import type { TtsVoiceGender } from "@/lib/ttsVoiceGender";
+import { TOP_HELPER_LABEL_CLASS } from "@/lib/topSectionUi";
+import { themeAccentAlpha } from "@/lib/themeAccent";
 
 type Props = {
   /** Dialect theme accent (e.g. `resolveTheme(outputLang).accent`). */
@@ -13,20 +15,16 @@ type Props = {
 };
 
 /**
- * Compact secondary control — smaller than language rows, quieter than the mic/poster.
- * Kept legible (≥10px touch targets) so it stays visible on real devices and deploy previews.
+ * Compact secondary control — accent from dialect theme only (fills/borders via themeAccentAlpha).
  */
-export function VoiceGenderSegment({ accent, value, onChange, idle, className }: Props) {
-  const labelClass = idle
-    ? "mb-0.5 text-center text-[7px] uppercase tracking-wider text-white/30"
-    : "mb-0.5 text-center text-[8px] uppercase tracking-wider text-white/38";
-
+export function VoiceGenderSegment({ accent, value, onChange, idle: _unusedIdle, className }: Props) {
+  void _unusedIdle;
   return (
-    <div className={className ?? ""}>
-      <p className={labelClass}>Voice</p>
+    <div className={`${className ?? ""} flex flex-col items-center`}>
+      <p className={TOP_HELPER_LABEL_CLASS}>Voice</p>
       <div
-        className="mx-auto inline-flex max-w-[8.25rem] rounded-md border border-white/[0.08] bg-black/22 p-px"
-        style={{ boxShadow: `inset 0 0 0 1px ${accent}10` }}
+        className="mx-auto inline-flex max-w-[8.25rem] rounded-md border border-white/[0.06] bg-black/18 p-px"
+        style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(accent, "10")}` }}
       >
         {(["male", "female"] as const).map((v) => {
           const selected = value === v;
@@ -39,12 +37,12 @@ export function VoiceGenderSegment({ accent, value, onChange, idle, className }:
               aria-checked={selected}
               onClick={() => onChange(v)}
               className={`min-h-[26px] min-w-0 flex-1 rounded-[5px] px-2 py-0.5 text-[10px] font-medium leading-none transition-colors ${
-                selected ? "" : "text-white/38 hover:text-white/55"
+                selected ? "" : "text-white/36 hover:text-white/50"
               }`}
               style={
                 selected
                   ? {
-                      backgroundColor: `${accent}16`,
+                      backgroundColor: themeAccentAlpha(accent, "18"),
                       color: accent,
                     }
                   : undefined
