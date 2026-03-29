@@ -29,6 +29,12 @@ import {
   formatIsraeliStreetRetryFromConfig,
   formatSlangControlPromptGuidance,
 } from "@/lib/slangControlConfig";
+import {
+  formatDevRuleProfileOverlay,
+  parseDevRuleProfile,
+  type DevRuleProfileId,
+} from "@/lib/evaluation/devRuleProfile";
+import { parseIntentCategory, resolveRuleProfile } from "@/lib/evaluation/ruleProfileRouting";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -48,6 +54,7 @@ function buildPrompt({
   context,
   previousMessage,
   personalizationHints,
+  devRuleProfile,
 }: {
   text: string;
   currentLang: string;
@@ -58,6 +65,8 @@ function buildPrompt({
   context: string;
   previousMessage: string | null;
   personalizationHints?: string[];
+  /** Rule profile overlay on slang path; explicit dev override or intent+dialect routing. */
+  devRuleProfile?: DevRuleProfileId;
 }) {
   const INTENSITY_INSTRUCTIONS: Record<number, string> = {
     1: "Use mostly standard language with just a tiny hint of local flavor. Max 1-2 very mild slang words. Keep it readable.",
@@ -103,6 +112,24 @@ function buildPrompt({
   const lengthRule =
     "LENGTH RULE: Keep the output roughly the same length as the input. Do not expand, explain, or add information that was not in the original text.";
 
+  /** Standard path only: idiomatic register-matched translation without translationese. */
+  const standardNaturalnessRule =
+    "NATURAL STANDARD: Match the source register — casual chat → natural idiomatic standard " +
+    primaryLanguage +
+    "; formal or careful writing → formal standard. Prefer idiomatic phrasing over literal word order and calques. " +
+    "Do not add greetings, apologies, hedging, or explanations absent from the source. " +
+    "Keep length and directness comparable to the input.";
+
+  /** Slang/Premium path: tighter chat realism without touching dialect packs or ||| format. */
+  const conversationalCompressionRule =
+    "CONVERSATIONAL REALISM: Sound like a real chat reply, not a translation or assistant. " +
+    "Short inputs → proportionally short replies; no padding, lead-ins, or extra clauses. " +
+    "Drop words a native would drop in a quick message when meaning stays clear. " +
+    "Avoid stiff complete-sentence polish, rhetorical filler, or assistant-style hedging unless the source does. " +
+    (isKnownPremiumDialect(dialectId)
+      ? "Dialect-specific voice, SCRIPT LOCK, and research cues above take priority — compress within that voice; never flatten to generic English."
+      : "");
+
   const noAIRule =
     "AUTHENTICITY RULE: Write exactly like a real person texting a friend. NO commas unless absolutely necessary. Use short punchy phrases separated by spaces or line breaks — not commas. No full sentences if the original was casual. Raw, fast, human. Think WhatsApp message not a novel.";
 
@@ -119,8 +146,9 @@ function buildPrompt({
     return {
       prompt:
         `You are a professional translator.\n` +
-        `Translate the following into standard, formal, dictionary-accurate ${primaryLanguage} (target dialect id: ${dialectId}).\n` +
+        `Translate the following into natural, accurate standard ${primaryLanguage} matched to the source register (target dialect id: ${dialectId}).\n` +
         `${scriptLockBlock}\n` +
+        `${standardNaturalnessRule}\n` +
         `Return ONLY the translated text. No explanations.\n` +
         `${antiLeakageRule}\n` +
         `${lengthRule}\n` +
@@ -183,6 +211,31 @@ ENGLISH (STANDARD) — U.S. casual texting (mandatory):
 NEW YORK BROOKLYN — street English (mandatory):
 - Do not end on a hollow "different" punchline (e.g. "your energy different", "that shit different", "vibe different", or any sentence that ends on "...different") — that reads like a viral template. Close with a concrete line, a question, or plain words.
 - FLIRT: interested and a little softer than DM. DM: faster and blunter than flirt — less setup, more straight talk.
+- ANTI-OVERCOOK: Do not repeat signature fillers ("deadass", "son", etc.) across the message or lean on them every line — use sparingly, only where they would naturally land; vary wording like a real speaker.
+`
+      : "";
+
+  /** Tuning: London Roadman — fewer stacked discourse markers in one breath. */
+  const londonRoadmanAntiOvercookBlock =
+    dialectId === "London Roadman" && slangRequested
+      ? `
+
+LONDON ROADMAN — avoid marker soup:
+- Do not stack multiple roadman discourse markers in the same line (e.g. still / init / proper / tru say / you get me) unless the source genuinely needs that energy — usually one or two beats max.
+- Short source → short reply; do not pad with filler ticks to sound "more road."
+`
+      : "";
+
+  /** Tuning: Israeli Street — natural WhatsApp Hebrew over slang performance (esp. heavy / flirt). */
+  const israeliStreetAntiOvercookBlock =
+    dialectId === "Israeli Street" && slangRequested
+      ? `
+
+ISRAELI STREET — natural texting (not slang cosplay):
+- Prefer believable Israeli WhatsApp Hebrew: direct and local, but not every clause stuffed with slang tokens — one or two sharp hits often beat a wall of slang.
+- If the source is plain, keep the Hebrew plain-street, not a showcase reel.
+- HEAVY intensity: stay Hebrew-native and street, but do not add slang just to sound "more street" — density must match the message; avoid piling slang for show.
+- FLIRT: warmth and interest in natural Hebrew; charm from tone and word choice, not a caricature performance of "street."
 `
       : "";
 
@@ -196,8 +249,14 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
 
 3. NATURAL RHYTHM: Russians text in short punchy sentences. They drop pronouns when obvious. They use abbreviations. Sound like a real 20-year-old texting on their phone right now — not a translation.
 
-4. SELF-CHECK BEFORE OUTPUT: Before returning the result, mentally re-read it as a native Russian speaker. If any sentence sounds unnatural or grammatically broken — fix it.`
+4. SELF-CHECK (SILENT): Before returning, mentally re-read as a native Russian speaker and fix issues — do NOT write this check, your reasoning, or any commentary in the output.
+
+5. OUTPUT ONLY THE MESSAGE: Return ONLY the conversational line(s) in Cyrillic — exactly what you would send. No labels ("Translation:", "Вариант:"), no meta-analysis, no discussion of word choices, no alternatives or preambles.
+
+6. PROFILE VS OUTPUT: Any RULE PROFILE or tuning block above applies to word choice only. It must never change the output shape: still only the in-character line(s), then |||, then the dictionary — never explanations, lists of options, or commentary about the rewrite.`
     : "";
+
+  const devRuleProfileOverlay = slangRequested ? formatDevRuleProfileOverlay(devRuleProfile) : "";
 
   return {
     prompt:
@@ -207,6 +266,7 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
       `Intensity: ${intensityPrompt}\n` +
       `${antiLeakageRule}\n` +
       `${lengthRule}\n` +
+      `${conversationalCompressionRule}\n` +
       `${noAIRule}` +
       `${personalizationBlock}` +
       `${slangControlBlock}` +
@@ -214,7 +274,10 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
       `${premiumDistinctiveReminder}` +
       `${englishStandardVoiceBlock}` +
       `${newYorkBrooklynVoiceBlock}` +
-      `${russianRule}\n\n` +
+      `${londonRoadmanAntiOvercookBlock}` +
+      `${israeliStreetAntiOvercookBlock}` +
+      `${devRuleProfileOverlay}\n\n` +
+      `${russianRule}` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +
       `${formattingRule}`,
@@ -290,6 +353,12 @@ export async function POST(req: NextRequest) {
     ...buildPersonaPresetPromptHints(personaPresetId),
   ];
 
+  const explicitRuleProfile =
+    process.env.NODE_ENV === "development" ? parseDevRuleProfile(body.devRuleProfile) : undefined;
+  const intentCategory = parseIntentCategory(body.intentCategory);
+  const devRuleProfile: DevRuleProfileId =
+    explicitRuleProfile ?? resolveRuleProfile(String(currentLang), intentCategory);
+
   const { prompt, slangRequested } = buildPrompt({
     text: String(text),
     currentLang: String(currentLang),
@@ -300,6 +369,7 @@ export async function POST(req: NextRequest) {
     context: (context as string) || "default",
     previousMessage: previousMessage ? String(previousMessage) : null,
     personalizationHints,
+    devRuleProfile,
   });
 
   try {
