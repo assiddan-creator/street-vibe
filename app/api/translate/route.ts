@@ -34,7 +34,11 @@ import {
   parseDevRuleProfile,
   type DevRuleProfileId,
 } from "@/lib/evaluation/devRuleProfile";
-import { parseIntentCategory, resolveRuleProfile } from "@/lib/evaluation/ruleProfileRouting";
+import {
+  parseIntentCategory,
+  resolveRuleProfile,
+  type RoutingIntentCategory,
+} from "@/lib/evaluation/ruleProfileRouting";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -43,6 +47,49 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
+
+/** Shared anti-overcook layer for all premium dialects — complements dialect packs, does not replace them. */
+function formatPremiumAntiOvercookGuard(opts: {
+  sourceText: string;
+  slangLevel: number;
+  intentCategory?: RoutingIntentCategory;
+  context: string;
+}): string {
+  const trimmed = opts.sourceText.trim();
+  const wordCount = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
+  const isShortSource = wordCount <= 14 || trimmed.length < 100;
+  const inputFeelsSlangHeavy = opts.slangLevel >= 3;
+
+  const interpersonalIntent =
+    opts.intentCategory === "flirt" ||
+    opts.intentCategory === "tease" ||
+    opts.intentCategory === "admiration" ||
+    opts.intentCategory === "emotionally_warm" ||
+    (opts.intentCategory === undefined && opts.context === "flirt");
+
+  let lines = `
+
+PREMIUM GLOBAL — anti-overcooking (all premium dialects):
+- Sound like a real person texting — not a dialect demo, not AI performing "street." Preserve intent first; local flavor second (keep identity — do not flatten to generic English).
+- Prefer natural sentence shape over slang injection. Do not stack slang markers or discourse markers; do not overuse vocatives unless the source does.
+- Avoid meme / viral-internet slang by default; avoid obvious calques from English. No theatrical admiration or flirt; no "street performance" voice.
+- Short input → short output. One sendable chat message before |||. If unsure, underdo rather than overdo.`;
+
+  if (isShortSource && !inputFeelsSlangHeavy) {
+    lines += `
+- SHORT SOURCE: default to at most one strong dialect marker or signature local touch unless the line clearly needs more.`;
+  } else if (inputFeelsSlangHeavy) {
+    lines += `
+- HEAVY intensity: more local color is allowed — still avoid marker soup and unreadable density.`;
+  }
+
+  if (interpersonalIntent) {
+    lines += `
+- INTERPERSONAL (flirt / tease / admiration / emotionally warm — or flirt context when intent omitted): prioritize naturalness and believable warmth or edge over stylization; chemistry beats persona.`;
+  }
+
+  return lines;
+}
 
 function buildPrompt({
   text,
@@ -55,6 +102,7 @@ function buildPrompt({
   previousMessage,
   personalizationHints,
   devRuleProfile,
+  intentCategory,
 }: {
   text: string;
   currentLang: string;
@@ -67,6 +115,8 @@ function buildPrompt({
   personalizationHints?: string[];
   /** Rule profile overlay on slang path; explicit dev override or intent+dialect routing. */
   devRuleProfile?: DevRuleProfileId;
+  /** Optional — when set, tunes interpersonal naturalness hints. */
+  intentCategory?: RoutingIntentCategory;
 }) {
   const INTENSITY_INSTRUCTIONS: Record<number, string> = {
     1: "Use mostly standard language with just a tiny hint of local flavor. Max 1-2 very mild slang words. Keep it readable.",
@@ -199,6 +249,16 @@ PREMIUM DIALECT (${dialectId}): Keep a distinctive, culturally tuned voice — n
 `
       : "";
 
+  const premiumAntiOvercookGuard =
+    slangRequested && isKnownPremiumDialect(dialectId)
+      ? formatPremiumAntiOvercookGuard({
+          sourceText: text,
+          slangLevel,
+          intentCategory,
+          context,
+        })
+      : "";
+
   /** Tuning: US English standard output — consistent register, less meme-template phrasing; clearer flirt vs DM (see CONTEXT above). */
   const englishStandardVoiceBlock =
     dialectId === "English (Standard)" && slangRequested
@@ -226,14 +286,18 @@ NEW YORK BROOKLYN — street English (mandatory):
 `
       : "";
 
-  /** Tuning: London Roadman — fewer stacked discourse markers in one breath. */
+  /** Tuning: London Roadman — natural MLE chat, not a dialect demo. */
   const londonRoadmanAntiOvercookBlock =
     dialectId === "London Roadman" && slangRequested
       ? `
 
-LONDON ROADMAN — avoid marker soup:
-- Do not stack multiple roadman discourse markers in the same line (e.g. still / init / proper / tru say / you get me) unless the source genuinely needs that energy — usually one or two beats max.
-- Short source → short reply; do not pad with filler ticks to sound "more road."
+LONDON ROADMAN — lived-in MLE, not a drill:
+- Write like a normal casual message: subject + verb + link words, not headline telegraph. Connect ideas with "and / so / then" where a real speaker would — not "came did a check found" keyword stacks.
+- Local identity = natural UK phrasing and rhythm, not visible dialect signaling. One or two light touches (bruv, mandem, feds) can land; avoid piling "nicked / bagged / drew" etc. to prove the voice.
+- Work / police / crime storytelling: do not force extra "street" garnish — plain update + light MLE reads more human than slang-for-cops.
+- FLIRT context: if the source is not romantic or flirty, keep the same matter-of-fact tone as DM — do not inject soft/flirty energy, pet names, or pickup vibes.
+- Prefer stable spellings over gimmicky ones; HEAVY = more color in phrasing, not more tokens per line.
+- Short source → short reply; no filler ticks to sound "more road."
 `
       : "";
 
@@ -242,11 +306,39 @@ LONDON ROADMAN — avoid marker soup:
     dialectId === "Israeli Street" && slangRequested
       ? `
 
-ISRAELI STREET — natural texting (not slang cosplay):
-- Prefer believable Israeli WhatsApp Hebrew: direct and local, but not every clause stuffed with slang tokens — one or two sharp hits often beat a wall of slang.
-- If the source is plain, keep the Hebrew plain-street, not a showcase reel.
-- HEAVY intensity: stay Hebrew-native and street, but do not add slang just to sound "more street" — density must match the message; avoid piling slang for show.
-- FLIRT: warmth and interest in natural Hebrew; charm from tone and word choice, not a caricature performance of "street."
+ISRAELI STREET — Hebrew WhatsApp (not a slang showcase):
+- Direct, readable Hebrew in full thoughts — natural rhythm over staccato keyword drops. Match the source: mundane news → mundane delivery, not theatrical hype.
+- Do not repeat vocatives/fillers (וואי / אחי / נו) every clause; one softener if any. Storytelling: narrate the chain clearly (מי באו → מה מצאו → מה קרה) without piling slang for show.
+- HEAVY: still Hebrew-native and street — density follows the message; avoid "street performance" when the line is everyday reporting.
+- FLIRT: warmer register, still complete sentences; charm from tone, not from stacked slang.
+- Never trail off mid-word or mid-sentence before |||; finish the thought.
+`
+      : "";
+
+  /** Yard voice — human flow, not TV patois. */
+  const jamaicanPatoisVoiceBlock =
+    dialectId === "Jamaican Patois" && slangRequested
+      ? `
+
+JAMAICAN PATOIS — yard voice, real DM:
+- Tell the story in smooth, connected lines — full clauses with "an' / so / den" where needed — not broken keyword stacks or one-word-per-line theatrics.
+- Yard identity = natural voice and rhythm, not maximum patois spelling. Prefer readable mix: standard English where it still sounds yard aloud; use patois spellings where they add clarity or realism, not to show off.
+- Do not stack "di / dem / a / wi" every clause; avoid unstable or hyper-written spellings unless they clearly help. HEAVY = richer texture, not caricature dancehall or police-story slang for show.
+- Work / police / everyday news: matter-of-fact first; no forced Babylon / station performance unless the source is already that energy.
+- FLIRT context: if the content is not romantic or flirty, keep the same neutral storytelling tone as DM — do not add sweetness, flirting, or hype.
+- Short source → short reply; no pasted-on token rows.
+`
+      : "";
+
+  /** CDMX — completeness + narrative clarity (model sometimes trailed off mid-phrase). */
+  const mexicoCityBarrioVoiceBlock =
+    dialectId === "Mexico City Barrio" && slangRequested
+      ? `
+
+MEXICO CITY BARRIO — CDMX WhatsApp:
+- Warm local Spanish with natural connectors; complete sentences before ||| — do not stop mid-phrase (e.g. dangling half-lines).
+- Everyday storytelling: cómo le contarías a un amigo — eventos en orden, not a slang pile-up. One or two strong mexicanismos beat many thin ones.
+- FLIRT vs DM: same clarity; flirt can be softer, not more chaotic.
 `
       : "";
 
@@ -330,10 +422,13 @@ RULE PROFILE above applies to tone/word choice only; it must not change this out
       `${slangControlBlock}` +
       `${dialectPackBlock}` +
       `${premiumDistinctiveReminder}` +
+      `${premiumAntiOvercookGuard}` +
       `${englishStandardVoiceBlock}` +
       `${newYorkBrooklynVoiceBlock}` +
       `${londonRoadmanAntiOvercookBlock}` +
       `${israeliStreetAntiOvercookBlock}` +
+      `${jamaicanPatoisVoiceBlock}` +
+      `${mexicoCityBarrioVoiceBlock}` +
       `${devRuleProfileOverlay}\n\n` +
       `${spanishMadridVoiceBlock}` +
       `${arabicEgyptianVoiceBlock}` +
@@ -430,6 +525,7 @@ export async function POST(req: NextRequest) {
     previousMessage: previousMessage ? String(previousMessage) : null,
     personalizationHints,
     devRuleProfile,
+    intentCategory,
   });
 
   try {

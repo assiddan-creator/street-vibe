@@ -62,6 +62,8 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
       translate: [
         "Lean into MLE / roadman rhythm: short clauses, confident drops.",
         "Avoid American filler; prefer UK youth chat patterns when slang applies.",
+        "Everyday storytelling: natural cause-to-effect, not a slang stack — still MLE when it fits.",
+        "Flirt mode only when the source is actually flirty; otherwise same tone as a friend update.",
       ],
       toneNotes: ["Sounds like WhatsApp with mandem — not a lesson."],
     },
@@ -87,7 +89,9 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
     promptHints: {
       translate: [
         "Let sentences breathe — swingy rhythm, not robotic word order.",
-        "Honor Patois spellings when slang mode is on; avoid flattening to standard English only.",
+        "Honor Patois spellings when they improve realism; readable mix beats extreme orthography.",
+        "Non-flirty news/story beats: clear narrative first; patois texture second — not a yard performance.",
+        "Flirt mode only when the source is flirty; neutral stories stay neutral.",
       ],
       toneNotes: ["Warm but sharp; dancehall-adjacent without caricature."],
     },
@@ -218,6 +222,7 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
       translate: [
         "Local CDMX flavor; warm but still street — not overly formal.",
         "Choose mexicanismos over generic Latin American neutral when slang applies.",
+        "Finish each thought completely before the separator — no cut-off half lines.",
       ],
       toneNotes: ["Sounds like friends on WhatsApp in CDMX."],
     },
@@ -259,7 +264,7 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
     displayLabel: "Israeli Street",
     phraseRhythm: { pattern: "blunt, fast, script-loyal", cadence: "staccato" },
     preferredSentenceLength: "short",
-    slangDensityBias: "high",
+    slangDensityBias: "medium",
     deliveryStyle: {
       feel: "Tel Aviv youth WhatsApp",
       bluntness: "hard",
@@ -270,6 +275,7 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
       translate: [
         "Hebrew-only body text for slang; sababa/yalla must be Hebrew letters if used.",
         "Fast, blunt clauses; minimal polite padding.",
+        "Plain reporting or storytelling: readable sentences beat slang density — still Israeli, not formal.",
       ],
       toneNotes: ["Sounds like real Israeli groupchat — confident, clipped, local."],
     },
