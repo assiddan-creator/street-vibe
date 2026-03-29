@@ -16,6 +16,7 @@ export const DIALECTS: DialectOption[] = [
   { value: "Rio Favela", label: "Rio Favela", group: "street" },
   { value: "Israeli Street", label: "Israeli Street", group: "street" },
   { value: "Arabic Egyptian", label: "Arabic Egyptian", group: "street" },
+  { value: "Spanish Madrid", label: "Spanish Madrid", group: "street" },
   { value: "English (Standard)", label: "English", group: "standard" },
   { value: "Hebrew (Standard)", label: "Hebrew", group: "standard" },
   { value: "Spanish", label: "Spanish", group: "standard" },

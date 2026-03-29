@@ -310,6 +310,35 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
     interjectionHints: ["Rare soft breath between clauses only if it matches chat rhythm — never theatrical."],
     rewriteBiasTerms: ["خلاص", "يعني", "ماشي", "تمام", "عادي", "أكيد", "برضه", "دلوقتي"],
   },
+  "Spanish Madrid": {
+    dialectId: "Spanish Madrid",
+    displayLabel: "Spanish Madrid (Peninsular)",
+    phraseRhythm: { pattern: "direct, natural, Madrid chat", cadence: "linear" },
+    preferredSentenceLength: "short",
+    slangDensityBias: "low",
+    deliveryStyle: {
+      feel: "Urban Madrid — modern, restrained, not influencer-coded",
+      bluntness: "medium",
+      directness: "medium",
+    },
+    scriptPreference:
+      "Peninsular Spanish orthography; Madrid conversational register — not essay-formal, not theatrical, not LatAm-default.",
+    promptHints: {
+      translate: [
+        "Urban Peninsular Spanish (Madrid-first): sound like real WhatsApp between peers — natural, sendable, concise.",
+        "Intent first, local flavor second. Prefer stable core markers (vale, qué tal, bueno, a ver, ya se verá; tío/tía sparingly). Avoid slang stacking and fake Gen-Z performance.",
+        "Do NOT default to English loan filler (bro, literal, cringe template energy). Avoid by default: PEC, basado, en plan as filler, tronco, excessive mazo, meme-heavy phrasing.",
+        "Not Latin-American coded unless source is; avoid Mexicanisms as the default. Short input → short output; no meta or explanation.",
+      ],
+      toneNotes: ["Believable young-adult Madrid chat — not dubbed-TV dialogue, not radio host."],
+    },
+    ttsHints: [
+      "Slightly brisk conversational pace; clean orthography for speech — TTS route strips emoji and tightens chat noise.",
+      "Natural pauses from punctuation and syntax, not from forced stage directions.",
+    ],
+    interjectionHints: ["Avoid over-directed breath/pause tags unless already minimal policy."],
+    rewriteBiasTerms: ["vale", "qué tal", "bueno", "a ver", "ya veremos", "tío", "tía", "venga", "pues"],
+  },
 };
 
 export function getDialectPack(dialectId?: string): DialectPack | undefined {

@@ -133,12 +133,23 @@ function buildPrompt({
   const noAIRule =
     "AUTHENTICITY RULE: Write exactly like a real person texting a friend. NO commas unless absolutely necessary. Use short punchy phrases separated by spaces or line breaks — not commas. No full sentences if the original was casual. Raw, fast, human. Think WhatsApp message not a novel.";
 
-  const formattingRule =
+  /** Default slang path; Spanish Madrid uses a stricter shape below to cut glossary bloat and emoji slips. */
+  const formattingRuleBase =
     "\n\nOUTPUT FORMAT — follow this exactly and nothing else:\n" +
     "<rewritten text>\n" +
     "|||\n" +
     "<dictionary: 1-3 key slang words used, format: Word - Meaning>\n" +
     "Do not add any other text, explanation, or preamble.";
+
+  const formattingRule =
+    slangRequested && dialectId === "Spanish Madrid"
+      ? `
+
+OUTPUT FORMAT — Spanish Madrid (strict):
+- Before |||: one sendable WhatsApp-style block only — Spanish, the line(s) you would actually send. No labels, no meta, no tutorial tone, no English in this block. No emoji unless the source already contains emoji.
+- After |||: at most 2 lines. Each line: "término — aclaración breve en español" (short gloss only, ≤8 words after the dash). Spanish only — no English at all in gloss lines (not even one word). No heading word "dictionary", no etymology, no example sentences, no "Option A/B", no bullets of alternatives. If nothing needs glossing, output exactly one line: —
+- Do not prepend or append any other commentary.`
+      : formattingRuleBase;
 
   const personalizationBlock = formatPersonalizationBlockForTranslate(personalizationHints ?? []);
 
@@ -281,6 +292,30 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
 
   const devRuleProfileOverlay = slangRequested ? formatDevRuleProfileOverlay(devRuleProfile) : "";
 
+  /** Peninsular Madrid urban — after RULE PROFILE overlay; reduces meta + LatAm default leakage. */
+  const spanishMadridVoiceBlock =
+    dialectId === "Spanish Madrid" && slangRequested
+      ? `
+
+SPANISH MADRID (PENINSULAR / URBAN) — mandatory:
+- Register: modern Madrid-area conversational Spanish — natural, sendable, young-adult chat. NOT influencer monologue, NOT meme-stack performance, NOT theatrical, NOT essay-formal written Spanish.
+- Geography: Peninsular Spanish first; do NOT default to Latin-American vocabulary or cadence unless the source clearly is. Avoid Mexican/LatAm filler as the baseline.
+- Intent first, local flavor second. Prefer stable markers (vale, qué tal, bueno, a ver, ya se verá; tío/tía sparingly). Avoid slang stacking, fake Gen-Z Madrid, and English loan filler (bro, literal, etc.).
+- Avoid by default: PEC, basado, en plan as empty filler, tronco, excessive mazo, meme-catchphrase energy.
+- ANTI-OVERCOOK: short input → short output; one clear beat per clause; no assistant padding or meta.
+- After |||: minimal — at most two short Spanish gloss lines, or a single "—". Never a glossary essay or English explanations (see OUTPUT FORMAT below).
+
+PRACTICAL / NEUTRAL ASKS (logistics: link, time, place, quick favor): one short line before |||; no emoji by default; plain everyday WhatsApp wording; do not elevate register (avoid stiff "enlace de referencia" — chat "link" / "pasame el link" is fine unless the source is formal).
+
+OUTPUT SHAPE (NON-NEGOTIABLE):
+- Before |||: only the in-character message in Spanish — line(s) you would actually send.
+- No English, no gloss, no "option A/B", no commentary, no linguistic notes, no meta.
+- FLIRT / HEAVY: still one sendable chat block before |||; do not switch to analysis or multilingual options.
+
+RULE PROFILE above applies to tone/word choice only; it must not change this output shape.
+`
+      : "";
+
   return {
     prompt:
       `${locationLine}${previousLine}\n\n` +
@@ -300,6 +335,7 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
       `${londonRoadmanAntiOvercookBlock}` +
       `${israeliStreetAntiOvercookBlock}` +
       `${devRuleProfileOverlay}\n\n` +
+      `${spanishMadridVoiceBlock}` +
       `${arabicEgyptianVoiceBlock}` +
       `${russianRule}` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +

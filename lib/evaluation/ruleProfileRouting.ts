@@ -141,6 +141,18 @@ export const RULE_PROFILE_ROUTING_MATRIX: Record<string, RuleRoutingEntry> = {
       ambiguity: "safer",
     },
   },
+  "Spanish Madrid": {
+    byIntent: {
+      greeting: "safer",
+      flirt: "current",
+      tease: "current",
+      attitude: "anti-overcooked",
+      practical_ask: "safer",
+      admiration: "current",
+      emotionally_warm: "current",
+      ambiguity: "safer",
+    },
+  },
 };
 
 export function parseIntentCategory(v: unknown): RoutingIntentCategory | undefined {

@@ -127,6 +127,7 @@ export const EVAL_PRIORITY_DIALECTS = [
   "Paris Banlieue",
   "Israeli Street",
   "Arabic Egyptian",
+  "Spanish Madrid",
 ] as const;
 
 /** Context keys aligned with `/api/translate` (see CONTEXT_INSTRUCTIONS in translate route). */

@@ -359,6 +359,18 @@ export const SLANG_DB: SlangDB = {
     { word: "Kwayyis", meaning: "good / fine", example: "كويس، متشكر." },
     { word: "Wallahi", meaning: "I swear / honestly", example: "والله مش فاكر." },
   ],
+  madrid: [
+    { word: "Vale", meaning: "ok / sure / alright", example: "Vale, te escribo luego." },
+    { word: "Qué tal", meaning: "how's it going / hey", example: "Qué tal, cuánto tiempo." },
+    { word: "Bueno", meaning: "well / ok", example: "Bueno, pues ya veremos." },
+    { word: "A ver", meaning: "let's see / well", example: "A ver qué pasa." },
+    { word: "Tío / tía", meaning: "dude / mate (informal)", example: "Tía, no puedo ahora." },
+    { word: "Molar", meaning: "to be cool / like", example: "Eso mola." },
+    { word: "Guay", meaning: "cool / nice", example: "Qué guay." },
+    { word: "Venga", meaning: "come on / ok go", example: "Venga, dale." },
+    { word: "Rollo", meaning: "thing / situation / vibe", example: "Qué rollo con eso." },
+    { word: "Flipar", meaning: "to be amazed / freak out", example: "Flipas con esto." },
+  ],
 };
 
 const DIALECT_TO_DB_KEY: Record<string, string> = {
@@ -372,6 +384,7 @@ const DIALECT_TO_DB_KEY: Record<string, string> = {
   "Rio Favela": "rio",
   "Israeli Street": "israeli",
   "Arabic Egyptian": "egyptian",
+  "Spanish Madrid": "madrid",
 };
 
 export function lookupSlang(word: string, dialect: string): SlangEntry | null {

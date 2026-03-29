@@ -67,6 +67,12 @@ export const VOICE_MAP: Record<string, VoiceTuning> = {
     pitch: 0,
     emotion: "neutral",
   },
+  "Spanish Madrid": {
+    voice_id: "Spanish_ReservedYoungMan",
+    speed: 0.92,
+    pitch: -0.5,
+    emotion: "neutral",
+  },
 };
 
 const DEFAULT_VOICE: VoiceTuning = {

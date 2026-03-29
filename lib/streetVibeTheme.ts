@@ -91,6 +91,14 @@ export const DIALECT_THEMES: DialectTheme[] = [
     city: "Cairo",
   },
   {
+    id: "Spanish Madrid",
+    pillLabel: "Madrid",
+    bg: "#1a0f0a",
+    accent: "#C60B1E",
+    flag: "🇪🇸",
+    city: "Madrid",
+  },
+  {
     id: "English (Standard)",
     pillLabel: "English",
     bg: "#0d0d0d",
@@ -198,6 +206,7 @@ export const OUTPUT_PREMIUM_OPTIONS: { value: string; label: string }[] = [
   { value: "Rio Favela", label: "🇧🇷 Rio Favela" },
   { value: "Israeli Street", label: "🇮🇱 Israeli Street" },
   { value: "Arabic Egyptian", label: "🇪🇬 Arabic Egyptian" },
+  { value: "Spanish Madrid", label: "🇪🇸 Spanish Madrid" },
 ];
 
 export const OUTPUT_STANDARD_OPTIONS: { value: string; label: string }[] = [

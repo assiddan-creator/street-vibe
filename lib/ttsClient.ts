@@ -31,6 +31,7 @@ export function getDialectLocaleForTts(outputLang: string): string {
     "Mexico City Barrio": "es-MX",
     "Rio Favela": "pt-BR",
     "Arabic Egyptian": "ar-EG",
+    "Spanish Madrid": "es-ES",
     "English (Standard)": "en-US",
     Spanish: "es-ES",
     French: "fr-FR",

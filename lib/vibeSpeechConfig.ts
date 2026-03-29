@@ -100,6 +100,16 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
           "Low MSA feel; avoid formal or news-reader intonation; light teasing only where the line supports it.",
         ],
       },
+      "Spanish Madrid": {
+        pauseProfile: "natural",
+        minimaxSpeed: 0.88,
+        speechStyleNotes:
+          "Peninsular Madrid peer chat: brisk but natural; clean orthography — no forced phonetic spellings, no announcer or dub cadence.",
+        googleTextStyleNotes: [
+          "Spanish Madrid: slightly quicker conversational pacing than generic Spanish; pauses from commas/periods only.",
+          "Avoid radio-host polish; sound like a real voice note, not a trailer voice.",
+        ],
+      },
     },
   },
   flirty: {
@@ -126,6 +136,15 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
           "Soft flirt; intimate but not theatrical; avoid shouty or soap-opera romance delivery.",
         ],
       },
+      "Spanish Madrid": {
+        pauseProfile: "natural",
+        minimaxSpeed: 0.87,
+        energyLevel: 0.55,
+        warmthLevel: 0.72,
+        speechStyleNotes:
+          "Madrid flirt: warm and direct, not influencer monologue; light teasing without theatrical romance energy.",
+        googleTextStyleNotes: ["Soft intimate tone; avoid dubbed-TV melodrama or shouty delivery."],
+      },
     },
   },
   angry: {
@@ -148,6 +167,13 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
           "Firm Egyptian boundaries — direct, conversational; not aggressive, not melodramatic.",
         googleTextStyleNotes: ["Clear firm tone without shouting; short clauses."],
       },
+      "Spanish Madrid": {
+        pauseProfile: "punctuated",
+        energyLevel: 0.78,
+        speechStyleNotes:
+          "Firm Madrid boundaries — blunt peer talk; not shouty, not trailer-villain energy.",
+        googleTextStyleNotes: ["Direct and clipped; no dramatic pause staging."],
+      },
     },
   },
   stoned: {
@@ -167,6 +193,12 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
         pauseProfile: "relaxed",
         minimaxSpeed: 0.78,
         speechStyleNotes: "Mellow Egyptian chat — extra breathing room between phrases; not robotic.",
+      },
+      "Spanish Madrid": {
+        pauseProfile: "relaxed",
+        minimaxSpeed: 0.84,
+        speechStyleNotes:
+          "Mellow Madrid chat — relaxed phrasing; still conversational, not slow announcer read.",
       },
     },
   },

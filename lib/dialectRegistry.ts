@@ -16,7 +16,8 @@ export type StreetVibeDialectId =
   | "Mexico City Barrio"
   | "Rio Favela"
   | "Israeli Street"
-  | "Arabic Egyptian";
+  | "Arabic Egyptian"
+  | "Spanish Madrid";
 
 export type StreetVibeDialectRegistryEntry = {
   id: StreetVibeDialectId;
@@ -238,6 +239,26 @@ export const STREETVIBE_DIALECT_REGISTRY: Record<StreetVibeDialectId, StreetVibe
       loadingMessage: "ثانية، بنترجم…",
     },
   },
+  "Spanish Madrid": {
+    id: "Spanish Madrid",
+    primaryLanguage: "Spanish (Peninsular / Madrid urban colloquial)",
+    scriptLock:
+      "Write ONLY in Spanish using the Latin alphabet with correct accents (español castellano). Target: urban Peninsular Spanish as used in everyday Madrid-area chat — not English, not Latin-American default vocabulary unless the source already uses it. Prefer Madrid/Spain conversational norms over Mexican or Rioplatense defaults.",
+    isPremiumSlang: true,
+    google: {
+      languageCode: "es-ES",
+      speakingRate: 0.94,
+      pitch: -0.5,
+    },
+    minimax: {
+      languageBoost: "Spanish",
+      defaultMaleVoiceId: "Casual_Guy",
+      defaultFemaleVoiceId: "Lively_Girl",
+    },
+    ui: {
+      loadingMessage: "Un segundo, traduciendo…",
+    },
+  },
 };
 
 export function getDialectConfig(id: string): StreetVibeDialectRegistryEntry | undefined {
@@ -257,8 +278,8 @@ export function validateDialectRegistryShape(): string[] {
   const warnings: string[] = [];
   const ids = Object.keys(STREETVIBE_DIALECT_REGISTRY) as StreetVibeDialectId[];
 
-  if (ids.length !== 10) {
-    warnings.push(`Expected exactly 10 premium dialect entries, found ${ids.length}.`);
+  if (ids.length !== 11) {
+    warnings.push(`Expected exactly 11 premium dialect entries, found ${ids.length}.`);
   }
 
   for (const id of ids) {

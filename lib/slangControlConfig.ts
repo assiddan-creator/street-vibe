@@ -183,6 +183,20 @@ export const PREMIUM_SLANG_CONTROL: Record<StreetVibeDialectId, SlangControlConf
     ],
     dictionaryBiasTerms: ["خلاص", "يعني", "ماشي", "تمام", "عادي"],
   },
+  "Spanish Madrid": {
+    dialectId: "Spanish Madrid",
+    strictScriptLock: true,
+    allowLatinFallback: true,
+    maxForeignTokens: 3,
+    preserveLocalSlangPriority: ["Peninsular Spanish", "Madrid urban chat", "natural sendable phrasing"],
+    bannedGenericTerms: ["bro", "literally", "no cap", "cringe", "vibe check"],
+    rewriteHints: [
+      "Peninsular Spanish body text — avoid defaulting to Latin-American youth slang unless the source is LatAm.",
+      "Keep register conversational; avoid stiff written-Spanish formality and avoid translationese from English.",
+      "Do not stack markers or force trend slang; tío/tía only where a real Madrileño would use them.",
+    ],
+    dictionaryBiasTerms: ["vale", "venga", "tío", "tía", "mola", "guay", "rollo"],
+  },
 };
 
 export function getSlangControlConfig(dialectId?: string): SlangControlConfig {

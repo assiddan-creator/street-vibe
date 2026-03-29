@@ -9,6 +9,7 @@
  * - Tokyo Gyaru: clipped cadence, shorter breath groups
  * - Rio Favela: melodic flow / softer phrase boundaries
  * - Arabic Egyptian: relaxed pauses + Cairo conversational shaping (see `vibeSpeechConfig` overrides); final Arabic cleanup runs in `/api/tts` via `normalizeArabicPremiumForSpeech`.
+ * - Spanish Madrid: Madrid conversational shaping via `vibeSpeechConfig`; final strip/abbrev pass in `/api/tts` via `normalizeSpanishMadridForSpeech`.
  */
 
 import { isKnownPremiumDialect, type StreetVibeDialectId } from "@/lib/dialectRegistry";

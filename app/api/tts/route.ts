@@ -27,6 +27,10 @@ import {
   ARABIC_EGYPTIAN_DIALECT_ID,
   normalizeArabicPremiumForSpeech,
 } from "@/lib/arabicPremiumSpeechNormalize";
+import {
+  SPANISH_MADRID_DIALECT_ID,
+  normalizeSpanishMadridForSpeech,
+} from "@/lib/spanishMadridSpeechNormalize";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -106,16 +110,20 @@ export async function POST(req: NextRequest) {
           vibe: vibeContext,
           dialectId: dialectKey || undefined,
         });
-    const speakText =
-      !devRawTts && dialectKey === ARABIC_EGYPTIAN_DIALECT_ID
-        ? normalizeArabicPremiumForSpeech(shapedText, dialectKey)
-        : shapedText;
+    let speakText = shapedText;
+    if (!devRawTts && dialectKey === ARABIC_EGYPTIAN_DIALECT_ID) {
+      speakText = normalizeArabicPremiumForSpeech(shapedText, dialectKey);
+    } else if (!devRawTts && dialectKey === SPANISH_MADRID_DIALECT_ID) {
+      speakText = normalizeSpanishMadridForSpeech(shapedText, dialectKey);
+    }
     const originalLen = text.length;
     const shapedLen = shapedText.length;
     const speakLen = speakText.length;
     const shapingChanged = !devRawTts && shapedText !== text;
-    const arabicPremiumNormalized =
-      !devRawTts && dialectKey === ARABIC_EGYPTIAN_DIALECT_ID && speakText !== shapedText;
+    const premiumSpeechNormalized =
+      !devRawTts &&
+      (dialectKey === ARABIC_EGYPTIAN_DIALECT_ID || dialectKey === SPANISH_MADRID_DIALECT_ID) &&
+      speakText !== shapedText;
     const dialectPack = isKnownPremiumDialect(dialectKey) ? getDialectPack(dialectKey) : undefined;
     const dialectPackTtsHints = isKnownPremiumDialect(dialectKey) ? getDialectPackTtsHints(dialectKey) : [];
     console.info("[tts][google] speech shaping", {
@@ -123,7 +131,7 @@ export async function POST(req: NextRequest) {
       originalLen,
       shapedLen,
       speakLen,
-      arabicPremiumNormalized,
+      premiumSpeechNormalized,
       shapingChanged,
       personaPresetId: personaPresetId ?? null,
       dialectPackLabel: dialectPack?.displayLabel,
@@ -220,6 +228,8 @@ export async function POST(req: NextRequest) {
   ttsInput = ttsInput.replace(/\bdeadass\b/gi, "deadass,");
   if (!devRawTts && dialectKeyMm === ARABIC_EGYPTIAN_DIALECT_ID) {
     ttsInput = normalizeArabicPremiumForSpeech(ttsInput, dialectKeyMm);
+  } else if (!devRawTts && dialectKeyMm === SPANISH_MADRID_DIALECT_ID) {
+    ttsInput = normalizeSpanishMadridForSpeech(ttsInput, dialectKeyMm);
   }
 
   const interjectionPolicy = getInterjectionPolicy(vibeContext, dialectKeyMm || undefined);

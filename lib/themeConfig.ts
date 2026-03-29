@@ -189,6 +189,14 @@ export const CITY_THEME_BY_DIALECT_ID: Record<string, CityThemeTokens> = {
     bg: { wide: "/images/arabic.jpeg", long: "/images/arabic.jpeg" },
     micBall: "/images/arabic.jpeg",
   },
+  "Spanish Madrid": {
+    glow: "#C60B1E",
+    button: "#C60B1E",
+    buttonBorder: "#FFC400",
+    accent: "#FFC400",
+    bg: IMG.spain,
+    micBall: "/images/spain.jpeg",
+  },
   "London Roadman": {
     glow: "#012169",
     button: "#CF111A",
