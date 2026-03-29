@@ -23,6 +23,10 @@ import { shapeTextForGoogleTts } from "@/lib/googleSpeechWriter";
 import { isKnownPremiumDialect } from "@/lib/dialectRegistry";
 import { getDialectPack, getDialectPackTtsHints } from "@/lib/dialectPacks";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
+import {
+  ARABIC_EGYPTIAN_DIALECT_ID,
+  normalizeArabicPremiumForSpeech,
+} from "@/lib/arabicPremiumSpeechNormalize";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -102,15 +106,24 @@ export async function POST(req: NextRequest) {
           vibe: vibeContext,
           dialectId: dialectKey || undefined,
         });
+    const speakText =
+      !devRawTts && dialectKey === ARABIC_EGYPTIAN_DIALECT_ID
+        ? normalizeArabicPremiumForSpeech(shapedText, dialectKey)
+        : shapedText;
     const originalLen = text.length;
     const shapedLen = shapedText.length;
+    const speakLen = speakText.length;
     const shapingChanged = !devRawTts && shapedText !== text;
+    const arabicPremiumNormalized =
+      !devRawTts && dialectKey === ARABIC_EGYPTIAN_DIALECT_ID && speakText !== shapedText;
     const dialectPack = isKnownPremiumDialect(dialectKey) ? getDialectPack(dialectKey) : undefined;
     const dialectPackTtsHints = isKnownPremiumDialect(dialectKey) ? getDialectPackTtsHints(dialectKey) : [];
     console.info("[tts][google] speech shaping", {
       devRawTts,
       originalLen,
       shapedLen,
+      speakLen,
+      arabicPremiumNormalized,
       shapingChanged,
       personaPresetId: personaPresetId ?? null,
       dialectPackLabel: dialectPack?.displayLabel,
@@ -133,8 +146,8 @@ export async function POST(req: NextRequest) {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: { text: shapedText },
+            body: JSON.stringify({
+            input: { text: speakText },
             voice: { languageCode: voice.languageCode, name: voiceName },
             audioConfig,
           }),
@@ -205,6 +218,9 @@ export async function POST(req: NextRequest) {
 
   let ttsInput = minimaxText;
   ttsInput = ttsInput.replace(/\bdeadass\b/gi, "deadass,");
+  if (!devRawTts && dialectKeyMm === ARABIC_EGYPTIAN_DIALECT_ID) {
+    ttsInput = normalizeArabicPremiumForSpeech(ttsInput, dialectKeyMm);
+  }
 
   const interjectionPolicy = getInterjectionPolicy(vibeContext, dialectKeyMm || undefined);
   const dialectPackMm = isKnownPremiumDialect(dialectKeyMm) ? getDialectPack(dialectKeyMm) : undefined;

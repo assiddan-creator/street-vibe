@@ -83,6 +83,14 @@ export const DIALECT_THEMES: DialectTheme[] = [
     city: "Tel Aviv",
   },
   {
+    id: "Arabic Egyptian",
+    pillLabel: "Cairo",
+    bg: "#1a1510",
+    accent: "#CE1126",
+    flag: "🇪🇬",
+    city: "Cairo",
+  },
+  {
     id: "English (Standard)",
     pillLabel: "English",
     bg: "#0d0d0d",
@@ -189,6 +197,7 @@ export const OUTPUT_PREMIUM_OPTIONS: { value: string; label: string }[] = [
   { value: "Mexico City Barrio", label: "🇲🇽 Mexico City Barrio" },
   { value: "Rio Favela", label: "🇧🇷 Rio Favela" },
   { value: "Israeli Street", label: "🇮🇱 Israeli Street" },
+  { value: "Arabic Egyptian", label: "🇪🇬 Arabic Egyptian" },
 ];
 
 export const OUTPUT_STANDARD_OPTIONS: { value: string; label: string }[] = [

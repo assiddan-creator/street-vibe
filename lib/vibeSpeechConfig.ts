@@ -89,6 +89,18 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
     pauseProfile: "natural",
     energyLevel: 0.5,
     warmthLevel: 0.5,
+    dialectOverrides: {
+      "Arabic Egyptian": {
+        pauseProfile: "relaxed",
+        minimaxSpeed: 0.82,
+        speechStyleNotes:
+          "Modern urban Egyptian: short clauses, conversational Cairo delivery — not announcer-like, not MSA cadence.",
+        googleTextStyleNotes: [
+          "Arabic Egyptian (Cairo): slightly more breathing room than text; calm practical asks; warm but restrained.",
+          "Low MSA feel; avoid formal or news-reader intonation; light teasing only where the line supports it.",
+        ],
+      },
+    },
   },
   flirty: {
     minimaxEmotion: "auto",
@@ -102,6 +114,19 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
     pauseProfile: "natural",
     energyLevel: 0.65,
     warmthLevel: 0.75,
+    dialectOverrides: {
+      "Arabic Egyptian": {
+        pauseProfile: "relaxed",
+        minimaxSpeed: 0.83,
+        energyLevel: 0.5,
+        warmthLevel: 0.7,
+        speechStyleNotes:
+          "Soft Egyptian flirt — restrained endearments, light teasing; warm interest without aggressive energy.",
+        googleTextStyleNotes: [
+          "Soft flirt; intimate but not theatrical; avoid shouty or soap-opera romance delivery.",
+        ],
+      },
+    },
   },
   angry: {
     minimaxEmotion: "angry",
@@ -115,6 +140,15 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
     pauseProfile: "punctuated",
     energyLevel: 0.9,
     warmthLevel: 0.2,
+    dialectOverrides: {
+      "Arabic Egyptian": {
+        pauseProfile: "natural",
+        energyLevel: 0.72,
+        speechStyleNotes:
+          "Firm Egyptian boundaries — direct, conversational; not aggressive, not melodramatic.",
+        googleTextStyleNotes: ["Clear firm tone without shouting; short clauses."],
+      },
+    },
   },
   stoned: {
     minimaxEmotion: "calm",
@@ -128,6 +162,13 @@ export const VIBE_SPEECH_CONFIG: Record<StreetVibeId, VibeSpeechEntry> = {
     pauseProfile: "relaxed",
     energyLevel: 0.25,
     warmthLevel: 0.55,
+    dialectOverrides: {
+      "Arabic Egyptian": {
+        pauseProfile: "relaxed",
+        minimaxSpeed: 0.78,
+        speechStyleNotes: "Mellow Egyptian chat — extra breathing room between phrases; not robotic.",
+      },
+    },
   },
 };
 

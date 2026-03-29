@@ -129,6 +129,18 @@ export const RULE_PROFILE_ROUTING_MATRIX: Record<string, RuleRoutingEntry> = {
       emotionally_warm: "anti-overcooked",
     },
   },
+  "Arabic Egyptian": {
+    byIntent: {
+      greeting: "current",
+      flirt: "current",
+      tease: "current",
+      attitude: "anti-overcooked",
+      practical_ask: "current",
+      admiration: "current",
+      emotionally_warm: "current",
+      ambiguity: "safer",
+    },
+  },
 };
 
 export function parseIntentCategory(v: unknown): RoutingIntentCategory | undefined {

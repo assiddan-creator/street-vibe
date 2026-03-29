@@ -181,6 +181,14 @@ export const CITY_THEME_BY_DIALECT_ID: Record<string, CityThemeTokens> = {
     bg: IMG.israel,
     micBall: "/images/israel.jpeg",
   },
+  "Arabic Egyptian": {
+    glow: "#CE1126",
+    button: "#CE1126",
+    buttonBorder: "#000000",
+    accent: "#C8A951",
+    bg: { wide: "/images/arabic.jpeg", long: "/images/arabic.jpeg" },
+    micBall: "/images/arabic.jpeg",
+  },
   "London Roadman": {
     glow: "#012169",
     button: "#CF111A",

@@ -15,7 +15,8 @@ export type StreetVibeDialectId =
   | "Russian Street"
   | "Mexico City Barrio"
   | "Rio Favela"
-  | "Israeli Street";
+  | "Israeli Street"
+  | "Arabic Egyptian";
 
 export type StreetVibeDialectRegistryEntry = {
   id: StreetVibeDialectId;
@@ -37,7 +38,7 @@ export type StreetVibeDialectRegistryEntry = {
   };
 };
 
-/** Single source of truth for the nine premium street dialects (TTS + translate script locks + UI loading). */
+/** Single source of truth for premium street dialects (TTS + translate script locks + UI loading). */
 export const STREETVIBE_DIALECT_REGISTRY: Record<StreetVibeDialectId, StreetVibeDialectRegistryEntry> = {
   "London Roadman": {
     id: "London Roadman",
@@ -217,6 +218,26 @@ export const STREETVIBE_DIALECT_REGISTRY: Record<StreetVibeDialectId, StreetVibe
       loadingMessage: "רגע אחד, מתרגמים...",
     },
   },
+  "Arabic Egyptian": {
+    id: "Arabic Egyptian",
+    primaryLanguage: "Arabic (Egyptian / Greater Cairo urban colloquial)",
+    scriptLock:
+      "Write ONLY in Arabic script (Arabic letters). Target: urban Egyptian Arabic as used in everyday Cairo-area chat — not formal Modern Standard Arabic for essays or news. Do not use Latin letters for Arabic words (no Arabizi). English/Latin only for unavoidable proper nouns or global brands if needed.",
+    isPremiumSlang: true,
+    google: {
+      languageCode: "ar-EG",
+      speakingRate: 0.92,
+      pitch: 0,
+    },
+    minimax: {
+      languageBoost: "Arabic",
+      defaultMaleVoiceId: "Casual_Guy",
+      defaultFemaleVoiceId: "Lively_Girl",
+    },
+    ui: {
+      loadingMessage: "ثانية، بنترجم…",
+    },
+  },
 };
 
 export function getDialectConfig(id: string): StreetVibeDialectRegistryEntry | undefined {
@@ -236,8 +257,8 @@ export function validateDialectRegistryShape(): string[] {
   const warnings: string[] = [];
   const ids = Object.keys(STREETVIBE_DIALECT_REGISTRY) as StreetVibeDialectId[];
 
-  if (ids.length !== 9) {
-    warnings.push(`Expected exactly 9 premium dialect entries, found ${ids.length}.`);
+  if (ids.length !== 10) {
+    warnings.push(`Expected exactly 10 premium dialect entries, found ${ids.length}.`);
   }
 
   for (const id of ids) {

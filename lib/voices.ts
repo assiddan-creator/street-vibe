@@ -61,6 +61,12 @@ export const VOICE_MAP: Record<string, VoiceTuning> = {
     pitch: 0,
     emotion: "neutral",
   },
+  "Arabic Egyptian": {
+    voice_id: "Friendly_Person",
+    speed: 0.88,
+    pitch: 0,
+    emotion: "neutral",
+  },
 };
 
 const DEFAULT_VOICE: VoiceTuning = {

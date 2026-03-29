@@ -347,6 +347,18 @@ export const SLANG_DB: SlangDB = {
     { word: "Dugri", meaning: "straight talk / direct", example: "Ani omer lecha dugri." },
     { word: "Metzuyan", meaning: "excellent", example: "Ze metzuyan mamash." },
   ],
+  egyptian: [
+    { word: "Khalas", meaning: "enough / done / that's it", example: "خلاص، كده تمام." },
+    { word: "Aywa", meaning: "yeah / ok", example: "أيوه، ماشي." },
+    { word: "Mashi", meaning: "ok / alright / going", example: "ماشي، هبعتلك." },
+    { word: "Tamam", meaning: "ok / fine", example: "تمام، شوفك بعدين." },
+    { word: "Yani", meaning: "like / I mean", example: "يعني مش قصدي كده." },
+    { word: "Aadi", meaning: "normal / it's fine", example: "عادي، متقلقش." },
+    { word: "Dilwati", meaning: "now / right now", example: "دلوقتي مش مناسب." },
+    { word: "Bardo", meaning: "also / as well", example: "أنا برضه موافق." },
+    { word: "Kwayyis", meaning: "good / fine", example: "كويس، متشكر." },
+    { word: "Wallahi", meaning: "I swear / honestly", example: "والله مش فاكر." },
+  ],
 };
 
 const DIALECT_TO_DB_KEY: Record<string, string> = {
@@ -359,6 +371,7 @@ const DIALECT_TO_DB_KEY: Record<string, string> = {
   "Mexico City Barrio": "mexico",
   "Rio Favela": "rio",
   "Israeli Street": "israeli",
+  "Arabic Egyptian": "egyptian",
 };
 
 export function lookupSlang(word: string, dialect: string): SlangEntry | null {

@@ -165,6 +165,24 @@ export const PREMIUM_SLANG_CONTROL: Record<StreetVibeDialectId, SlangControlConf
     ],
     dictionaryBiasTerms: ["סבבה", "יאללה", "אחי", "אחלה", "וואלה", "סטלה"],
   },
+  "Arabic Egyptian": {
+    dialectId: "Arabic Egyptian",
+    strictScriptLock: true,
+    allowLatinFallback: false,
+    maxForeignTokens: 2,
+    preserveLocalSlangPriority: [
+      "Arabic script Egyptian colloquial",
+      "Greater Cairo urban chat",
+      "natural sendable phrasing",
+    ],
+    bannedGenericTerms: ["bro", "literally", "no cap", "lol", "omg"],
+    rewriteHints: [
+      "Arabic letters for Arabic — no Arabizi; Latin only for unavoidable brands or proper nouns.",
+      "Prefer restrained Egyptian colloquial over formal MSA when slang mode is on.",
+      "Do not stack fillers or discourse markers; avoid theatrical or meme-stacked lines.",
+    ],
+    dictionaryBiasTerms: ["خلاص", "يعني", "ماشي", "تمام", "عادي"],
+  },
 };
 
 export function getSlangControlConfig(dialectId?: string): SlangControlConfig {

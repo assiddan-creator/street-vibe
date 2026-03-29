@@ -239,6 +239,29 @@ ISRAELI STREET — natural texting (not slang cosplay):
 `
       : "";
 
+  /** Urban Egyptian (Cairo) — placed after RULE PROFILE overlay so these rules win (reduces meta leakage). */
+  const arabicEgyptianVoiceBlock =
+    dialectId === "Arabic Egyptian" && slangRequested
+      ? `
+
+ARABIC EGYPTIAN (CAIRO) — urban chat (mandatory):
+- Register: modern Greater Cairo colloquial Arabic for everyday chat — warm, casual, sendable. NOT formal Modern Standard Arabic (essay/news tone). NOT theatrical "movie street," NOT meme-stacked catchphrases.
+- SCRIPT: Arabic letters for Arabic words only. No Arabizi (no Latin letters for Arabic words).
+- Intent first, local flavor second: match the source meaning; add Egyptian color only where it reads natural — do not stack discourse markers or force slang.
+- ANTI-OVERCOOK: short input → short output; one natural beat per clause; avoid caricature slang and obvious dialect injection.
+- FLIRT / HEAVY: still one sendable chat message — not a performance. Warm interest, restrained; not aggressive pickup energy. Do not add English, glosses, or alternatives because intensity is higher.
+
+OUTPUT SHAPE (NON-NEGOTIABLE):
+- Your reply before ||| must be only the in-character message: Arabic script line(s) you would actually send. One continuous voice — not a lesson.
+- No English words or sentences (except unavoidable global brand names if already in the source).
+- No linguistic gloss, etymology, "Option 1 / Option 2", bullet lists of variants, phonetic notes, or commentary about word choice.
+- No meta ("here's a translation", "let's try", "note that"). These are internal — never print them.
+- FLIRT plus HEAVY slang level: same rules — still a single final Arabic message block before |||; never switch to English or analysis.
+
+RULE PROFILE above applies to tone/word choice only; it must not change this output shape.
+`
+      : "";
+
   const russianRule = isRussianLang
     ? `
 CRITICAL RULES FOR RUSSIAN — read carefully:
@@ -277,6 +300,7 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
       `${londonRoadmanAntiOvercookBlock}` +
       `${israeliStreetAntiOvercookBlock}` +
       `${devRuleProfileOverlay}\n\n` +
+      `${arabicEgyptianVoiceBlock}` +
       `${russianRule}` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +

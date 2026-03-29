@@ -280,6 +280,36 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
     interjectionHints: ["Sparse; prefer meaning in Hebrew over stage directions."],
     rewriteBiasTerms: ["סבבה", "יאללה", "אחי", "אחלה", "וואלה", "סטלה"],
   },
+  "Arabic Egyptian": {
+    dialectId: "Arabic Egyptian",
+    displayLabel: "Arabic Egyptian (Cairo)",
+    phraseRhythm: { pattern: "warm, compact, conversational", cadence: "linear" },
+    preferredSentenceLength: "short",
+    slangDensityBias: "low",
+    deliveryStyle: {
+      feel: "Greater Cairo urban chat — modern, restrained, human",
+      bluntness: "medium",
+      directness: "medium",
+    },
+    scriptPreference:
+      "Arabic script only for Arabic words; Egyptian colloquial register — not MSA essay tone, not theatrical street performance.",
+    promptHints: {
+      translate: [
+        "Urban Egyptian (Cairo-first): sound like real WhatsApp/Telegram between peers — warm, modern, sendable.",
+        "Preserve intent and tone first; add local Egyptian flavor only where it fits naturally — avoid obvious dialect injection or caricature slang.",
+        "No Arabizi: do not write Arabic words in Latin letters. No stacked discourse markers; avoid meme-like catchphrases.",
+        "Anti-overcooked: short input → short output; no assistant padding, meta, or explanation.",
+      ],
+      toneNotes: ["Believable young-adult Cairo chat — not newscaster MSA, not exaggerated 'movie street'."],
+    },
+    ttsHints: [
+      "Natural conversational pace; slightly more phrase boundary room than ultra-compressed text.",
+      "Warm but restrained — not announcer, not dramatic, not MSA cadence.",
+      "Prefer wording that sounds natural aloud; the TTS route applies conservative Arabic Premium normalization before synthesis.",
+    ],
+    interjectionHints: ["Rare soft breath between clauses only if it matches chat rhythm — never theatrical."],
+    rewriteBiasTerms: ["خلاص", "يعني", "ماشي", "تمام", "عادي", "أكيد", "برضه", "دلوقتي"],
+  },
 };
 
 export function getDialectPack(dialectId?: string): DialectPack | undefined {
