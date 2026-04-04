@@ -6,7 +6,7 @@ import {
   SCRIPT_OUTPUT_UNIVERSAL_RULE,
   splitTranslationAndDictionary,
 } from "@/lib/streetVibeTheme";
-import { isKnownPremiumDialect } from "@/lib/dialectRegistry";
+import { isKnownPremiumDialect, usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import {
   containsLatinLeak,
   countLatinTokens,
@@ -150,12 +150,15 @@ function buildPrompt({
     default: "This is a casual message between friends.",
   };
 
-  const intensityPrompt = INTENSITY_INSTRUCTIONS[slangLevel] || INTENSITY_INSTRUCTIONS[2];
-  const contextPrompt = CONTEXT_INSTRUCTIONS[context] || CONTEXT_INSTRUCTIONS.default;
-  const customLocation = slangLocation ? String(slangLocation).trim() : "";
-
   const dialectId = String(currentLang);
   const primaryLanguage = getDialectPrimaryLanguage(dialectId);
+
+  const intensityPrompt = usesPremiumStreetIntensityControls(dialectId)
+    ? INTENSITY_INSTRUCTIONS[slangLevel] || INTENSITY_INSTRUCTIONS[2]
+    : `STANDARD TARGET (non-premium): Natural idiomatic casual ${primaryLanguage} aligned with CONTEXT above. Ignore any raw/mild/street tier from the request; do not layer premium street-dialect thickness. Match the source register — readable, human, sendable chat — not performance slang or dialect showcase.`;
+
+  const contextPrompt = CONTEXT_INSTRUCTIONS[context] || CONTEXT_INSTRUCTIONS.default;
+  const customLocation = slangLocation ? String(slangLocation).trim() : "";
   const scriptLockBlock = [
     "SCRIPT LOCK (MANDATORY — highest priority):",
     SCRIPT_OUTPUT_UNIVERSAL_RULE,
@@ -247,7 +250,9 @@ OUTPUT FORMAT — Spanish Madrid (strict):
 
   const locationLine = customLocation
     ? `You are a 22-year-old from ${customLocation} who speaks ${primaryLanguage}. You grew up there, you text your friends every day, and you write exactly like people from your neighborhood.`
-    : `You are a 22-year-old native ${primaryLanguage} speaker from the streets (voice: ${dialectId}). You grew up there, you text your friends every day, and you write exactly like people from your city.`;
+    : usesPremiumStreetIntensityControls(dialectId)
+      ? `You are a 22-year-old native ${primaryLanguage} speaker from the streets (voice: ${dialectId}). You grew up there, you text your friends every day, and you write exactly like people from your city.`
+      : `You are a 22-year-old native ${primaryLanguage} speaker (voice: ${dialectId}). You text friends every day in natural, idiomatic casual — believable and clear, not stiff formal.`;
 
   const previousLine = previousMessage
     ? `\nFor consistency, the previous message in this conversation was rewritten as: "${previousMessage}". Keep the same voice and energy.`

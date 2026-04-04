@@ -271,6 +271,15 @@ export function isKnownPremiumDialect(id: string): id is StreetVibeDialectId {
 }
 
 /**
+ * Single source of truth for translate UI + API: premium street dialects use Raw/Mild/Street intensity;
+ * standard / non-premium targets use vibe only (no premium intensity tiers).
+ * Alias of {@link isKnownPremiumDialect} — same registry keys as `STREETVIBE_DIALECT_REGISTRY`.
+ */
+export function usesPremiumStreetIntensityControls(dialectId: string): boolean {
+  return isKnownPremiumDialect(dialectId);
+}
+
+/**
  * Dev-only consistency checks for the registry. Never throws; returns human-readable warnings.
  * Call from tests or diagnostics — not used in production hot paths.
  */

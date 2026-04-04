@@ -27,6 +27,7 @@ import {
   recordInteractionSignal,
 } from "@/lib/implicitPreferenceEngine";
 import { themeAccentAlpha } from "@/lib/themeAccent";
+import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
 import {
@@ -99,6 +100,7 @@ export default function SpeakPage() {
   }, [inputText, interimText, isListening]);
 
   const theme = resolveTheme(outputLang);
+  const showPremiumIntensityControls = usesPremiumStreetIntensityControls(outputLang);
   const { setDialect } = useCityTheme();
 
   useEffect(() => {
@@ -146,7 +148,7 @@ export default function SpeakPage() {
           currentLang: dialect,
           translationMode: "slang",
           slangLevel,
-          isPremiumSelected: true,
+          isPremiumSelected: usesPremiumStreetIntensityControls(dialect),
           context,
           previousMessage: null,
           sourceLanguage: inputLanguage,
@@ -617,52 +619,54 @@ export default function SpeakPage() {
             />
           </div>
 
-          {/* INTENSITY */}
-          <div>
-            <p className="mb-1 text-center text-[9px] font-medium uppercase tracking-widest text-white/40">⚡ Intensity</p>
-            <div className="flex flex-wrap items-center justify-center gap-1">
-              {(
-                [
-                  { level: 1 as const, label: "🌿 Mild" },
-                  { level: 2 as const, label: "🔥 Street" },
-                  { level: 3 as const, label: "💀 Raw" },
-                ] as const
-              ).map(({ level, label }) => {
-                const on = slangLevel === level;
-                return (
-                  <button
-                    key={level}
-                    type="button"
-                    onClick={() => {
-                      setSlangLevel(level);
-                      trackAnalyticsEvent({
-                      name: ANALYTICS_EVENT_NAMES.SLANG_LEVEL_SELECTED,
-                      slangLevel: level,
-                      mode: ANALYTICS_MODE.SPEAK,
-                    });
-                      if (getLearnsYouEnabled()) {
-                        recordInteractionSignal({
-                          type: "slang_level_select",
-                          level,
-                          timestampMs: Date.now(),
+          {/* INTENSITY — premium dialects only */}
+          {showPremiumIntensityControls ? (
+            <div>
+              <p className="mb-1 text-center text-[9px] font-medium uppercase tracking-widest text-white/40">⚡ Intensity</p>
+              <div className="flex flex-wrap items-center justify-center gap-1">
+                {(
+                  [
+                    { level: 1 as const, label: "🌿 Mild" },
+                    { level: 2 as const, label: "🔥 Street" },
+                    { level: 3 as const, label: "💀 Raw" },
+                  ] as const
+                ).map(({ level, label }) => {
+                  const on = slangLevel === level;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => {
+                        setSlangLevel(level);
+                        trackAnalyticsEvent({
+                          name: ANALYTICS_EVENT_NAMES.SLANG_LEVEL_SELECTED,
+                          slangLevel: level,
+                          mode: ANALYTICS_MODE.SPEAK,
                         });
+                        if (getLearnsYouEnabled()) {
+                          recordInteractionSignal({
+                            type: "slang_level_select",
+                            level,
+                            timestampMs: Date.now(),
+                          });
+                        }
+                      }}
+                      className={`shrink-0 rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
+                        on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
+                      }`}
+                      style={
+                        on
+                          ? { borderColor: theme.accent, color: theme.accent, backgroundColor: `${theme.accent}18` }
+                          : undefined
                       }
-                    }}
-                    className={`shrink-0 rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
-                      on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
-                    }`}
-                    style={
-                      on
-                        ? { borderColor: theme.accent, color: theme.accent, backgroundColor: `${theme.accent}18` }
-                        : undefined
-                    }
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {/* VIBE */}
           <div>
