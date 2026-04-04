@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Inter, Manrope, Space_Grotesk } from "next/font/google";
 import { AnalyticsBoot } from "@/components/AnalyticsBoot";
 import { CityThemeProvider } from "@/components/theme/CityThemeProvider";
 import "./globals.css";
@@ -13,6 +14,24 @@ const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  display: "swap",
+});
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-label",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -34,7 +53,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-[100dvh] antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${manrope.variable} ${inter.variable} min-h-[100dvh] font-sans antialiased`}
       >
         <CityThemeProvider>
           <AnalyticsBoot />

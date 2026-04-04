@@ -319,23 +319,13 @@ export default function Home() {
       >
         <header className="mb-4 flex shrink-0 items-center justify-center">
           {isIdle ? (
-            <span
-              className="text-xl text-white"
-              style={{
-                fontFamily: "'Permanent Marker', cursive",
-                opacity: 0.7,
-                letterSpacing: "0.05em",
-              }}
-            >
+            <span className="font-heading text-xl font-bold tracking-tight text-white" style={{ opacity: 0.85 }}>
               StreetVibe
             </span>
           ) : (
             <span
-              className="text-3xl text-white drop-shadow-lg"
-              style={{
-                fontFamily: "'Permanent Marker', cursive",
-                textShadow: `0 0 20px ${theme.accent}88, 0 2px 4px rgba(0,0,0,0.8)`,
-              }}
+              className="font-heading text-3xl font-bold tracking-tight text-white drop-shadow-lg"
+              style={{ textShadow: `0 0 20px ${theme.accent}88, 0 2px 4px rgba(0,0,0,0.8)` }}
             >
               StreetVibe
             </span>
@@ -582,7 +572,7 @@ export default function Home() {
         </div>
 
         <div
-          className={`flex min-w-0 w-full flex-col gap-3 transition-all duration-500 ${
+          className={`flex min-w-0 w-full flex-col gap-6 transition-all duration-500 ${
             isActive ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-8 opacity-0"
           }`}
         >
@@ -598,11 +588,15 @@ export default function Home() {
           </div>
 
           {showPremiumIntensityControls ? (
-            <div>
-              <p className="mb-1 text-center text-[9px] font-medium uppercase tracking-widest text-white/40">
+            <div className="flex flex-col gap-2">
+              <p className="font-label mb-0 text-center text-[10px] font-medium uppercase tracking-widest text-white/45">
                 ⚡ Intensity
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-1">
+              <div
+                className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl"
+                role="group"
+                aria-label="Slang intensity"
+              >
                 {(
                   [
                     { level: 1 as const, label: "🌿 Mild" },
@@ -630,12 +624,16 @@ export default function Home() {
                           });
                         }
                       }}
-                      className={`shrink-0 rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
-                        on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
+                      className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold transition-all duration-300 ${
+                        on ? "" : "bg-transparent text-white/45 hover:text-white/65"
                       }`}
                       style={
                         on
-                          ? { borderColor: theme.accent, color: theme.accent, backgroundColor: `${theme.accent}18` }
+                          ? {
+                              color: theme.accent,
+                              backgroundColor: `${theme.accent}24`,
+                              boxShadow: `0 0 24px -8px ${theme.accent}aa, inset 0 1px 0 ${theme.accent}44`,
+                            }
                           : undefined
                       }
                     >
@@ -647,9 +645,15 @@ export default function Home() {
             </div>
           ) : null}
 
-          <div>
-            <p className="mb-1 text-center text-[9px] font-medium uppercase tracking-widest text-white/40">🎭 Vibe</p>
-            <div className="flex flex-wrap items-center justify-center gap-1">
+          <div className="flex flex-col gap-2">
+            <p className="font-label mb-0 text-center text-[10px] font-medium uppercase tracking-widest text-white/45">
+              🎭 Vibe
+            </p>
+            <div
+              className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl"
+              role="group"
+              aria-label="Message vibe"
+            >
               {(
                 [
                   { value: "dm", label: "📱 Friend" },
@@ -666,10 +670,10 @@ export default function Home() {
                     onClick={() => {
                       setContext(value);
                       trackAnalyticsEvent({
-                      name: ANALYTICS_EVENT_NAMES.VIBE_SELECTED,
-                      vibe: value,
-                      mode: ANALYTICS_MODE.TEXT,
-                    });
+                        name: ANALYTICS_EVENT_NAMES.VIBE_SELECTED,
+                        vibe: value,
+                        mode: ANALYTICS_MODE.TEXT,
+                      });
                       if (getLearnsYouEnabled()) {
                         recordInteractionSignal({
                           type: "context_select",
@@ -678,12 +682,16 @@ export default function Home() {
                         });
                       }
                     }}
-                    className={`shrink-0 rounded-full border px-4 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all duration-300 ${
-                      on ? "border-2" : "border border-white/10 bg-black/25 text-white/90"
+                    className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold transition-all duration-300 ${
+                      on ? "" : "bg-transparent text-white/45 hover:text-white/65"
                     }`}
                     style={
                       on
-                        ? { borderColor: theme.accent, color: theme.accent, backgroundColor: `${theme.accent}18` }
+                        ? {
+                            color: theme.accent,
+                            backgroundColor: `${theme.accent}24`,
+                            boxShadow: `0 0 24px -8px ${theme.accent}aa, inset 0 1px 0 ${theme.accent}44`,
+                          }
                         : undefined
                     }
                   >

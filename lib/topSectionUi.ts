@@ -8,4 +8,4 @@ export const TOP_STACK_CLASS =
 
 /** Secondary field captions — soft gray so selected values read as primary. */
 export const TOP_HELPER_LABEL_CLASS =
-  "mb-1 block w-full text-center text-[8px] font-normal uppercase tracking-[0.22em] text-zinc-500";
+  "font-label mb-1 block w-full text-center text-[8px] font-normal uppercase tracking-[0.22em] text-zinc-500";
