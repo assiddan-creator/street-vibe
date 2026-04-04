@@ -7,6 +7,7 @@ import { LearnsYouControls } from "@/components/LearnsYouControls";
 import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
+import { AmbientAccentGlows } from "@/components/AmbientAccentGlows";
 import { Toast } from "@/components/Toast";
 import { HebrewTransliterationCard } from "@/components/HebrewTransliterationCard";
 import { TranslationResultCard } from "@/components/TranslationResultCard";
@@ -325,7 +326,9 @@ export default function SpeakPage() {
   const hebrewContext = shouldOfferHebrewTransliteration(inputLanguage, uiLocale);
 
   return (
-    <>
+    <div className="relative w-full">
+      <AmbientAccentGlows accent={theme.accent} />
+      <div className="relative z-10 w-full">
       <Toast message={toast} accent={theme.accent} />
       {popupWord && (
         <div
@@ -351,7 +354,7 @@ export default function SpeakPage() {
         className="mx-auto flex min-w-0 w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-4 pt-3"
         onClick={() => setPopupWord(null)}
       >
-        <header className="mb-4 flex shrink-0 items-center justify-center">
+        <header className="mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-4 py-2.5 backdrop-blur-xl">
           <span
             className="font-heading font-bold tracking-tight text-white drop-shadow-lg transition-all duration-500"
             style={{
@@ -548,16 +551,18 @@ export default function SpeakPage() {
             type="button"
             onClick={toggleMic}
             aria-label={isListening ? "Stop listening" : "Tap to speak"}
-            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full shadow-2xl transition-all duration-500 ease-in-out active:scale-95 ${
+            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out active:scale-95 ${
               isActive ? "h-24 w-24" : "h-48 w-48"
             } ${isListening ? "mic-pulse" : isIdle ? "animate-pulse-slow" : ""}`}
             style={
               isListening
                 ? {
                     background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
-                    boxShadow: `0 8px 28px ${theme.accent}55`,
+                    boxShadow: `0 12px 56px ${theme.accent}77, 0 0 100px ${theme.accent}55, 0 8px 28px rgba(0,0,0,0.45)`,
                   }
-                : { boxShadow: `0 0 40px ${theme.accent}33, 0 8px 32px rgba(0,0,0,0.6)` }
+                : {
+                    boxShadow: `0 0 0 1px ${theme.accent}28, 0 0 120px -8px ${theme.accent}99, 0 24px 64px ${theme.accent}44, 0 12px 40px rgba(0,0,0,0.55)`,
+                  }
             }
           >
             {micBall ? (
@@ -872,6 +877,7 @@ export default function SpeakPage() {
           </div>
         </div>
       </div>
-    </>
+      </div>
+    </div>
   );
 }

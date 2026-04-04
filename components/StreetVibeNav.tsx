@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ANALYTICS_EVENT_NAMES, ANALYTICS_MODE, trackAnalyticsEvent } from "@/lib/analyticsEvents";
 
 const linkBase =
-  "rounded-full border px-3 py-1 text-[11px] font-semibold opacity-60 backdrop-blur-md transition-colors duration-300";
+  "rounded-full border border-white/5 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-white/75 backdrop-blur-xl transition-colors duration-300 hover:bg-white/10 hover:text-white/95";
 
 export function StreetVibeNav() {
   const pathname = usePathname();
@@ -26,8 +26,8 @@ export function StreetVibeNav() {
       <Link
         href="/"
         onClick={() => trackModeNav(ANALYTICS_MODE.TEXT)}
-        className={`${linkBase} border-themeButtonBorder bg-themeButton/20 text-white shadow-glow-theme hover:bg-themeButton/30 ${
-          isText ? "bg-themeButton/40 ring-1 ring-themeButtonBorder" : ""
+        className={`${linkBase} ${
+          isText ? "border-white/15 bg-white/15 text-white shadow-none" : ""
         }`}
       >
         Text Mode
@@ -35,8 +35,8 @@ export function StreetVibeNav() {
       <Link
         href="/speak"
         onClick={() => trackModeNav(ANALYTICS_MODE.SPEAK)}
-        className={`${linkBase} border-themeButtonBorder bg-themeButton/20 text-white shadow-glow-theme hover:bg-themeButton/30 ${
-          isSpeak ? "bg-themeButton/40 ring-1 ring-themeButtonBorder" : ""
+        className={`${linkBase} ${
+          isSpeak ? "border-white/15 bg-white/15 text-white shadow-none" : ""
         }`}
       >
         Speak Mode
