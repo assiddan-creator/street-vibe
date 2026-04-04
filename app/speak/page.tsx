@@ -347,7 +347,7 @@ export default function SpeakPage() {
       )}
 
       <div
-        className="mx-auto flex w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-4 pt-3"
+        className="mx-auto flex min-w-0 w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-4 pt-3"
         onClick={() => setPopupWord(null)}
       >
         <header className="mb-4 flex shrink-0 items-center justify-center">
@@ -603,7 +603,7 @@ export default function SpeakPage() {
 
         {/* שלב B */}
         <div
-          className={`flex flex-col gap-3 transition-all duration-500 ${
+          className={`flex min-w-0 w-full flex-col gap-3 transition-all duration-500 ${
             isActive ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-8 opacity-0"
           }`}
         >
@@ -783,7 +783,7 @@ export default function SpeakPage() {
 
           {/* כרטיס תרגום */}
           <section
-            className={`min-w-0 shrink-0 overflow-visible transition-all duration-500 ${
+            className={`min-w-0 w-full shrink-0 overflow-visible transition-all duration-500 ${
               translatedText || loading || error ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
             }`}
           >
