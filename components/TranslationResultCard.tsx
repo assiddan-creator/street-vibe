@@ -99,13 +99,13 @@ export function TranslationResultCard({
 
         {showTransliterationRow ? (
           <section
-            className="min-w-0 overflow-visible rounded-lg border border-white/[0.06] bg-white/[0.03] p-3"
+            className="h-auto max-h-none min-w-0 overflow-visible rounded-lg border border-white/[0.06] bg-white/[0.03] p-3"
             dir="rtl"
           >
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">
               {labels.readAloud ?? "איך לקרוא"}
             </p>
-            <p className="min-w-0 whitespace-normal break-words text-right text-[13px] leading-[1.65] text-white/75 [overflow-wrap:anywhere]">
+            <p className="h-auto max-h-none min-h-0 min-w-0 w-full overflow-visible whitespace-normal break-words text-right text-[13px] leading-[1.65] text-white/75 [overflow-wrap:anywhere] [text-wrap:wrap]">
               {hebrewTransliteration?.trim()}
             </p>
           </section>
