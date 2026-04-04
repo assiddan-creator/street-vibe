@@ -45,9 +45,13 @@ export function TranslationResultCard({
   const showTransliterationRow =
     hebrewContext && Boolean(hebrewTransliteration?.trim());
 
+  if (hebrewTransliteration?.trim()) {
+    console.log("Transliteration string:", hebrewTransliteration);
+  }
+
   return (
     <div
-      className={`${GLASS_OUTPUT_CARD} min-h-[min(60vh,420px)] max-h-none !p-5 sm:!p-6`}
+      className={`${GLASS_OUTPUT_CARD} min-h-[min(60vh,420px)] !max-h-none !overflow-x-visible !p-5 sm:!p-6`}
       style={
         {
           ["--scroll-thumb" as string]: `${accent}88`,
@@ -56,7 +60,7 @@ export function TranslationResultCard({
         } as CSSProperties
       }
     >
-      <div className="min-w-0 space-y-4">
+      <div className="w-full min-w-0 max-w-full space-y-4 overflow-visible">
         <section className="min-w-0 rounded-lg border border-white/[0.07] bg-black/20 p-3">
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">{labels.source}</p>
           <p
@@ -99,13 +103,13 @@ export function TranslationResultCard({
 
         {showTransliterationRow ? (
           <section
-            className="h-auto max-h-none min-w-0 overflow-visible rounded-lg border border-white/[0.06] bg-white/[0.03] p-3"
+            className="min-w-0 overflow-visible rounded-lg border border-white/[0.06] bg-white/[0.03] p-3"
             dir="rtl"
           >
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">
               {labels.readAloud ?? "איך לקרוא"}
             </p>
-            <p className="h-auto max-h-none min-h-0 min-w-0 w-full overflow-visible whitespace-normal break-words text-right text-[13px] leading-[1.65] text-white/75 [overflow-wrap:anywhere] [text-wrap:wrap]">
+            <p className="min-h-min w-full whitespace-pre-wrap break-words text-right text-[13px] leading-[1.65] text-white/75 [overflow-wrap:anywhere]">
               {hebrewTransliteration?.trim()}
             </p>
           </section>
