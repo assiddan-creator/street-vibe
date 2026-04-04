@@ -14,6 +14,7 @@ import {
   sanitizeIsraeliStreetOutput,
   shouldRetryIsraeliStreetOutput,
 } from "@/lib/hebrewOutputGuard";
+import { sanitizeRussianStreetDictionary } from "@/lib/russianOutputGuard";
 import {
   applyPersonaPresetToProfile,
   buildPersonaPresetPromptHints,
@@ -54,6 +55,8 @@ function formatPremiumAntiOvercookGuard(opts: {
   slangLevel: number;
   intentCategory?: RoutingIntentCategory;
   context: string;
+  /** When set, suppress generic flirt “interpersonal” overlay (Russian Street uses its own block). */
+  dialectId?: string;
 }): string {
   const trimmed = opts.sourceText.trim();
   const wordCount = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
@@ -84,8 +87,13 @@ PREMIUM GLOBAL — anti-overcooking (all premium dialects):
   }
 
   if (interpersonalIntent) {
-    lines += `
+    if (opts.dialectId === "Russian Street") {
+      lines += `
+- RUSSIAN STREET / FLIRT UI: Do not let the “flirt” context inflate neutral sources. If the source is factual, logistical, news, TV, or a plain request (not romantic), keep the same matter-of-fact energy as DM — no extra warmth, no hook questions, no “favorite” prompts, no “tell me yours” engagement.`;
+    } else {
+      lines += `
 - INTERPERSONAL (flirt / tease / admiration / emotionally warm — or flirt context when intent omitted): prioritize naturalness and believable warmth or edge over stylization; chemistry beats persona.`;
+    }
   }
 
   return lines;
@@ -183,6 +191,17 @@ function buildPrompt({
   const noAIRule =
     "AUTHENTICITY RULE: Write exactly like a real person texting a friend. NO commas unless absolutely necessary. Use short punchy phrases separated by spaces or line breaks — not commas. No full sentences if the original was casual. Raw, fast, human. Think WhatsApp message not a novel.";
 
+  /** Russian Street: do not apply English-style anti-comma / line-break pressure to Russian (see CRITICAL RULES FOR RUSSIAN). */
+  const slangAuthenticityRule =
+    dialectId === "Russian Street"
+      ? `AUTHENTICITY (RUSSIAN STREET — Telegram/VK; replaces the generic English-centric authenticity rule for this dialect):
+- Write like a real Telegram or VK DM — casual young Russian, not literary prose or edited-article polish.
+- Natural Russian punctuation: use commas, periods, dashes where grammar and readability need them — do not strip commas to imitate English \"no comma\" chat; follow normal Russian norms.
+- Casual feel: a lowercase first letter is fine when it fits a quick message; sentence case is fine too. Avoid stiff, full-stop-heavy bookish rhythm unless the source matches it.
+- Do not insert artificial line breaks that split one thought or break grammar; breaks only where they feel natural in chat.
+- FLIRT context: warmth only when the source is actually flirty or romantic — if the source is neutral, keep the same matter-of-fact tone as DM (street voice, not fake flirt).`
+      : noAIRule;
+
   /** Default slang path; Spanish Madrid uses a stricter shape below to cut glossary bloat and emoji slips. */
   const formattingRuleBase =
     "\n\nOUTPUT FORMAT — follow this exactly and nothing else:\n" +
@@ -243,7 +262,12 @@ OUTPUT FORMAT — Spanish Madrid (strict):
   /** Premium street dialects: keep distinctive voice — do not dilute toward generic American internet filler. */
   const premiumDistinctiveReminder =
     slangRequested && isKnownPremiumDialect(dialectId)
-      ? `
+      ? dialectId === "Russian Street"
+        ? `
+
+PREMIUM DIALECT (Russian Street): Distinctive Moscow/SPb youth voice — not generic internet Russian. Match the source: neutral or practical lines stay flat and direct even when the UI is on “flirt”; only add warmth when the source is actually flirty or romantic.
+`
+        : `
 
 PREMIUM DIALECT (${dialectId}): Keep a distinctive, culturally tuned voice — not generic hype English. Preserve depth and local authenticity; flirt should feel warmer than DM, DM blunter than flirt.
 `
@@ -256,6 +280,7 @@ PREMIUM DIALECT (${dialectId}): Keep a distinctive, culturally tuned voice — n
           slangLevel,
           intentCategory,
           context,
+          dialectId,
         })
       : "";
 
@@ -382,6 +407,28 @@ CRITICAL RULES FOR RUSSIAN — read carefully:
 6. PROFILE VS OUTPUT: Any RULE PROFILE or tuning block above applies to word choice only. It must never change the output shape: still only the in-character line(s), then |||, then the dictionary — never explanations, lists of options, or commentary about the rewrite.`
     : "";
 
+  const russianStreetStabilizationBlock =
+    dialectId === "Russian Street" && slangRequested
+      ? `
+
+RUSSIAN STREET — OUTPUT STABILITY (mandatory; overrides generic FLIRT context when the source is neutral):
+
+NEUTRAL / NON-FLIRTY SOURCES (news, TV, facts, logistics, links, mundane requests):
+- If the SOURCE is not romantic or flirty, ignore “flirt” as a tone mandate: write like DM — matter-of-fact, no added warmth performance.
+- Do NOT add hook questions, “who’s your favorite”, “tell me yours”, “guess who”, “what do you think”, or similar engagement lines not present in the source.
+- Do NOT add extra sentences to manufacture chemistry.
+
+WHEN THE SOURCE IS ACTUALLY FLIRTY / ROMANTIC:
+- Then you may use a warmer, closer register; still no English, no meta, no tutorial tone.
+
+DICTIONARY (after |||):
+- Lines after ||| must be Russian only (Cyrillic). No English words, no Latin gloss explanations, no mixed EN/RU lines, no “casual for / informal / send / when you”.
+- Format: at most 2 short lines like: слово — краткое пояснение по-русски.
+- If a clean Russian-only gloss is not possible, output exactly one line: —
+- Do not truncate mid-word, mid-paren, or mid-dash; incomplete gloss lines are forbidden — use — instead.
+`
+      : "";
+
   const devRuleProfileOverlay = slangRequested ? formatDevRuleProfileOverlay(devRuleProfile) : "";
 
   /** Peninsular Madrid urban — after RULE PROFILE overlay; reduces meta + LatAm default leakage. */
@@ -417,7 +464,7 @@ RULE PROFILE above applies to tone/word choice only; it must not change this out
       `${antiLeakageRule}\n` +
       `${lengthRule}\n` +
       `${conversationalCompressionRule}\n` +
-      `${noAIRule}` +
+      `${slangAuthenticityRule}` +
       `${personalizationBlock}` +
       `${slangControlBlock}` +
       `${dialectPackBlock}` +
@@ -433,6 +480,7 @@ RULE PROFILE above applies to tone/word choice only; it must not change this out
       `${spanishMadridVoiceBlock}` +
       `${arabicEgyptianVoiceBlock}` +
       `${russianRule}` +
+      `${russianStreetStabilizationBlock}` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +
       `${formattingRule}`,
@@ -590,6 +638,12 @@ export async function POST(req: NextRequest) {
       } else {
         fullText = combined;
       }
+    }
+
+    if (dialectId === "Russian Street" && slangRequested) {
+      const { translated, dictRaw } = splitTranslationAndDictionary(fullText);
+      const dictSanitized = sanitizeRussianStreetDictionary(dictRaw);
+      fullText = dictSanitized ? `${translated}${DICT_SEPARATOR}${dictSanitized}` : translated;
     }
 
     return NextResponse.json({ fullText }, { status: 200, headers: corsHeaders });
