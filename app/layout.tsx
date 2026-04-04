@@ -51,6 +51,10 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap"
           rel="stylesheet"
         />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${manrope.variable} ${inter.variable} min-h-[100dvh] font-sans antialiased`}

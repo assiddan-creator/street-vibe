@@ -2,6 +2,7 @@
 
 import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
 import { FlipButtonSkeleton, PopupWordSkeleton } from "@/components/ui/Skeleton";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
@@ -18,6 +19,7 @@ import {
   GLASS_SELECT,
   GLASS_SELECT_COMPACT,
 } from "@/lib/themeUiClasses";
+import { SLANG_INTENSITY_SEGMENTS, VIBE_SEGMENTS } from "@/lib/slangSegmentControls";
 import {
   INPUT_LANGUAGES,
   OUTPUT_PREMIUM_OPTIONS,
@@ -584,21 +586,16 @@ export default function Home() {
 
           {showPremiumIntensityControls ? (
             <div className="flex flex-col gap-2">
-              <p className="font-label mb-0 text-center text-[10px] font-medium uppercase tracking-widest text-white/45">
-                ⚡ Intensity
+              <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[10px] font-medium uppercase tracking-widest text-white/45">
+                <MaterialSymbol name="bolt" className="text-[13px]" />
+                Intensity
               </p>
               <div
                 className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl"
                 role="group"
                 aria-label="Slang intensity"
               >
-                {(
-                  [
-                    { level: 1 as const, label: "🌿 Mild" },
-                    { level: 2 as const, label: "🔥 Street" },
-                    { level: 3 as const, label: "💀 Raw" },
-                  ] as const
-                ).map(({ level, label }) => {
+                {SLANG_INTENSITY_SEGMENTS.map(({ level, text, icon }) => {
                   const on = slangLevel === level;
                   return (
                     <button
@@ -619,7 +616,7 @@ export default function Home() {
                           });
                         }
                       }}
-                      className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold transition-all duration-300 ${
+                      className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-semibold transition-all duration-300 ${
                         on ? "" : "bg-transparent text-white/45 hover:text-white/65"
                       }`}
                       style={
@@ -632,7 +629,8 @@ export default function Home() {
                           : undefined
                       }
                     >
-                      {label}
+                      <MaterialSymbol name={icon} className="text-[15px]" />
+                      {text}
                     </button>
                   );
                 })}
@@ -641,22 +639,16 @@ export default function Home() {
           ) : null}
 
           <div className="flex flex-col gap-2">
-            <p className="font-label mb-0 text-center text-[10px] font-medium uppercase tracking-widest text-white/45">
-              🎭 Vibe
+            <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[10px] font-medium uppercase tracking-widest text-white/45">
+              <MaterialSymbol name="masks" className="text-[13px]" />
+              Vibe
             </p>
             <div
               className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl"
               role="group"
               aria-label="Message vibe"
             >
-              {(
-                [
-                  { value: "dm", label: "📱 Friend" },
-                  { value: "flirt", label: "😏 Flirty" },
-                  { value: "angry", label: "😤 Angry" },
-                  { value: "stoned", label: "🌀 Stoned" },
-                ] as const
-              ).map(({ value, label }) => {
+              {VIBE_SEGMENTS.map(({ value, text, icon }) => {
                 const on = context === value;
                 return (
                   <button
@@ -677,7 +669,7 @@ export default function Home() {
                         });
                       }
                     }}
-                    className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold transition-all duration-300 ${
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-semibold transition-all duration-300 ${
                       on ? "" : "bg-transparent text-white/45 hover:text-white/65"
                     }`}
                     style={
@@ -690,7 +682,8 @@ export default function Home() {
                         : undefined
                     }
                   >
-                    {label}
+                    <MaterialSymbol name={icon} className="text-[15px]" />
+                    {text}
                   </button>
                 );
               })}
