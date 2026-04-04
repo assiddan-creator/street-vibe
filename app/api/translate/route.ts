@@ -529,6 +529,9 @@ async function callGeminiHebrewTransliteration(apiKey: string, translatedLine: s
 
   const prompt =
     `You output exactly one thing: a phonetic read-aloud version of the LINE below using Hebrew letters only (א–ת, including final letter forms).\n\n` +
+    `CRITICAL — COMPLETENESS:\n` +
+    `- You MUST provide the COMPLETE transliteration for the ENTIRE translated phrase in LINE. Cover every word from start to finish.\n` +
+    `- Do not truncate the sentence, stop halfway, end with "...", or omit the tail of the LINE. If the LINE is long, output the full length in Hebrew letters anyway.\n\n` +
     `Rules:\n` +
     `- Transcribe how a Hebrew speaker would pronounce the LINE for everyday reading — practical chat style, not IPA, not linguistic analysis.\n` +
     `- Your entire output must be Hebrew script only. No Latin letters, no English words, no labels, no quotation marks wrapping the answer, no explanations.\n` +
@@ -545,12 +548,18 @@ async function callGeminiHebrewTransliteration(apiKey: string, translatedLine: s
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.35,
-        maxOutputTokens: 512,
+        /** Long translated lines need room; 512 was cutting Hebrew read-aloud mid-phrase. */
+        maxOutputTokens: 2048,
       },
     }),
   });
   const data = await geminiRes.json();
-  return (data?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+  const parts = data?.candidates?.[0]?.content?.parts;
+  const text =
+    Array.isArray(parts) && parts.length > 0
+      ? parts.map((p: { text?: string }) => p?.text ?? "").join("")
+      : "";
+  return text.trim();
 }
 
 export async function OPTIONS() {
