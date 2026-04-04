@@ -2,19 +2,15 @@
 
 import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  FlipButtonSkeleton,
-  PopupWordSkeleton,
-  TranslationBlockSkeleton,
-  TtsPlaySkeleton,
-} from "@/components/ui/Skeleton";
+import { FlipButtonSkeleton, PopupWordSkeleton, TtsPlaySkeleton } from "@/components/ui/Skeleton";
 import { LearnsYouControls } from "@/components/LearnsYouControls";
 import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
+import { TranslationResultCard } from "@/components/TranslationResultCard";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
-import { GLASS_INPUT, GLASS_OUTPUT_CARD, GLASS_SELECT, GLASS_SELECT_COMPACT } from "@/lib/themeUiClasses";
+import { GLASS_INPUT, GLASS_SELECT, GLASS_SELECT_COMPACT } from "@/lib/themeUiClasses";
 import {
   INPUT_LANGUAGES,
   OUTPUT_PREMIUM_OPTIONS,
@@ -31,6 +27,7 @@ import {
   recordInteractionSignal,
 } from "@/lib/implicitPreferenceEngine";
 import { themeAccentAlpha } from "@/lib/themeAccent";
+import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
 import {
   ANALYTICS_EVENT_NAMES,
@@ -49,6 +46,8 @@ export default function SpeakPage() {
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [dictionaryPills, setDictionaryPills] = useState<string[]>([]);
+  const [hebrewTransliteration, setHebrewTransliteration] = useState<string | null>(null);
+  const [uiLocale, setUiLocale] = useState("en");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -73,6 +72,10 @@ export default function SpeakPage() {
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
+  }, []);
+
+  useEffect(() => {
+    setUiLocale(typeof navigator !== "undefined" ? navigator.language : "en");
   }, []);
 
   useEffect(() => {
@@ -114,6 +117,7 @@ export default function SpeakPage() {
     setOriginalText(trimmed);
     setTranslatedText("");
     setDictionaryPills([]);
+    setHebrewTransliteration(null);
 
     const learnsYouOn = getLearnsYouEnabled();
     const implicitExtras = getImplicitSoftExtrasForRequests(learnsYouOn, false, undefined);
@@ -145,10 +149,17 @@ export default function SpeakPage() {
           isPremiumSelected: true,
           context,
           previousMessage: null,
+          sourceLanguage: inputLanguage,
+          uiLocale,
           ...implicitExtras,
         }),
       });
-      const data = (await res.json()) as { fullText?: string; error?: string };
+      const data = (await res.json()) as {
+        fullText?: string;
+        translatedText?: string;
+        hebrewTransliteration?: string;
+        error?: string;
+      };
       if (!res.ok) {
         const err = new Error(data.error || "Translation failed") as Error & { httpStatus?: number };
         err.httpStatus = res.status;
@@ -179,8 +190,10 @@ export default function SpeakPage() {
       }
       const fullText = String(data.fullText ?? "").trim();
       const { translated, dictRaw } = splitTranslationAndDictionary(fullText);
-      setTranslatedText(translated);
+      const translatedFinal = String(data.translatedText ?? translated).trim();
+      setTranslatedText(translatedFinal);
       setDictionaryPills(parseDictionaryPills(dictRaw));
+      setHebrewTransliteration(data.hebrewTransliteration?.trim() || null);
     } catch (e) {
       trackAnalyticsEvent({
         name: ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED,
@@ -193,6 +206,7 @@ export default function SpeakPage() {
       setError(e instanceof Error ? e.message : "Translation failed");
       setTranslatedText("");
       setDictionaryPills([]);
+      setHebrewTransliteration(null);
     } finally {
       setLoading(false);
     }
@@ -218,6 +232,7 @@ export default function SpeakPage() {
     setOriginalText("");
     setTranslatedText("");
     setDictionaryPills([]);
+    setHebrewTransliteration(null);
     setError(null);
     audioRef.current?.pause();
     audioRef.current = null;
@@ -304,6 +319,7 @@ export default function SpeakPage() {
   const micBall = cityTheme.micBall ?? null;
   const isActive = inputText.trim().length > 0 || originalText.trim().length > 0;
   const isIdle = !isActive;
+  const hebrewContext = shouldOfferHebrewTransliteration(inputLanguage, uiLocale);
 
   return (
     <>
@@ -767,90 +783,44 @@ export default function SpeakPage() {
               translatedText || loading || error ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
             }`}
           >
-            <div
-              className={`${GLASS_OUTPUT_CARD} min-h-[200px] max-h-none overflow-visible !p-4`}
-              style={
-                {
-                  ["--scroll-thumb" as string]: `${theme.accent}88`,
-                  ["--scroll-thumb-hover" as string]: `${theme.accent}aa`,
-                  ["--scroll-track" as string]: "rgba(0,0,0,0.35)",
-                } as CSSProperties
-              }
-            >
-              <p className="mb-1 text-[10px] text-white/50">Original</p>
-              <p className="mb-2 whitespace-pre-wrap break-words text-[11px] leading-snug text-white/80">
-                {originalText.trim() || "—"}
-              </p>
-              <p className="mb-0.5 text-[10px] text-white/50">Street</p>
-              <div className="min-h-0 text-sm font-bold leading-snug">
-                {loading ? (
-                  <TranslationBlockSkeleton accent={theme.accent} />
-                ) : error ? (
-                  <p className="text-[11px] font-normal text-red-400">{error}</p>
-                ) : translatedText.trim() ? (
-                  <p
-                    className="text-[13px] leading-relaxed [overflow-wrap:anywhere]"
-                    style={{ color: theme.accent }}
-                  >
-                    {translatedText.split(/(\s+)/).map((token, i) =>
-                      token.trim() ? (
-                        <span
-                          key={i}
-                          onClick={(e) => void handleWordClick(token, e)}
-                          className="cursor-pointer rounded px-0.5 transition-all duration-150 hover:bg-white/10 active:bg-white/20"
-                        >
-                          {token}
-                        </span>
+            <TranslationResultCard
+              accent={theme.accent}
+              originalText={originalText}
+              translatedText={translatedText}
+              dictionaryPills={dictionaryPills}
+              loading={loading}
+              error={error}
+              hebrewTransliteration={hebrewTransliteration}
+              hebrewContext={hebrewContext}
+              onWordClick={(token, e) => void handleWordClick(token, e)}
+              afterTranslation={
+                translatedText.trim() ? (
+                  <div className="mt-3 flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() => void handlePlay()}
+                      disabled={ttsLoading || ttsPlaying}
+                      className="relative w-full overflow-hidden rounded-xl py-2.5 text-sm font-bold transition-all duration-300 active:scale-95 disabled:opacity-50"
+                      style={{
+                        background: `linear-gradient(135deg, ${theme.accent}44, ${theme.accent}22)`,
+                        border: `1px solid ${theme.accent}55`,
+                        color: theme.accent,
+                        fontFamily: "'Permanent Marker', cursive",
+                      }}
+                    >
+                      {ttsLoading ? (
+                        <TtsPlaySkeleton />
+                      ) : ttsPlaying ? (
+                        "🔊 Playing..."
                       ) : (
-                        <span key={i}>{token}</span>
-                      ),
-                    )}
-                  </p>
-                ) : null}
-              </div>
-
-              {translatedText.trim() ? (
-                <div className="mt-3 flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={() => void handlePlay()}
-                    disabled={ttsLoading || ttsPlaying}
-                    className="relative w-full overflow-hidden rounded-xl py-2.5 text-sm font-bold transition-all duration-300 active:scale-95 disabled:opacity-50"
-                    style={{
-                      background: `linear-gradient(135deg, ${theme.accent}44, ${theme.accent}22)`,
-                      border: `1px solid ${theme.accent}55`,
-                      color: theme.accent,
-                      fontFamily: "'Permanent Marker', cursive",
-                    }}
-                  >
-                    {ttsLoading ? (
-                      <TtsPlaySkeleton />
-                    ) : ttsPlaying ? (
-                      "🔊 Playing..."
-                    ) : (
-                      "▶ Play Street Voice"
-                    )}
-                  </button>
-                  {ttsError ? <p className="text-center text-[10px] text-red-400">{ttsError}</p> : null}
-                </div>
-              ) : null}
-
-              <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
-                {dictionaryPills.map((pill, i) => (
-                  <span
-                    key={`${pill}-${i}`}
-                    className="whitespace-pre-wrap break-words rounded-full border px-3 py-1 text-[11px] font-medium leading-tight transition-all duration-500"
-                    style={{
-                      borderColor: `${theme.accent}55`,
-                      color: theme.accent,
-                      backgroundColor: `${theme.accent}15`,
-                    }}
-                  >
-                    {pill}
-                  </span>
-                ))}
-              </div>
-            </div>
+                        "▶ Play Street Voice"
+                      )}
+                    </button>
+                    {ttsError ? <p className="text-center text-[10px] text-red-400">{ttsError}</p> : null}
+                  </div>
+                ) : null
+              }
+            />
           </section>
 
           <div className="mt-6 flex flex-col gap-1.5 border-t border-white/5 pt-4">

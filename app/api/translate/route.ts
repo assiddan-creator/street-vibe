@@ -16,6 +16,11 @@ import {
 } from "@/lib/hebrewOutputGuard";
 import { sanitizeRussianStreetDictionary } from "@/lib/russianOutputGuard";
 import {
+  isPrimarilyHebrewScript,
+  looksLikeHebrewLetterTransliteration,
+  shouldOfferHebrewTransliteration,
+} from "@/lib/transliterationPolicy";
+import {
   applyPersonaPresetToProfile,
   buildPersonaPresetPromptHints,
   parseOptionalPersonaPresetId,
@@ -510,6 +515,37 @@ async function callGeminiGenerate(
   return { text, raw: data };
 }
 
+/** Read-aloud: target language line → Hebrew letters only (separate lightweight generation). */
+async function callGeminiHebrewTransliteration(apiKey: string, translatedLine: string): Promise<string> {
+  const trimmed = translatedLine.trim();
+  if (!trimmed) return "";
+
+  const prompt =
+    `You output exactly one thing: a phonetic read-aloud version of the LINE below using Hebrew letters only (א–ת, including final letter forms).\n\n` +
+    `Rules:\n` +
+    `- Transcribe how a Hebrew speaker would pronounce the LINE for everyday reading — practical chat style, not IPA, not linguistic analysis.\n` +
+    `- Your entire output must be Hebrew script only. No Latin letters, no English words, no labels, no quotation marks wrapping the answer, no explanations.\n` +
+    `- The LINE may be in any language or writing system; map the sounds to Hebrew letters in a simple, readable way.\n` +
+    `- Do not repeat or translate the meaning; only approximate pronunciation in Hebrew letters.\n\n` +
+    `LINE:\n` +
+    trimmed;
+
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
+  const geminiRes = await fetch(GEMINI_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.35,
+        maxOutputTokens: 512,
+      },
+    }),
+  });
+  const data = await geminiRes.json();
+  return (data?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
@@ -539,6 +575,8 @@ export async function POST(req: NextRequest) {
     isPremiumSelected,
     context,
     previousMessage,
+    sourceLanguage,
+    uiLocale,
   } = body || {};
 
   if (!text || !currentLang) {
@@ -646,7 +684,36 @@ export async function POST(req: NextRequest) {
       fullText = dictSanitized ? `${translated}${DICT_SEPARATOR}${dictSanitized}` : translated;
     }
 
-    return NextResponse.json({ fullText }, { status: 200, headers: corsHeaders });
+    const { translated: translatedMain } = splitTranslationAndDictionary(fullText);
+    const sourceLangStr =
+      typeof sourceLanguage === "string" ? sourceLanguage : undefined;
+    const uiLocaleStr = typeof uiLocale === "string" ? uiLocale : undefined;
+
+    let hebrewTransliteration: string | undefined;
+    if (
+      shouldOfferHebrewTransliteration(sourceLangStr, uiLocaleStr) &&
+      translatedMain.trim() &&
+      !isPrimarilyHebrewScript(translatedMain)
+    ) {
+      try {
+        const raw = await callGeminiHebrewTransliteration(apiKey, translatedMain);
+        if (raw && looksLikeHebrewLetterTransliteration(raw)) {
+          hebrewTransliteration = raw.trim();
+        }
+      } catch {
+        /* omit optional field */
+      }
+    }
+
+    return NextResponse.json(
+      {
+        fullText,
+        sourceText: String(text),
+        translatedText: translatedMain,
+        ...(hebrewTransliteration ? { hebrewTransliteration } : {}),
+      },
+      { status: 200, headers: corsHeaders }
+    );
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
