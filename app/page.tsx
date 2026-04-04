@@ -8,6 +8,7 @@ import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { LearnsYouControls } from "@/components/LearnsYouControls";
 import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { AmbientAccentGlows } from "@/components/AmbientAccentGlows";
+import { GraffitiLogo } from "@/components/GraffitiLogo";
 import { Toast } from "@/components/Toast";
 import { HebrewTransliterationCard } from "@/components/HebrewTransliterationCard";
 import { TranslationResultCard } from "@/components/TranslationResultCard";
@@ -320,19 +321,8 @@ export default function Home() {
         className="mx-auto flex min-w-0 w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-4 pt-3"
         onClick={() => setPopupWord(null)}
       >
-        <header className="mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-4 py-2.5 backdrop-blur-xl">
-          {isIdle ? (
-            <span className="font-heading text-xl font-bold tracking-tight text-white" style={{ opacity: 0.85 }}>
-              StreetVibe
-            </span>
-          ) : (
-            <span
-              className="font-heading text-3xl font-bold tracking-tight text-white drop-shadow-lg"
-              style={{ textShadow: `0 0 20px ${theme.accent}88, 0 2px 4px rgba(0,0,0,0.8)` }}
-            >
-              StreetVibe
-            </span>
-          )}
+        <header className="mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-3 py-2 backdrop-blur-xl">
+          <GraffitiLogo accent={theme.accent} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
         </header>
 
         <StreetVibeNav />

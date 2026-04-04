@@ -8,6 +8,7 @@ import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { AmbientAccentGlows } from "@/components/AmbientAccentGlows";
+import { GraffitiLogo } from "@/components/GraffitiLogo";
 import { Toast } from "@/components/Toast";
 import { HebrewTransliterationCard } from "@/components/HebrewTransliterationCard";
 import { TranslationResultCard } from "@/components/TranslationResultCard";
@@ -354,17 +355,8 @@ export default function SpeakPage() {
         className="mx-auto flex min-w-0 w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-4 pt-3"
         onClick={() => setPopupWord(null)}
       >
-        <header className="mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-4 py-2.5 backdrop-blur-xl">
-          <span
-            className="font-heading font-bold tracking-tight text-white drop-shadow-lg transition-all duration-500"
-            style={{
-              fontSize: isActive ? "1.5rem" : "1.2rem",
-              opacity: isIdle ? 0.85 : 1,
-              textShadow: isActive ? `0 0 20px ${theme.accent}88` : "none",
-            }}
-          >
-            StreetVibe
-          </span>
+        <header className="mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-3 py-2 backdrop-blur-xl">
+          <GraffitiLogo accent={theme.accent} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
         </header>
 
         <StreetVibeNav />
