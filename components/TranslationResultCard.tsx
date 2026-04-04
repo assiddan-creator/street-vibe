@@ -47,7 +47,7 @@ export function TranslationResultCard({
 
   return (
     <div
-      className={`${GLASS_OUTPUT_CARD} h-auto min-h-[min(60vh,420px)] !max-h-none !overflow-visible !p-5 sm:!p-6`}
+      className={`${GLASS_OUTPUT_CARD} box-border h-auto min-h-[min(60vh,420px)] max-w-full min-w-0 !max-h-none !overflow-visible !p-5 sm:!p-6`}
       style={
         {
           ["--scroll-thumb" as string]: `${accent}88`,
@@ -106,15 +106,20 @@ export function TranslationResultCard({
 
       {showTransliterationRow ? (
         <section
-          className="mt-4 min-w-0 overflow-visible rounded-lg border border-white/[0.06] bg-white/[0.03] p-3"
+          className="mt-4 box-border min-w-0 max-w-full overflow-visible rounded-lg border border-white/[0.06] bg-white/[0.03] p-3"
           dir="rtl"
         >
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">
             {labels.readAloud ?? "איך לקרוא"}
           </p>
-          <p className="h-auto min-h-0 w-full min-w-0 whitespace-pre-wrap break-words text-right text-[13px] leading-[1.65] text-white/75 [overflow-wrap:anywhere]">
-            {hebrewTransliteration?.trim()}
-          </p>
+          <div className="min-w-0 max-w-full" dir="rtl">
+            <p
+              dir="rtl"
+              className="block h-auto min-h-0 w-full max-w-full min-w-0 whitespace-normal break-words text-right text-[13px] leading-[1.65] text-white/75 [overflow-wrap:anywhere]"
+            >
+              {hebrewTransliteration?.trim()}
+            </p>
+          </div>
         </section>
       ) : null}
 
