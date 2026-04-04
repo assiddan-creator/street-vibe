@@ -40,7 +40,7 @@ export function TranslationResultCard({
 
   return (
     <div
-      className={`${GLASS_OUTPUT_CARD} box-border h-auto min-h-[min(60vh,420px)] max-w-full min-w-0 !max-h-none !overflow-visible !p-5 sm:!p-6`}
+      className={`${GLASS_OUTPUT_CARD} box-border h-auto min-h-[min(60vh,420px)] max-w-full min-w-0 !max-h-none !overflow-visible !p-5 sm:!p-7`}
       style={
         {
           ["--scroll-thumb" as string]: `${accent}88`,
@@ -54,33 +54,39 @@ export function TranslationResultCard({
         CSS forces overflow-x to compute to auto and clips RTL lines. Transliteration sits outside that scrollport.
       */}
       <div className="output-card-scroll max-h-[min(70vh,560px)] min-h-0 w-full min-w-0 overflow-y-auto overflow-x-visible">
-        <div className="w-full min-w-0 space-y-4">
-          <section className="min-w-0 rounded-lg border border-white/[0.07] bg-black/20 p-3">
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">{labels.source}</p>
+        <div className="w-full min-w-0 space-y-5">
+          <section className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.04] p-4 backdrop-blur-xl">
+            <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.2em] text-white/40">{labels.source}</p>
             <p
-              className={`whitespace-pre-wrap break-words text-[12px] leading-relaxed text-white/85 ${hebrewContext ? "text-right" : ""}`}
+              className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-white/75 ${hebrewContext ? "text-right" : ""}`}
               dir={hebrewContext ? "rtl" : "auto"}
             >
               {originalText.trim() || "—"}
             </p>
           </section>
 
-          <section className="min-w-0 rounded-lg border border-white/[0.12] bg-gradient-to-b from-white/[0.06] to-transparent p-3.5 shadow-inner">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">{labels.translation}</p>
-            <div className="min-h-[2.5rem] min-w-0 text-[15px] font-semibold leading-relaxed">
+          <section
+            className="min-w-0 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4 shadow-none backdrop-blur-xl"
+            style={{ boxShadow: `inset 0 1px 0 0 ${accent}18` }}
+          >
+            <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.2em] text-white/45">{labels.translation}</p>
+            <div className="min-h-[3rem] min-w-0">
               {loading ? (
                 <TranslationBlockSkeleton accent={accent} />
               ) : error ? (
-                <p className="text-[12px] font-normal text-red-400">{error}</p>
+                <p className="text-sm font-normal text-red-400/95">{error}</p>
               ) : translatedText.trim() ? (
-                <p className="min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]" style={{ color: accent }}>
+                <p
+                  className="min-w-0 whitespace-pre-wrap break-words text-2xl font-bold leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-3xl"
+                  style={{ color: accent }}
+                >
                   {onWordClick
                     ? translatedText.split(/(\s+)/).map((token, i) =>
                         token.trim() ? (
                           <span
                             key={i}
                             onClick={(e) => onWordClick(token, e)}
-                            className="cursor-pointer rounded px-0.5 transition-all duration-150 hover:bg-white/10 active:bg-white/20"
+                            className="cursor-pointer rounded-md px-0.5 transition-colors duration-200 hover:bg-white/10 active:bg-white/[0.12]"
                           >
                             {token}
                           </span>
@@ -97,15 +103,14 @@ export function TranslationResultCard({
         </div>
       </div>
 
-      <div className="mt-3 flex min-w-0 flex-wrap items-center justify-center gap-1.5">
+      <div className="mt-4 flex min-w-0 flex-wrap items-center justify-center gap-2">
         {dictionaryPills.map((pill, i) => (
           <span
             key={`${pill}-${i}`}
-            className="whitespace-pre-wrap break-words rounded-full border px-3 py-1 text-[11px] font-medium leading-tight transition-all duration-500"
+            className="whitespace-pre-wrap break-words rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium leading-tight shadow-none backdrop-blur-md transition-all duration-300"
             style={{
-              borderColor: `${accent}55`,
+              borderColor: `${accent}35`,
               color: accent,
-              backgroundColor: `${accent}15`,
             }}
           >
             {pill}

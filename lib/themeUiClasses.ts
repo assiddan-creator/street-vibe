@@ -30,6 +30,6 @@ export const GLASS_INPUT =
 
 /** Scrolls vertically when tall; horizontal overflow visible so RTL / long lines wrap instead of clipping (see `min-w-0` on card + text blocks). */
 export const GLASS_OUTPUT_CARD =
-  "output-card-scroll min-w-0 max-w-full overflow-y-auto overflow-x-visible rounded-xl border border-white/10 bg-black/30 backdrop-blur-md p-2.5 shadow-lg transition-[border-color] duration-500 ease-in-out";
+  "output-card-scroll min-w-0 max-w-full overflow-y-auto overflow-x-visible rounded-2xl border border-white/5 bg-white/5 p-2.5 shadow-none backdrop-blur-2xl transition-[border-color,box-shadow] duration-500 ease-in-out";
 
 export const GLASS_DUO_CARD = "rounded-xl border border-white/10 bg-black/30 backdrop-blur-md p-1.5";

@@ -5,14 +5,12 @@
  * so overflow/flex on the main card cannot clip RTL Hebrew lines.
  */
 export function HebrewTransliterationCard({ text: hebrewTransliteration }: { text: string }) {
-  console.log("Transliteration string:", hebrewTransliteration);
-
   const trimmed = hebrewTransliteration.trim();
   if (!trimmed) return null;
 
   return (
-    <div className="box-border h-auto w-full min-w-0 max-w-full overflow-visible rounded-xl border border-white/10 bg-black/30 p-4 shadow-lg backdrop-blur-md">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">איך לקרוא</p>
+    <div className="box-border h-auto w-full min-w-0 max-w-full overflow-visible rounded-2xl border border-white/5 bg-white/5 p-4 shadow-none backdrop-blur-2xl">
+      <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.2em] text-white/40">איך לקרוא</p>
       <p
         className="block h-auto w-full overflow-visible whitespace-normal break-words text-right"
         style={{

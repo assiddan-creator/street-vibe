@@ -718,13 +718,13 @@ export default function SpeakPage() {
           </div>
 
           {/* FLIP IT */}
-          <div className="flex w-full items-center gap-2">
+          <div className="flex w-full items-center gap-2.5">
             <button
               type="button"
               onClick={() => void handleCopy()}
               aria-label="Copy"
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border bg-black/25 text-white/70 backdrop-blur-md transition-all duration-200 hover:bg-white/10 active:scale-95"
-              style={{ borderColor: `${theme.accent}30` }}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white/75 shadow-none backdrop-blur-xl transition-all duration-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white active:scale-[0.97]"
+              style={{ borderColor: `${theme.accent}35` }}
             >
               <svg className="h-[20px] w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path
@@ -740,11 +740,12 @@ export default function SpeakPage() {
               type="button"
               onClick={handleFlipIt}
               disabled={loading}
-              className="relative flex-1 overflow-hidden rounded-xl py-3 font-bold text-white transition-all duration-300 active:scale-95 disabled:opacity-60"
+              className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3.5 font-bold text-white shadow-none backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
               style={{
                 fontFamily: "'Permanent Marker', cursive",
-                fontSize: "1.1rem",
-                boxShadow: `0 4px 20px ${theme.accent}44`,
+                fontSize: "1.05rem",
+                borderColor: `${theme.accent}30`,
+                boxShadow: `0 0 0 1px ${theme.accent}20, inset 0 1px 0 ${theme.accent}18`,
               }}
             >
               {cityTheme.bg?.wide ? (
@@ -757,7 +758,7 @@ export default function SpeakPage() {
               ) : null}
               <div
                 className="absolute inset-0"
-                style={{ background: `linear-gradient(135deg, ${theme.accent}33 0%, #00000099 100%)` }}
+                style={{ background: `linear-gradient(135deg, ${theme.accent}28 0%, rgba(0,0,0,0.55) 100%)` }}
               />
               <span className="relative z-10 flex w-full justify-center drop-shadow-lg">
                 {loading ? <FlipButtonSkeleton /> : "Flip it 🔥"}
@@ -768,8 +769,8 @@ export default function SpeakPage() {
               type="button"
               onClick={handleClear}
               aria-label="Clear"
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border bg-black/25 text-white/70 backdrop-blur-md transition-all duration-200 hover:bg-white/10 active:scale-95"
-              style={{ borderColor: `${theme.accent}30` }}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white/75 shadow-none backdrop-blur-xl transition-all duration-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white active:scale-[0.97]"
+              style={{ borderColor: `${theme.accent}35` }}
             >
               <svg className="h-[20px] w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path
@@ -788,7 +789,7 @@ export default function SpeakPage() {
               translatedText || loading || error ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
             }`}
           >
-            <div className="flex w-full min-w-0 flex-col gap-3 overflow-visible">
+            <div className="flex w-full min-w-0 flex-col gap-4 overflow-visible">
               <TranslationResultCard
                 accent={theme.accent}
                 originalText={originalText}
@@ -805,12 +806,12 @@ export default function SpeakPage() {
                       type="button"
                       onClick={() => void handlePlay()}
                       disabled={ttsLoading || ttsPlaying}
-                      className="relative w-full overflow-hidden rounded-xl py-2.5 text-sm font-bold transition-all duration-300 active:scale-95 disabled:opacity-50"
+                      className="relative w-full overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3 text-sm font-bold text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.99] disabled:opacity-45"
                       style={{
-                        background: `linear-gradient(135deg, ${theme.accent}44, ${theme.accent}22)`,
-                        border: `1px solid ${theme.accent}55`,
+                        borderColor: `${theme.accent}35`,
                         color: theme.accent,
                         fontFamily: "'Permanent Marker', cursive",
+                        boxShadow: `inset 0 1px 0 ${theme.accent}22`,
                       }}
                     >
                       {ttsLoading ? (
