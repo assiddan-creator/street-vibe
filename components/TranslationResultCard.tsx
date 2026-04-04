@@ -7,7 +7,6 @@ import { GLASS_OUTPUT_CARD } from "@/lib/themeUiClasses";
 export type ResultLabels = {
   source: string;
   translation: string;
-  readAloud?: string;
 };
 
 type TranslationResultCardProps = {
@@ -17,9 +16,7 @@ type TranslationResultCardProps = {
   dictionaryPills: string[];
   loading: boolean;
   error: string | null;
-  /** Shown when non-empty and `showTransliterationRow` is true */
-  hebrewTransliteration: string | null;
-  /** Hebrew UI or Hebrew input — controls layout + labels; third row only if transliteration present */
+  /** Hebrew UI or Hebrew input — controls מקור / תרגום labels and source direction */
   hebrewContext: boolean;
   onWordClick?: (token: string, e: MouseEvent<HTMLElement>) => void;
   /** Extra content after translation block (e.g. TTS on speak page) */
@@ -33,17 +30,13 @@ export function TranslationResultCard({
   dictionaryPills,
   loading,
   error,
-  hebrewTransliteration,
   hebrewContext,
   onWordClick,
   afterTranslation,
 }: TranslationResultCardProps) {
   const labels: ResultLabels = hebrewContext
-    ? { source: "מקור", translation: "תרגום", readAloud: "איך לקרוא" }
+    ? { source: "מקור", translation: "תרגום" }
     : { source: "Original", translation: "Street" };
-
-  const showTransliterationRow =
-    hebrewContext && Boolean(hebrewTransliteration?.trim());
 
   return (
     <div
@@ -103,25 +96,6 @@ export function TranslationResultCard({
           </section>
         </div>
       </div>
-
-      {showTransliterationRow ? (
-        <section
-          className="mt-4 box-border min-w-0 max-w-full overflow-visible rounded-lg border border-white/[0.06] bg-white/[0.03] p-3"
-          dir="rtl"
-        >
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">
-            {labels.readAloud ?? "איך לקרוא"}
-          </p>
-          <div className="min-w-0 max-w-full" dir="rtl">
-            <p
-              dir="rtl"
-              className="block h-auto min-h-0 w-full max-w-full min-w-0 whitespace-normal break-words text-right text-[13px] leading-[1.65] text-white/75 [overflow-wrap:anywhere]"
-            >
-              {hebrewTransliteration?.trim()}
-            </p>
-          </div>
-        </section>
-      ) : null}
 
       <div className="mt-3 flex min-w-0 flex-wrap items-center justify-center gap-1.5">
         {dictionaryPills.map((pill, i) => (

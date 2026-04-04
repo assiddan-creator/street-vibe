@@ -8,6 +8,7 @@ import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { LearnsYouControls } from "@/components/LearnsYouControls";
 import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { Toast } from "@/components/Toast";
+import { HebrewTransliterationCard } from "@/components/HebrewTransliterationCard";
 import { TranslationResultCard } from "@/components/TranslationResultCard";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import {
@@ -762,17 +763,21 @@ export default function Home() {
               translatedText || loading || error ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
             }`}
           >
-            <TranslationResultCard
-              accent={theme.accent}
-              originalText={originalText}
-              translatedText={translatedText}
-              dictionaryPills={dictionaryPills}
-              loading={loading}
-              error={error}
-              hebrewTransliteration={hebrewTransliteration}
-              hebrewContext={hebrewContext}
-              onWordClick={(token, e) => void handleWordClick(token, e)}
-            />
+            <div className="flex w-full min-w-0 flex-col gap-3 overflow-visible">
+              <TranslationResultCard
+                accent={theme.accent}
+                originalText={originalText}
+                translatedText={translatedText}
+                dictionaryPills={dictionaryPills}
+                loading={loading}
+                error={error}
+                hebrewContext={hebrewContext}
+                onWordClick={(token, e) => void handleWordClick(token, e)}
+              />
+              {hebrewContext && hebrewTransliteration?.trim() ? (
+                <HebrewTransliterationCard text={hebrewTransliteration} />
+              ) : null}
+            </div>
           </section>
         </div>
       </div>

@@ -8,6 +8,7 @@ import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { Toast } from "@/components/Toast";
+import { HebrewTransliterationCard } from "@/components/HebrewTransliterationCard";
 import { TranslationResultCard } from "@/components/TranslationResultCard";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { GLASS_INPUT, GLASS_SELECT, GLASS_SELECT_COMPACT } from "@/lib/themeUiClasses";
@@ -787,17 +788,17 @@ export default function SpeakPage() {
               translatedText || loading || error ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
             }`}
           >
-            <TranslationResultCard
-              accent={theme.accent}
-              originalText={originalText}
-              translatedText={translatedText}
-              dictionaryPills={dictionaryPills}
-              loading={loading}
-              error={error}
-              hebrewTransliteration={hebrewTransliteration}
-              hebrewContext={hebrewContext}
-              onWordClick={(token, e) => void handleWordClick(token, e)}
-              afterTranslation={
+            <div className="flex w-full min-w-0 flex-col gap-3 overflow-visible">
+              <TranslationResultCard
+                accent={theme.accent}
+                originalText={originalText}
+                translatedText={translatedText}
+                dictionaryPills={dictionaryPills}
+                loading={loading}
+                error={error}
+                hebrewContext={hebrewContext}
+                onWordClick={(token, e) => void handleWordClick(token, e)}
+                afterTranslation={
                 translatedText.trim() ? (
                   <div className="mt-3 flex flex-col gap-1">
                     <button
@@ -824,7 +825,11 @@ export default function SpeakPage() {
                   </div>
                 ) : null
               }
-            />
+              />
+              {hebrewContext && hebrewTransliteration?.trim() ? (
+                <HebrewTransliterationCard text={hebrewTransliteration} />
+              ) : null}
+            </div>
           </section>
 
           <div className="mt-6 flex flex-col gap-1.5 border-t border-white/5 pt-4">
