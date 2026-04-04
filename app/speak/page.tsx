@@ -783,7 +783,7 @@ export default function SpeakPage() {
 
           {/* כרטיס תרגום */}
           <section
-            className={`shrink-0 overflow-hidden transition-all duration-500 ${
+            className={`min-w-0 shrink-0 overflow-visible transition-all duration-500 ${
               translatedText || loading || error ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
             }`}
           >

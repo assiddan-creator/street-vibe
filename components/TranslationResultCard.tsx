@@ -47,7 +47,7 @@ export function TranslationResultCard({
 
   return (
     <div
-      className={`${GLASS_OUTPUT_CARD} min-h-[min(60vh,420px)] max-h-none overflow-visible !p-5 sm:!p-6`}
+      className={`${GLASS_OUTPUT_CARD} min-h-[min(60vh,420px)] max-h-none !p-5 sm:!p-6`}
       style={
         {
           ["--scroll-thumb" as string]: `${accent}88`,
@@ -56,8 +56,8 @@ export function TranslationResultCard({
         } as CSSProperties
       }
     >
-      <div className="space-y-4">
-        <section className="rounded-lg border border-white/[0.07] bg-black/20 p-3">
+      <div className="min-w-0 space-y-4">
+        <section className="min-w-0 rounded-lg border border-white/[0.07] bg-black/20 p-3">
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">{labels.source}</p>
           <p
             className={`whitespace-pre-wrap break-words text-[12px] leading-relaxed text-white/85 ${hebrewContext ? "text-right" : ""}`}
@@ -67,15 +67,15 @@ export function TranslationResultCard({
           </p>
         </section>
 
-        <section className="rounded-lg border border-white/[0.12] bg-gradient-to-b from-white/[0.06] to-transparent p-3.5 shadow-inner">
+        <section className="min-w-0 rounded-lg border border-white/[0.12] bg-gradient-to-b from-white/[0.06] to-transparent p-3.5 shadow-inner">
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">{labels.translation}</p>
-          <div className="min-h-[2.5rem] text-[15px] font-semibold leading-relaxed">
+          <div className="min-h-[2.5rem] min-w-0 text-[15px] font-semibold leading-relaxed">
             {loading ? (
               <TranslationBlockSkeleton accent={accent} />
             ) : error ? (
               <p className="text-[12px] font-normal text-red-400">{error}</p>
             ) : translatedText.trim() ? (
-              <p className="[overflow-wrap:anywhere]" style={{ color: accent }}>
+              <p className="min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]" style={{ color: accent }}>
                 {onWordClick
                   ? translatedText.split(/(\s+)/).map((token, i) =>
                       token.trim() ? (
@@ -99,20 +99,20 @@ export function TranslationResultCard({
 
         {showTransliterationRow ? (
           <section
-            className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-3"
+            className="min-w-0 overflow-visible rounded-lg border border-white/[0.06] bg-white/[0.03] p-3"
             dir="rtl"
           >
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">
               {labels.readAloud ?? "איך לקרוא"}
             </p>
-            <p className="text-[13px] leading-relaxed text-white/75 [overflow-wrap:anywhere]">
+            <p className="min-w-0 whitespace-normal break-words text-right text-[13px] leading-[1.65] text-white/75 [overflow-wrap:anywhere]">
               {hebrewTransliteration?.trim()}
             </p>
           </section>
         ) : null}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+      <div className="mt-3 flex min-w-0 flex-wrap items-center justify-center gap-1.5">
         {dictionaryPills.map((pill, i) => (
           <span
             key={`${pill}-${i}`}
