@@ -20,6 +20,7 @@ import {
   looksLikeHebrewLetterTransliteration,
   shouldOfferHebrewTransliteration,
 } from "@/lib/transliterationPolicy";
+import { cleanMainTranslationLine } from "@/lib/translationOutputClean";
 import {
   applyPersonaPresetToProfile,
   buildPersonaPresetPromptHints,
@@ -213,7 +214,8 @@ function buildPrompt({
     "<rewritten text>\n" +
     "|||\n" +
     "<dictionary: 1-3 key slang words used, format: Word - Meaning>\n" +
-    "Do not add any other text, explanation, or preamble.";
+    "Before |||: ONLY the sendable line(s) in the target language/script — no English commentary, no gloss-as-message, no \"very direct\" / \"this implies\" notes, no labels, no preamble.\n" +
+    "Do not add any other text, explanation, or preamble outside the dictionary block after |||.";
 
   const formattingRule =
     slangRequested && dialectId === "Spanish Madrid"
@@ -684,7 +686,14 @@ export async function POST(req: NextRequest) {
       fullText = dictSanitized ? `${translated}${DICT_SEPARATOR}${dictSanitized}` : translated;
     }
 
-    const { translated: translatedMain } = splitTranslationAndDictionary(fullText);
+    const splitMain = splitTranslationAndDictionary(fullText);
+    const dictRaw = splitMain.dictRaw;
+    const cleanedMain = cleanMainTranslationLine(splitMain.translated);
+    if (cleanedMain !== splitMain.translated) {
+      fullText = dictRaw ? `${cleanedMain}${DICT_SEPARATOR}${dictRaw}` : cleanedMain;
+    }
+    const translatedMain = cleanedMain;
+
     const sourceLangStr =
       typeof sourceLanguage === "string" ? sourceLanguage : undefined;
     const uiLocaleStr = typeof uiLocale === "string" ? uiLocale : undefined;
