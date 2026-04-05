@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
 import { ANALYTICS_EVENT_NAMES, ANALYTICS_MODE, trackAnalyticsEvent } from "@/lib/analyticsEvents";
 
 const linkBase =
   "rounded-full border border-white/5 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-white/75 backdrop-blur-xl transition-colors duration-300 hover:bg-white/10 hover:text-white/95";
 
-export function StreetVibeNav() {
+type StreetVibeNavProps = {
+  onHistoryClick?: () => void;
+};
+
+export function StreetVibeNav({ onHistoryClick }: StreetVibeNavProps) {
   const pathname = usePathname();
   const isText = pathname === "/" || pathname === "";
   const isSpeak = pathname === "/speak";
@@ -41,6 +46,16 @@ export function StreetVibeNav() {
       >
         Speak Mode
       </Link>
+      {onHistoryClick ? (
+        <button
+          type="button"
+          onClick={onHistoryClick}
+          className="inline-flex h-[2.125rem] w-[2.125rem] shrink-0 items-center justify-center rounded-full border border-white/5 bg-white/5 text-white/75 backdrop-blur-xl transition-colors duration-300 hover:border-white/10 hover:bg-white/10 hover:text-white"
+          aria-label="Translation history"
+        >
+          <MaterialSymbol name="history" className="text-[19px] leading-none" />
+        </button>
+      ) : null}
     </nav>
   );
 }

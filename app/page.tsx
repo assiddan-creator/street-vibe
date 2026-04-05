@@ -4,6 +4,7 @@ import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
 import { FlipButtonSkeleton, PopupWordSkeleton } from "@/components/ui/Skeleton";
+import { HistoryVaultSheet } from "@/components/HistoryVaultSheet";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { LearnsYouControls } from "@/components/LearnsYouControls";
@@ -43,6 +44,12 @@ import {
   recordInteractionSignal,
 } from "@/lib/implicitPreferenceEngine";
 import { themeAccentAlpha } from "@/lib/themeAccent";
+import {
+  appendHistoryVaultEntry,
+  clearHistoryVault,
+  loadHistoryVault,
+  type HistoryVaultEntry,
+} from "@/lib/historyVault";
 import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
@@ -71,9 +78,15 @@ export default function Home() {
   } | null>(null);
   const [popupLoading, setPopupLoading] = useState(false);
   const [ttsGender, setTtsGender] = useState<TtsVoiceGender>("male");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
+  }, []);
+
+  useEffect(() => {
+    setHistoryEntries(loadHistoryVault());
   }, []);
 
   useEffect(() => {
@@ -89,6 +102,29 @@ export default function Home() {
   const notifyCopiedToast = useCallback(() => {
     setToast("Copied! Ready to paste.");
   }, []);
+
+  const openHistory = useCallback(() => {
+    setHistoryEntries(loadHistoryVault());
+    setHistoryOpen(true);
+  }, []);
+
+  const handleClearHistoryVault = useCallback(() => {
+    clearHistoryVault();
+    setHistoryEntries([]);
+  }, []);
+
+  const copySlangFromHistory = useCallback(
+    async (slang: string) => {
+      if (!slang.trim()) return;
+      try {
+        await navigator.clipboard.writeText(slang);
+        notifyCopiedToast();
+      } catch {
+        /* ignore */
+      }
+    },
+    [notifyCopiedToast]
+  );
 
   const selectedInputLang = inputLanguage;
 
@@ -111,6 +147,24 @@ export default function Home() {
   const theme = resolveTheme(outputLang);
   const showPremiumIntensityControls = usesPremiumStreetIntensityControls(outputLang);
   const { setDialect } = useCityTheme();
+
+  const restoreFromHistory = useCallback(
+    (entry: HistoryVaultEntry) => {
+      setHistoryOpen(false);
+      setOutputLang(entry.dialect);
+      setInputLanguage(entry.inputLanguage);
+      setInputText(entry.sourceText);
+      setOriginalText(entry.sourceText);
+      setTranslatedText(entry.translatedSlang);
+      setContext(entry.vibe);
+      setSlangLevel(entry.slangLevel);
+      setNativeTransliteration(entry.nativeTransliteration);
+      setDictionaryPills([]);
+      setError(null);
+      setDialect(entry.dialect);
+    },
+    [setDialect]
+  );
 
   useEffect(() => {
     setDialect(outputLang);
@@ -206,6 +260,19 @@ export default function Home() {
       setTranslatedText(translatedFinal);
       setDictionaryPills(pills);
       setNativeTransliteration(data.nativeTransliteration?.trim() || null);
+
+      if (translatedFinal) {
+        appendHistoryVaultEntry({
+          sourceText: trimmed,
+          translatedSlang: translatedFinal,
+          nativeTransliteration: data.nativeTransliteration?.trim() || null,
+          dialect,
+          vibe: context,
+          slangLevel,
+          inputLanguage: selectedInputLang,
+        });
+        setHistoryEntries(loadHistoryVault());
+      }
     } catch (e) {
       trackAnalyticsEvent({
         name: ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED,
@@ -299,6 +366,15 @@ export default function Home() {
       <AmbientAccentGlows accent={theme.accent} />
       <div className="relative z-10 w-full">
       <Toast message={toast} accent={theme.accent} />
+      <HistoryVaultSheet
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        accent={theme.accent}
+        entries={historyEntries}
+        onClear={handleClearHistoryVault}
+        onCopySlang={copySlangFromHistory}
+        onRestore={restoreFromHistory}
+      />
       {popupWord && (
         <div
           className="fixed z-50 max-w-[260px] rounded-xl border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-md"
@@ -331,7 +407,7 @@ export default function Home() {
           <GraffitiLogo accent={theme.accent} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
         </header>
 
-        <StreetVibeNav />
+        <StreetVibeNav onHistoryClick={openHistory} />
 
         <div className={TOP_STACK_CLASS}>
         <div className="flex flex-col gap-1.5">
