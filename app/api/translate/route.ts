@@ -20,6 +20,7 @@ import {
   looksLikeHebrewLetterTransliteration,
   shouldOfferHebrewTransliteration,
 } from "@/lib/transliterationPolicy";
+import { cleanSpeechForTranslation } from "@/lib/cleanSpeechInput";
 import { cleanMainTranslationLine } from "@/lib/translationOutputClean";
 import {
   applyPersonaPresetToProfile,
@@ -602,6 +603,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const rawInput = String(text).trim();
+  const cleanedForTranslation = cleanSpeechForTranslation(rawInput);
+  const textForTranslation = cleanedForTranslation.length > 0 ? cleanedForTranslation : rawInput;
+
   const profileFromBody = parseOptionalPersonalProfileFromBody(body);
   const personaPresetId = parseOptionalPersonaPresetId(body);
   const effectiveProfile = applyPersonaPresetToProfile(profileFromBody, personaPresetId);
@@ -617,7 +622,7 @@ export async function POST(req: NextRequest) {
     explicitRuleProfile ?? resolveRuleProfile(String(currentLang), intentCategory);
 
   const { prompt, slangRequested } = buildPrompt({
-    text: String(text),
+    text: textForTranslation,
     currentLang: String(currentLang),
     translationMode: translationMode === "slang" ? "slang" : "standard",
     slangLocation: slangLocation as string | undefined,
@@ -731,7 +736,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         fullText,
-        sourceText: String(text),
+        sourceText: rawInput,
         translatedText: translatedMain,
         ...(hebrewTransliteration ? { hebrewTransliteration } : {}),
       },
