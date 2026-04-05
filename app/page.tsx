@@ -644,7 +644,7 @@ export default function Home() {
           {micError ? <p className="mt-1 text-center text-[10px] text-red-400">{micError}</p> : null}
         </div>
 
-        <div className="mx-auto mt-2 flex w-full max-w-[min(100%,390px)] flex-col items-stretch px-3 pb-1 sm:px-4">
+        <div className="mx-auto mt-2 flex w-full max-w-[min(100%,390px)] flex-col items-center px-3 pb-1 sm:px-4">
           <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
         </div>
 
