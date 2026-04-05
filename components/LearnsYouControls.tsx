@@ -59,9 +59,9 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
           idle ? "opacity-[0.92]" : ""
         }`}
       >
-        <div className="flex w-full min-w-0 items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 w-full items-center justify-between gap-3">
+        <div className="flex w-full items-center justify-between">
+          <div className="min-w-0 flex-1 pr-3">
+            <div className="flex items-center gap-3">
               <span className={`${labelClass} shrink-0`}>Learns You</span>
               <button
                 type="button"
@@ -69,19 +69,12 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
                 aria-label="Learns You mode"
                 aria-checked={on}
                 onClick={toggle}
-                className="relative inline-flex h-6 w-11 shrink-0 overflow-hidden rounded-full border transition-colors"
-                style={
-                  on
-                    ? {
-                        borderColor: `${accent}28`,
-                        backgroundColor: `${accent}08`,
-                      }
-                    : { borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(0,0,0,0.2)" }
-                }
+                className="w-11 h-6 bg-white/10 rounded-full relative inline-flex items-center cursor-pointer transition-colors shrink-0"
               >
                 <span
-                  className={`pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 rounded-full bg-white/80 shadow-sm transition-transform duration-200 ease-out ${
-                    on ? "-translate-y-1/2 translate-x-5" : "-translate-y-1/2 translate-x-0"
+                  aria-hidden
+                  className={`pointer-events-none absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${
+                    on ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </button>
@@ -99,10 +92,10 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
             <button
               type="button"
               onClick={onHistoryClick}
-              className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-white/10 bg-transparent px-4 py-1 text-xs font-medium text-white/50 hover:bg-white/[0.04] hover:text-white/60"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-on-surface-variant bg-transparent border border-white/10 rounded-full hover:bg-white/5 transition-colors h-8 shrink-0"
               aria-label="Open translation history"
             >
-              <MaterialSymbol name="history" className="text-[14px] leading-none" />
+              <MaterialSymbol name="history" className="text-[11px] leading-none" />
               History
             </button>
           ) : null}

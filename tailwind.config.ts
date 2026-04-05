@@ -20,6 +20,8 @@ const config: Config = {
         themeGlow: "var(--theme-glow)",
         themeButton: "rgb(var(--theme-button-rgb) / <alpha-value>)",
         themeButtonBorder: "rgb(var(--theme-button-border-rgb) / <alpha-value>)",
+        /** Muted secondary label / utility text (Material “on-surface-variant”) */
+        "on-surface-variant": "rgba(255, 255, 255, 0.55)",
       },
       boxShadow: {
         "glow-theme": "0 0 15px -1px var(--theme-glow)",
