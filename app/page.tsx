@@ -407,7 +407,7 @@ export default function Home() {
           <GraffitiLogo accent={theme.accent} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
         </header>
 
-        <StreetVibeNav onHistoryClick={openHistory} />
+        <StreetVibeNav />
 
         <div className={TOP_STACK_CLASS}>
         <div className="flex flex-col gap-1.5">
@@ -645,7 +645,7 @@ export default function Home() {
         </div>
 
         <div className="mx-auto mt-2 flex w-full max-w-[min(100%,390px)] flex-col items-center px-2 pb-1">
-          <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero />
+          <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
         </div>
 
         <div
