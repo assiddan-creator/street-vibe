@@ -82,9 +82,13 @@ export default function Home() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), 2000);
+    const t = window.setTimeout(() => setToast(null), 2800);
     return () => window.clearTimeout(t);
   }, [toast]);
+
+  const notifyCopiedToast = useCallback(() => {
+    setToast("Copied! Ready to paste.");
+  }, []);
 
   const selectedInputLang = inputLanguage;
 
@@ -229,7 +233,7 @@ export default function Home() {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-      setToast("Copied!");
+      notifyCopiedToast();
     } catch {
       /* ignore */
     }
@@ -770,6 +774,7 @@ export default function Home() {
                 error={error}
                 hebrewContext={hebrewContext}
                 onWordClick={(token, e) => void handleWordClick(token, e)}
+                onAutoCopied={notifyCopiedToast}
               />
               {hebrewContext && hebrewTransliteration?.trim() ? (
                 <HebrewTransliterationCard text={hebrewTransliteration} />

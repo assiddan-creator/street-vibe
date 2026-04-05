@@ -86,9 +86,13 @@ export default function SpeakPage() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), 2000);
+    const t = window.setTimeout(() => setToast(null), 2800);
     return () => window.clearTimeout(t);
   }, [toast]);
+
+  const notifyCopiedToast = useCallback(() => {
+    setToast("Copied! Ready to paste.");
+  }, []);
 
   const onFinalSpeech = useCallback((text: string) => {
     setInputText((prev) => (prev + " " + text).trim());
@@ -228,7 +232,7 @@ export default function SpeakPage() {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-      setToast("Copied!");
+      notifyCopiedToast();
     } catch {
       /* ignore */
     }
@@ -806,6 +810,7 @@ export default function SpeakPage() {
                 error={error}
                 hebrewContext={hebrewContext}
                 onWordClick={(token, e) => void handleWordClick(token, e)}
+                onAutoCopied={notifyCopiedToast}
                 afterTranslation={
                 translatedText.trim() ? (
                   <div className="mt-3 flex flex-col gap-1">
