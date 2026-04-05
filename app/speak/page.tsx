@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
 import { FlipButtonSkeleton, PopupWordSkeleton, TtsPlaySkeleton } from "@/components/ui/Skeleton";
 import { LearnsYouControls } from "@/components/LearnsYouControls";
+import { VoiceCalibration } from "@/components/VoiceCalibration";
+import { VoiceModeToggle } from "@/components/VoiceModeToggle";
 import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { HistoryVaultSheet } from "@/components/HistoryVaultSheet";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
@@ -84,6 +86,8 @@ export default function SpeakPage() {
   const [ttsGender, setTtsGender] = useState<TtsVoiceGender>("male");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
+  /** Bumps `VoiceModeToggle` when a new clone id is stored. */
+  const [voiceRefreshSignal, setVoiceRefreshSignal] = useState(0);
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
@@ -678,8 +682,10 @@ export default function SpeakPage() {
           {micError ? <p className="mt-1 text-center text-[10px] text-red-400">{micError}</p> : null}
         </div>
 
-        <div className="mx-auto mt-2 flex w-full max-w-[min(100%,200px)] flex-col items-center px-3 pb-1 sm:px-4">
+        <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
+          <VoiceModeToggle accent={theme.accent} voiceRefreshSignal={voiceRefreshSignal} />
           <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
+          <VoiceCalibration onCalibrated={() => setVoiceRefreshSignal((n) => n + 1)} />
         </div>
 
         {/* שלב B */}

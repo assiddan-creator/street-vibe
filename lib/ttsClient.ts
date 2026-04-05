@@ -16,6 +16,10 @@ import {
 import { resolveMinimaxEmotionFromVibe } from "@/lib/minimaxTtsEmotion";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
+import {
+  getStoredCustomVoiceId,
+  getUseClonedVoicePreference,
+} from "@/lib/customVoicePreference";
 import { getStoredTtsGender, MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
 
 /** BCP-47 locale for Web Speech API synthesis per output dialect. */
@@ -180,6 +184,8 @@ export async function fetchTtsAudioUrl(
     learnsYouEnabled: learnsYou,
     implicitGuidancePresent,
   });
+  const clonedVoiceId = getUseClonedVoicePreference() ? getStoredCustomVoiceId() : null;
+
   const requestBody = {
     text,
     dialect,
@@ -187,6 +193,7 @@ export async function fetchTtsAudioUrl(
     tuning,
     ttsGender,
     context: vibeKey,
+    ...(clonedVoiceId ? { customVoiceId: clonedVoiceId } : {}),
     ...(implicitExtras?.personalSlangProfile
       ? { personalSlangProfile: implicitExtras.personalSlangProfile }
       : {}),

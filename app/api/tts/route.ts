@@ -60,11 +60,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders });
   }
 
-  const engine = typeof body.engine === "string" && body.engine ? body.engine : "minimax";
-
   const { text, dialect } = body || {};
-  const resolvedEngine =
-    engine === "minimax" && !isPremiumSlang(typeof dialect === "string" ? dialect : "") ? "google" : engine;
 
   if (!text || typeof text !== "string") {
     return NextResponse.json({ error: "Missing text" }, { status: 400, headers: corsHeaders });
@@ -87,6 +83,93 @@ export async function POST(req: NextRequest) {
     const fb = getPreferredVibeFallback(effectiveProfile);
     if (fb) vibeContext = fb;
   }
+
+  const dialectKeyMm = typeof dialect === "string" ? dialect : "";
+
+  const customVoiceId =
+    typeof body.customVoiceId === "string" && body.customVoiceId.trim() !== ""
+      ? body.customVoiceId.trim()
+      : null;
+
+  if (customVoiceId) {
+    const elevenKey = process.env.ELEVENLABS_API_KEY;
+    if (!elevenKey) {
+      return NextResponse.json(
+        { error: "Missing ELEVENLABS_API_KEY" },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    const minimaxText = devRawTts
+      ? text.trim()
+      : shapeTextForMinimaxTts(text, {
+          vibe: vibeContext,
+          dialectId: dialectKeyMm || undefined,
+        });
+
+    let ttsInput = minimaxText;
+    ttsInput = ttsInput.replace(/\bdeadass\b/gi, "deadass,");
+    if (!devRawTts && dialectKeyMm === ARABIC_EGYPTIAN_DIALECT_ID) {
+      ttsInput = normalizeArabicPremiumForSpeech(ttsInput, dialectKeyMm);
+    } else if (!devRawTts && dialectKeyMm === SPANISH_MADRID_DIALECT_ID) {
+      ttsInput = normalizeSpanishMadridForSpeech(ttsInput, dialectKeyMm);
+    }
+
+    const modelId =
+      typeof body.elevenLabsModelId === "string" && body.elevenLabsModelId.trim() !== ""
+        ? body.elevenLabsModelId.trim()
+        : process.env.ELEVENLABS_TTS_MODEL_ID || "eleven_multilingual_v2";
+
+    try {
+      const elRes = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(customVoiceId)}`,
+        {
+          method: "POST",
+          headers: {
+            "xi-api-key": elevenKey,
+            "Content-Type": "application/json",
+            Accept: "audio/mpeg",
+          },
+          body: JSON.stringify({
+            model_id: modelId,
+            text: ttsInput,
+          }),
+        }
+      );
+
+      if (!elRes.ok) {
+        let errBody: string;
+        try {
+          errBody = await elRes.text();
+        } catch {
+          errBody = elRes.statusText;
+        }
+        console.error("[tts][elevenlabs] failed", elRes.status, errBody);
+        return NextResponse.json(
+          { error: "ElevenLabs TTS failed", details: errBody.slice(0, 800) },
+          { status: 502, headers: corsHeaders }
+        );
+      }
+
+      const buf = Buffer.from(await elRes.arrayBuffer());
+      const audioBase64 = buf.toString("base64");
+      return NextResponse.json(
+        { audioBase64, engine: "elevenlabs" },
+        { status: 200, headers: corsHeaders }
+      );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return NextResponse.json(
+        { error: "ElevenLabs TTS request failed", details: msg },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+  }
+
+  const engine = typeof body.engine === "string" && body.engine ? body.engine : "minimax";
+
+  const resolvedEngine =
+    engine === "minimax" && !isPremiumSlang(typeof dialect === "string" ? dialect : "") ? "google" : engine;
 
   if (resolvedEngine === "google") {
     const geminiKey = process.env.GEMINI_API_KEY;
@@ -195,7 +278,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const dialectKeyMm = typeof dialect === "string" ? dialect : "";
   const mmTuning = resolveMinimaxTtsTuning(vibeContext, dialectKeyMm || undefined);
 
   const speed =
