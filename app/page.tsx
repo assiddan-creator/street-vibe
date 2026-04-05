@@ -11,7 +11,7 @@ import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { AmbientAccentGlows } from "@/components/AmbientAccentGlows";
 import { GraffitiLogo } from "@/components/GraffitiLogo";
 import { Toast } from "@/components/Toast";
-import { HebrewTransliterationCard } from "@/components/HebrewTransliterationCard";
+import { NativeTransliterationCard } from "@/components/NativeTransliterationCard";
 import { TranslationResultCard } from "@/components/TranslationResultCard";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import {
@@ -55,7 +55,7 @@ export default function Home() {
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [dictionaryPills, setDictionaryPills] = useState<string[]>([]);
-  const [hebrewTransliteration, setHebrewTransliteration] = useState<string | null>(null);
+  const [nativeTransliteration, setNativeTransliteration] = useState<string | null>(null);
   const [uiLocale, setUiLocale] = useState("en");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +125,7 @@ export default function Home() {
     setOriginalText(trimmed);
     setTranslatedText("");
     setDictionaryPills([]);
-    setHebrewTransliteration(null);
+    setNativeTransliteration(null);
 
     const learnsYouOn = getLearnsYouEnabled();
     const implicitExtras = getImplicitSoftExtrasForRequests(learnsYouOn, false, undefined);
@@ -166,7 +166,7 @@ export default function Home() {
       const data = (await res.json()) as {
         fullText?: string;
         translatedText?: string;
-        hebrewTransliteration?: string;
+        nativeTransliteration?: string;
         error?: string;
       };
       if (!res.ok) {
@@ -205,7 +205,7 @@ export default function Home() {
 
       setTranslatedText(translatedFinal);
       setDictionaryPills(pills);
-      setHebrewTransliteration(data.hebrewTransliteration?.trim() || null);
+      setNativeTransliteration(data.nativeTransliteration?.trim() || null);
     } catch (e) {
       trackAnalyticsEvent({
         name: ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED,
@@ -218,7 +218,7 @@ export default function Home() {
       setError(e instanceof Error ? e.message : "Translation failed");
       setTranslatedText("");
       setDictionaryPills([]);
-      setHebrewTransliteration(null);
+      setNativeTransliteration(null);
     } finally {
       setLoading(false);
     }
@@ -244,7 +244,7 @@ export default function Home() {
     setOriginalText("");
     setTranslatedText("");
     setDictionaryPills([]);
-    setHebrewTransliteration(null);
+    setNativeTransliteration(null);
     setError(null);
   };
 
@@ -776,8 +776,8 @@ export default function Home() {
                 onWordClick={(token, e) => void handleWordClick(token, e)}
                 onAutoCopied={notifyCopiedToast}
               />
-              {hebrewContext && hebrewTransliteration?.trim() ? (
-                <HebrewTransliterationCard text={hebrewTransliteration} />
+              {nativeTransliteration?.trim() ? (
+                <NativeTransliterationCard text={nativeTransliteration} sourceLanguage={selectedInputLang} />
               ) : null}
             </div>
           </section>

@@ -16,9 +16,9 @@ import {
 } from "@/lib/hebrewOutputGuard";
 import { sanitizeRussianStreetDictionary } from "@/lib/russianOutputGuard";
 import {
-  isPrimarilyHebrewScript,
-  looksLikeHebrewLetterTransliteration,
-  shouldOfferHebrewTransliteration,
+  looksLikePlausibleNativeTransliteration,
+  resolveEffectiveSourceLanguageForTransliteration,
+  translationRedundantForReader,
 } from "@/lib/transliterationPolicy";
 import { cleanSpeechForTranslation } from "@/lib/cleanSpeechInput";
 import { cleanMainTranslationLine } from "@/lib/translationOutputClean";
@@ -523,21 +523,38 @@ async function callGeminiGenerate(
   return { text, raw: data };
 }
 
-/** Read-aloud: target language line → Hebrew letters only (separate lightweight generation). */
-async function callGeminiHebrewTransliteration(apiKey: string, translatedLine: string): Promise<string> {
+/**
+ * Read-aloud: translated line → phonetic spelling using the reader language’s usual alphabet
+ * (per `readerLanguageBcp47`), not IPA.
+ */
+async function callGeminiNativeTransliteration(
+  apiKey: string,
+  translatedLine: string,
+  readerLanguageBcp47: string
+): Promise<string> {
   const trimmed = translatedLine.trim();
   if (!trimmed) return "";
 
+  const reader = readerLanguageBcp47.trim() || "en";
+
   const prompt =
-    `You output exactly one thing: a phonetic read-aloud version of the LINE below using Hebrew letters only (א–ת, including final letter forms).\n\n` +
+    `You output exactly one thing: a phonetic read-aloud version of the LINE below.\n\n` +
+    `READER / SOURCE LANGUAGE (BCP-47): ${reader}\n` +
+    `Use the alphabet and informal spelling habits that native readers of this language normally use when writing how something sounds in chat or notes — practical and readable, not IPA and not linguistic analysis.\n` +
+    `Examples of script choice (follow the reader language, not the LINE’s language):\n` +
+    `- Hebrew (he): Hebrew letters א–ת only.\n` +
+    `- English (en): Latin letters; respell sounds in a natural way for English readers.\n` +
+    `- Russian (ru): Cyrillic.\n` +
+    `- Arabic (ar): Arabic script.\n` +
+    `- Japanese (ja): kana/kanji as appropriate for how Japanese readers jot pronunciation.\n` +
+    `- Korean (ko): Hangul.\n` +
+    `- Chinese (zh): characters or pinyin-style Latin only if that is what readers of that locale expect for sound notes — pick one consistent system.\n\n` +
     `CRITICAL — COMPLETENESS:\n` +
-    `- You MUST provide the COMPLETE transliteration for the ENTIRE translated phrase in LINE. Cover every word from start to finish.\n` +
-    `- Do not truncate the sentence, stop halfway, end with "...", or omit the tail of the LINE. If the LINE is long, output the full length in Hebrew letters anyway.\n\n` +
+    `- You MUST give the COMPLETE transliteration for the ENTIRE LINE from first word to last. Do not truncate, stop halfway, end with "...", or omit the tail.\n\n` +
     `Rules:\n` +
-    `- Transcribe how a Hebrew speaker would pronounce the LINE for everyday reading — practical chat style, not IPA, not linguistic analysis.\n` +
-    `- Your entire output must be Hebrew script only. No Latin letters, no English words, no labels, no quotation marks wrapping the answer, no explanations.\n` +
-    `- The LINE may be in any language or writing system; map the sounds to Hebrew letters in a simple, readable way.\n` +
-    `- Do not repeat or translate the meaning; only approximate pronunciation in Hebrew letters.\n\n` +
+    `- Output must use only the writing system(s) appropriate for the READER language above. No English labels, no quotes around the answer, no explanations, no meta.\n` +
+    `- The LINE may be in any target dialect or script; map sounds into the reader’s script only.\n` +
+    `- Do not translate meaning; only approximate pronunciation for the reader language’s script.\n\n` +
     `LINE:\n` +
     trimmed;
 
@@ -717,16 +734,13 @@ export async function POST(req: NextRequest) {
       typeof sourceLanguage === "string" ? sourceLanguage : undefined;
     const uiLocaleStr = typeof uiLocale === "string" ? uiLocale : undefined;
 
-    let hebrewTransliteration: string | undefined;
-    if (
-      shouldOfferHebrewTransliteration(sourceLangStr, uiLocaleStr) &&
-      translatedMain.trim() &&
-      !isPrimarilyHebrewScript(translatedMain)
-    ) {
+    let nativeTransliteration: string | undefined;
+    const readerLang = resolveEffectiveSourceLanguageForTransliteration(sourceLangStr, uiLocaleStr);
+    if (translatedMain.trim() && !translationRedundantForReader(translatedMain, readerLang)) {
       try {
-        const raw = await callGeminiHebrewTransliteration(apiKey, translatedMain);
-        if (raw && looksLikeHebrewLetterTransliteration(raw)) {
-          hebrewTransliteration = raw.trim();
+        const raw = await callGeminiNativeTransliteration(apiKey, translatedMain, readerLang);
+        if (raw && looksLikePlausibleNativeTransliteration(raw, readerLang)) {
+          nativeTransliteration = raw.trim();
         }
       } catch {
         /* omit optional field */
@@ -738,7 +752,7 @@ export async function POST(req: NextRequest) {
         fullText,
         sourceText: rawInput,
         translatedText: translatedMain,
-        ...(hebrewTransliteration ? { hebrewTransliteration } : {}),
+        ...(nativeTransliteration ? { nativeTransliteration } : {}),
       },
       { status: 200, headers: corsHeaders }
     );

@@ -11,7 +11,7 @@ import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { AmbientAccentGlows } from "@/components/AmbientAccentGlows";
 import { GraffitiLogo } from "@/components/GraffitiLogo";
 import { Toast } from "@/components/Toast";
-import { HebrewTransliterationCard } from "@/components/HebrewTransliterationCard";
+import { NativeTransliterationCard } from "@/components/NativeTransliterationCard";
 import { TranslationResultCard } from "@/components/TranslationResultCard";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { SLANG_INTENSITY_SEGMENTS, VIBE_SEGMENTS } from "@/lib/slangSegmentControls";
@@ -52,7 +52,7 @@ export default function SpeakPage() {
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [dictionaryPills, setDictionaryPills] = useState<string[]>([]);
-  const [hebrewTransliteration, setHebrewTransliteration] = useState<string | null>(null);
+  const [nativeTransliteration, setNativeTransliteration] = useState<string | null>(null);
   const [uiLocale, setUiLocale] = useState("en");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +128,7 @@ export default function SpeakPage() {
     setOriginalText(trimmed);
     setTranslatedText("");
     setDictionaryPills([]);
-    setHebrewTransliteration(null);
+    setNativeTransliteration(null);
 
     const learnsYouOn = getLearnsYouEnabled();
     const implicitExtras = getImplicitSoftExtrasForRequests(learnsYouOn, false, undefined);
@@ -168,7 +168,7 @@ export default function SpeakPage() {
       const data = (await res.json()) as {
         fullText?: string;
         translatedText?: string;
-        hebrewTransliteration?: string;
+        nativeTransliteration?: string;
         error?: string;
       };
       if (!res.ok) {
@@ -204,7 +204,7 @@ export default function SpeakPage() {
       const translatedFinal = String(data.translatedText ?? translated).trim();
       setTranslatedText(translatedFinal);
       setDictionaryPills(parseDictionaryPills(dictRaw));
-      setHebrewTransliteration(data.hebrewTransliteration?.trim() || null);
+      setNativeTransliteration(data.nativeTransliteration?.trim() || null);
     } catch (e) {
       trackAnalyticsEvent({
         name: ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED,
@@ -217,7 +217,7 @@ export default function SpeakPage() {
       setError(e instanceof Error ? e.message : "Translation failed");
       setTranslatedText("");
       setDictionaryPills([]);
-      setHebrewTransliteration(null);
+      setNativeTransliteration(null);
     } finally {
       setLoading(false);
     }
@@ -243,7 +243,7 @@ export default function SpeakPage() {
     setOriginalText("");
     setTranslatedText("");
     setDictionaryPills([]);
-    setHebrewTransliteration(null);
+    setNativeTransliteration(null);
     setError(null);
     audioRef.current?.pause();
     audioRef.current = null;
@@ -839,8 +839,8 @@ export default function SpeakPage() {
                 ) : null
               }
               />
-              {hebrewContext && hebrewTransliteration?.trim() ? (
-                <HebrewTransliterationCard text={hebrewTransliteration} />
+              {nativeTransliteration?.trim() ? (
+                <NativeTransliterationCard text={nativeTransliteration} sourceLanguage={inputLanguage} />
               ) : null}
             </div>
           </section>
