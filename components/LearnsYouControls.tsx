@@ -55,14 +55,14 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
   if (belowHero) {
     return (
       <div
-        className={`${wrapClass} rounded-2xl border border-white/[0.07] bg-white/[0.05] px-3 py-2.5 shadow-none backdrop-blur-xl transition-opacity duration-300 ${
+        className={`${wrapClass} overflow-visible rounded-2xl border border-white/[0.07] bg-white/[0.05] px-6 py-2.5 shadow-none backdrop-blur-xl transition-opacity duration-300 sm:px-8 ${
           idle ? "opacity-[0.92]" : ""
         }`}
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex max-w-[11rem] items-center justify-between gap-2">
-              <span className={labelClass}>Learns You</span>
+        <div className="flex w-full min-w-0 items-center justify-between gap-4">
+          <div className="min-w-0 flex-1 overflow-visible pr-1">
+            <div className="flex min-w-0 w-full items-center justify-between gap-3">
+              <span className={`${labelClass} shrink-0`}>Learns You</span>
               <button
                 type="button"
                 role="switch"
@@ -99,10 +99,10 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
             <button
               type="button"
               onClick={onHistoryClick}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-2.5 py-2 text-xs font-medium text-white/55 transition-colors hover:border-white/12 hover:bg-white/[0.07] hover:text-white/75 active:scale-[0.98]"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-transparent px-3 py-1 text-xs font-medium text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white/55"
               aria-label="Open translation history"
             >
-              <MaterialSymbol name="history" className="text-[17px] leading-none opacity-85" />
+              <MaterialSymbol name="history" className="text-[14px] leading-none opacity-80" />
               History
             </button>
           ) : null}
