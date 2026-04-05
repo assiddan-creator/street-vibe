@@ -11,9 +11,13 @@ import type {
   SlangIntensityPreference,
   TonePreference,
 } from "@/lib/personalSlangProfile";
+import {
+  STREETVIBE_LEARNS_YOU_ENABLED_KEY,
+  STREETVIBE_USER_CADENCE_KEY,
+} from "@/lib/streetVibeStorageKeys";
 
-const STORAGE_LEARNS = "streetvibe_learns_you_enabled";
-const STORAGE_SIGNALS = "streetvibe_implicit_signals_v1";
+/** One-time migration from pre–vault key; removed after copy to {@link STREETVIBE_USER_CADENCE_KEY}. */
+const LEGACY_IMPLICIT_SIGNALS_KEY = "streetvibe_implicit_signals_v1";
 const MAX_SIGNALS = 200;
 const MIN_SIGNALS_FOR_FALLBACK = 5;
 
@@ -68,18 +72,28 @@ function isBrowser(): boolean {
 /** Whether the user turned on Learns You (persisted). */
 export function getLearnsYouEnabled(): boolean {
   if (!isBrowser()) return false;
-  return window.localStorage.getItem(STORAGE_LEARNS) === "1";
+  return window.localStorage.getItem(STREETVIBE_LEARNS_YOU_ENABLED_KEY) === "1";
 }
 
 export function setLearnsYouEnabled(enabled: boolean): void {
   if (!isBrowser()) return;
-  window.localStorage.setItem(STORAGE_LEARNS, enabled ? "1" : "0");
+  window.localStorage.setItem(STREETVIBE_LEARNS_YOU_ENABLED_KEY, enabled ? "1" : "0");
+}
+
+function migrateLegacyCadenceIfNeeded(): void {
+  if (!isBrowser()) return;
+  if (window.localStorage.getItem(STREETVIBE_USER_CADENCE_KEY)) return;
+  const legacy = window.localStorage.getItem(LEGACY_IMPLICIT_SIGNALS_KEY);
+  if (!legacy) return;
+  window.localStorage.setItem(STREETVIBE_USER_CADENCE_KEY, legacy);
+  window.localStorage.removeItem(LEGACY_IMPLICIT_SIGNALS_KEY);
 }
 
 export function loadPersistedSignals(): InteractionSignal[] {
   if (!isBrowser()) return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_SIGNALS);
+    migrateLegacyCadenceIfNeeded();
+    const raw = window.localStorage.getItem(STREETVIBE_USER_CADENCE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -91,7 +105,10 @@ export function loadPersistedSignals(): InteractionSignal[] {
 
 function saveSignals(signals: InteractionSignal[]): void {
   if (!isBrowser()) return;
-  window.localStorage.setItem(STORAGE_SIGNALS, JSON.stringify(signals.slice(-MAX_SIGNALS)));
+  window.localStorage.setItem(
+    STREETVIBE_USER_CADENCE_KEY,
+    JSON.stringify(signals.slice(-MAX_SIGNALS))
+  );
 }
 
 function isInteractionSignal(x: unknown): x is InteractionSignal {
@@ -110,7 +127,8 @@ function isInteractionSignal(x: unknown): x is InteractionSignal {
 /** Clears learned signals only; does not change the Learns You toggle. */
 export function clearLearnedPreferenceStorage(): void {
   if (!isBrowser()) return;
-  window.localStorage.removeItem(STORAGE_SIGNALS);
+  window.localStorage.removeItem(STREETVIBE_USER_CADENCE_KEY);
+  window.localStorage.removeItem(LEGACY_IMPLICIT_SIGNALS_KEY);
 }
 
 /**
