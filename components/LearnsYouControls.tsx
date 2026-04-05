@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
 import { ANALYTICS_EVENT_NAMES, trackAnalyticsEvent } from "@/lib/analyticsEvents";
 import {
   clearLearnedPreferenceStorage,
@@ -55,13 +54,13 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
   if (belowHero) {
     return (
       <div
-        className={`${wrapClass} rounded-2xl border border-white/[0.07] bg-white/[0.05] px-6 py-3 shadow-none backdrop-blur-xl transition-opacity duration-300 ${
+        className={`${wrapClass} rounded-2xl border border-white/[0.07] bg-white/[0.05] px-4 py-2 shadow-none backdrop-blur-xl transition-opacity duration-300 sm:px-5 ${
           idle ? "opacity-[0.92]" : ""
         }`}
       >
         <div className="flex w-full items-center justify-between">
-          <div className="min-w-0 flex-1 pr-3">
-            <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1 pr-2">
+            <div className="flex items-center gap-2.5">
               <span className={`${labelClass} shrink-0`}>Learns You</span>
               <button
                 type="button"
@@ -69,12 +68,12 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
                 aria-label="Learns You mode"
                 aria-checked={on}
                 onClick={toggle}
-                className="w-11 h-6 bg-white/10 rounded-full relative inline-flex items-center cursor-pointer transition-colors shrink-0"
+                className="relative h-4 w-8 shrink-0 cursor-pointer rounded-full bg-white/10 transition-colors"
               >
                 <span
                   aria-hidden
-                  className={`pointer-events-none absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${
-                    on ? "translate-x-5" : "translate-x-0"
+                  className={`pointer-events-none absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
+                    on ? "translate-x-4" : "translate-x-0"
                   }`}
                 />
               </button>
@@ -92,11 +91,18 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
             <button
               type="button"
               onClick={onHistoryClick}
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-on-surface-variant bg-transparent border border-white/10 rounded-full hover:bg-white/5 transition-colors h-8 shrink-0"
-              aria-label="Open translation history"
+              className="flex h-7 min-h-0 shrink-0 items-center justify-center rounded-full border border-white/10 bg-transparent px-2.5 py-1 text-on-surface-variant transition-colors hover:bg-white/5"
+              aria-label="History"
+              title="History"
             >
-              <MaterialSymbol name="history" className="text-[11px] leading-none" />
-              History
+              <svg
+                className="h-3.5 w-3.5 text-current opacity-80"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden
+              >
+                <path d="M13 3a9 9 0 00-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0013 21a9 9 0 000-18zm-1 5v5l4.25 2.52.75-1.23-3.5-2.08V8H12z" />
+              </svg>
             </button>
           ) : null}
         </div>
