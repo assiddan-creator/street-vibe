@@ -42,7 +42,7 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
   }, []);
 
   const labelClass = belowHero
-    ? `text-xs font-medium ${idle ? "text-white/40" : "text-white/50"}`
+    ? `text-[9px] font-medium leading-none ${idle ? "text-white/40" : "text-white/50"}`
     : idle
       ? "text-[8px] uppercase tracking-wider text-white/28"
       : "text-[8px] uppercase tracking-wider text-white/36";
@@ -54,13 +54,13 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
   if (belowHero) {
     return (
       <div
-        className={`${wrapClass} rounded-2xl border border-white/[0.07] bg-white/[0.05] px-4 py-2 shadow-none backdrop-blur-xl transition-opacity duration-300 sm:px-5 ${
+        className={`${wrapClass} rounded-lg border border-white/[0.06] bg-white/[0.05] px-2 py-1 shadow-none backdrop-blur-xl transition-opacity duration-300 sm:px-2.5 ${
           idle ? "opacity-[0.92]" : ""
         }`}
       >
         <div className="flex w-full items-center justify-between">
-          <div className="min-w-0 flex-1 pr-2">
-            <div className="flex items-center gap-2.5">
+          <div className="min-w-0 flex-1 pr-1.5">
+            <div className="flex items-center gap-1.5">
               <span className={`${labelClass} shrink-0`}>Learns You</span>
               <button
                 type="button"
@@ -68,12 +68,12 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
                 aria-label="Learns You mode"
                 aria-checked={on}
                 onClick={toggle}
-                className="relative h-4 w-8 shrink-0 cursor-pointer rounded-full bg-white/10 transition-colors"
+                className="relative h-2 w-4 shrink-0 cursor-pointer rounded-full bg-white/10 transition-colors"
               >
                 <span
                   aria-hidden
-                  className={`pointer-events-none absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
-                    on ? "translate-x-4" : "translate-x-0"
+                  className={`pointer-events-none absolute left-0.5 top-px h-1.5 w-1.5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
+                    on ? "translate-x-1.5" : "translate-x-0"
                   }`}
                 />
               </button>
@@ -82,7 +82,7 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
               type="button"
               onClick={reset}
               title="Reset learned preferences"
-              className="mt-1 text-left text-[10px] text-white/35 transition-colors hover:text-white/50"
+              className="mt-0.5 text-left text-[8px] leading-none text-white/35 transition-colors hover:text-white/50"
             >
               Reset
             </button>
@@ -91,12 +91,12 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
             <button
               type="button"
               onClick={onHistoryClick}
-              className="flex h-7 min-h-0 shrink-0 items-center justify-center rounded-full border border-white/10 bg-transparent px-2.5 py-1 text-on-surface-variant transition-colors hover:bg-white/5"
+              className="flex h-3.5 min-h-0 shrink-0 items-center justify-center rounded-full border border-white/10 bg-transparent px-1.5 py-0.5 text-on-surface-variant transition-colors hover:bg-white/5"
               aria-label="History"
               title="History"
             >
               <svg
-                className="h-3.5 w-3.5 text-current opacity-80"
+                className="h-2 w-2 text-current opacity-80"
                 viewBox="0 0 24 24"
                 fill="currentColor"
                 aria-hidden
@@ -112,7 +112,7 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
 
   return (
     <div className={wrapClass}>
-      <div className="flex w-full max-w-[8.25rem] items-center justify-between gap-2">
+      <div className="flex w-full max-w-[4.125rem] items-center justify-between gap-1">
         <span className={labelClass}>Learns You</span>
         <button
           type="button"
@@ -120,7 +120,7 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
           aria-label="Learns You mode"
           aria-checked={on}
           onClick={toggle}
-          className="relative h-4 w-8 shrink-0 rounded-full border transition-colors"
+          className="relative h-2 w-4 shrink-0 rounded-full border transition-colors"
           style={
             on
               ? {
@@ -131,8 +131,8 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
           }
         >
           <span
-            className={`absolute top-px h-3 w-3 rounded-full bg-white/75 transition-transform ${
-              on ? "translate-x-[17px]" : "translate-x-0.5"
+            className={`absolute top-px h-1.5 w-1.5 rounded-full bg-white/75 transition-transform ${
+              on ? "translate-x-1.5" : "translate-x-0.5"
             }`}
           />
         </button>
@@ -141,7 +141,7 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
         type="button"
         onClick={reset}
         title="Reset learned preferences"
-        className="max-w-[8.25rem] text-center text-[8px] text-white/25 hover:text-white/40"
+        className="max-w-[4.125rem] text-center text-[8px] text-white/25 hover:text-white/40"
       >
         Reset
       </button>
