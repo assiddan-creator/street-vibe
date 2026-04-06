@@ -1,41 +1,63 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { setStoredCustomVoiceId } from "@/lib/customVoicePreference";
+import { setStoredVoiceReferenceAudioBase64 } from "@/lib/customVoicePreference";
 
-/** ~60s at moderate pace — user can stop early after ~45s if needed. */
-export const VOICE_CALIBRATION_SCRIPT = `Take your time and read this out loud in a natural voice, as if you were leaving a voice note to a friend. Keep a steady rhythm for about one minute.
+const MAX_RECORD_MS = 3000;
 
-I'm calibrating Street Vibe so the app can match how I actually sound. This is a neutral sample: some days I'm low‑energy, some days I'm animated, but it's still me. I mix casual phrasing with clear sentences. I might pause, breathe, or rephrase — that's normal speech, not a script.
-
-I'll describe a simple scene so the tone stays varied. Imagine walking through your neighborhood at dusk: shop lights, traffic hum, someone laughing in the distance. You're not performing for a crowd; you're just talking. If you stumble on a word, keep going. Consistency matters more than perfection.
-
-When you're done reading, stop the recording. Thank you — that sample helps the voice model learn your cadence, not just your accent.`;
+/** Short emotional prompt — model needs ~2–3s for zero-shot cloning. */
+export const VOICE_CALIBRATION_SCRIPT = `Record about three seconds in the emotional tone you want Street Vibe to copy — hyped, soft, deadpan, or warm. Stay close to the mic, one clear voice, minimal background noise. Say anything that feels natural; how it sounds matters more than the words.`;
 
 type Props = {
-  /** Called after clone succeeds and id is stored in localStorage. */
-  onCalibrated?: (voiceId: string) => void;
+  /** Fires after the clip is saved to localStorage (base64). */
+  onCalibrated?: () => void;
   className?: string;
 };
 
-type Phase = "idle" | "recording" | "uploading" | "done" | "error";
+type Phase = "idle" | "recording" | "saving" | "done" | "error";
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => {
+      const s = r.result;
+      if (typeof s !== "string") {
+        reject(new Error("Could not read audio"));
+        return;
+      }
+      const comma = s.indexOf(",");
+      resolve(comma >= 0 ? s.slice(comma + 1) : s);
+    };
+    r.onerror = () => reject(new Error("Read failed"));
+    r.readAsDataURL(blob);
+  });
+}
 
 export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [voiceId, setVoiceId] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef(0);
+  const stoppedRef = useRef(false);
 
   const stopTick = useCallback(() => {
     if (tickRef.current) {
       clearInterval(tickRef.current);
       tickRef.current = null;
+    }
+  }, []);
+
+  const clearAutoStop = useCallback(() => {
+    if (autoStopRef.current) {
+      clearTimeout(autoStopRef.current);
+      autoStopRef.current = null;
     }
   }, []);
 
@@ -47,18 +69,15 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
   useEffect(() => {
     return () => {
       stopTick();
+      clearAutoStop();
       cleanupStream();
       mediaRecorderRef.current?.stop();
     };
-  }, [cleanupStream, stopTick]);
+  }, [cleanupStream, clearAutoStop, stopTick]);
 
   const pickMime = (): string | undefined => {
     if (typeof MediaRecorder === "undefined") return undefined;
-    const candidates = [
-      "audio/webm;codecs=opus",
-      "audio/webm",
-      "audio/mp4",
-    ];
+    const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
     for (const c of candidates) {
       if (MediaRecorder.isTypeSupported(c)) return c;
     }
@@ -67,7 +86,8 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
 
   const startRecording = async () => {
     setError(null);
-    setVoiceId(null);
+    setSaved(false);
+    stoppedRef.current = false;
     chunksRef.current = [];
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -86,14 +106,19 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
         cleanupStream();
       };
 
-      rec.start(250);
+      rec.start(100);
       setPhase("recording");
       startTimeRef.current = Date.now();
       setElapsedMs(0);
       stopTick();
       tickRef.current = setInterval(() => {
         setElapsedMs(Date.now() - startTimeRef.current);
-      }, 200);
+      }, 100);
+
+      clearAutoStop();
+      autoStopRef.current = setTimeout(() => {
+        stopRecording();
+      }, MAX_RECORD_MS);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Microphone access denied");
       setPhase("error");
@@ -101,10 +126,22 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
   };
 
   const stopRecording = () => {
+    if (stoppedRef.current) return;
     const rec = mediaRecorderRef.current;
     if (!rec || rec.state === "inactive") return;
 
+    stoppedRef.current = true;
+    clearAutoStop();
     stopTick();
+
+    const durationMs = Date.now() - startTimeRef.current;
+    if (durationMs < 400) {
+      cleanupStream();
+      mediaRecorderRef.current = null;
+      setError("Too short — hold a few seconds with clear emotion.");
+      setPhase("error");
+      return;
+    }
 
     rec.onstop = () => {
       cleanupStream();
@@ -113,94 +150,74 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
       const blob = new Blob(chunksRef.current, { type: mime });
       chunksRef.current = [];
 
-      if (blob.size < 8000) {
-        setError("Recording too short — speak for at least a few seconds.");
+      if (blob.size < 400) {
+        setError("Clip too small — try again with a louder take.");
         setPhase("error");
         return;
       }
 
-      void uploadBlob(blob);
+      void saveLocal(blob);
     };
 
     rec.stop();
     setPhase("idle");
   };
 
-  const uploadBlob = async (blob: Blob) => {
-    setPhase("uploading");
+  const saveLocal = async (blob: Blob) => {
+    setPhase("saving");
     setError(null);
     try {
-      const fd = new FormData();
-      const ext = blob.type.includes("webm")
-        ? "webm"
-        : blob.type.includes("mp4")
-          ? "m4a"
-          : blob.type.includes("ogg")
-            ? "ogg"
-            : "webm";
-      fd.append("file", blob, `calibration.${ext}`);
-      fd.append("name", `streetvibe-user-${Date.now()}`);
-
-      const res = await fetch("/api/voice/clone", { method: "POST", body: fd });
-      const data = (await res.json()) as { voice_id?: string; error?: string; details?: string };
-
-      if (!res.ok || !data.voice_id) {
-        const msg = data.error || data.details || "Clone failed";
-        throw new Error(typeof msg === "string" ? msg : "Clone failed");
-      }
-
-      setStoredCustomVoiceId(data.voice_id);
-      setVoiceId(data.voice_id);
+      const b64 = await blobToBase64(blob);
+      setStoredVoiceReferenceAudioBase64(b64);
+      setSaved(true);
       setPhase("done");
-      onCalibrated?.(data.voice_id);
+      onCalibrated?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
+      setError(e instanceof Error ? e.message : "Could not save clip");
       setPhase("error");
     }
   };
 
   const fmtTime = (ms: number) => {
-    const s = Math.floor(ms / 1000);
-    const m = Math.floor(s / 60);
-    const r = s % 60;
-    return `${m}:${r.toString().padStart(2, "0")}`;
+    const s = Math.min(ms / 1000, MAX_RECORD_MS / 1000);
+    return `${s.toFixed(1)}s`;
   };
 
   return (
     <div className={`flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left ${className}`}>
       <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">Voice calibration</p>
-      <p className="max-h-32 overflow-y-auto text-[11px] leading-relaxed text-white/70">{VOICE_CALIBRATION_SCRIPT}</p>
+      <p className="max-h-28 overflow-y-auto text-[11px] leading-relaxed text-white/70">{VOICE_CALIBRATION_SCRIPT}</p>
 
       <div className="flex flex-wrap items-center gap-2">
-        {phase !== "recording" && phase !== "uploading" ? (
+        {phase !== "recording" && phase !== "saving" ? (
           <button
             type="button"
             onClick={() => void startRecording()}
             className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-medium text-white/90 transition hover:bg-white/15"
           >
-            {voiceId ? "Record again" : "Start recording"}
+            {saved ? "Record again" : "Start recording"}
           </button>
         ) : null}
 
         {phase === "recording" ? (
           <>
-            <span className="font-mono text-[11px] text-emerald-400/90">{fmtTime(elapsedMs)}</span>
+            <span className="font-mono text-[11px] text-emerald-400/90">
+              {fmtTime(elapsedMs)} / {(MAX_RECORD_MS / 1000).toFixed(0)}s
+            </span>
             <button
               type="button"
               onClick={stopRecording}
               className="rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1.5 text-[11px] font-medium text-red-200 transition hover:bg-red-500/25"
             >
-              Stop & upload
+              Stop
             </button>
           </>
         ) : null}
 
-        {phase === "uploading" ? (
-          <span className="text-[11px] text-white/50">Uploading sample…</span>
-        ) : null}
+        {phase === "saving" ? <span className="text-[11px] text-white/50">Saving…</span> : null}
 
-        {phase === "done" && voiceId ? (
-          <span className="text-[11px] text-emerald-400/90">Saved — your cloned voice is ready.</span>
+        {phase === "done" && saved ? (
+          <span className="text-[11px] text-emerald-400/90">Saved locally — use “My voice” to hear it in TTS.</span>
         ) : null}
       </div>
 

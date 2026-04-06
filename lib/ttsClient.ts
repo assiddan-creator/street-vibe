@@ -17,7 +17,7 @@ import { resolveMinimaxEmotionFromVibe } from "@/lib/minimaxTtsEmotion";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 import {
-  getStoredCustomVoiceId,
+  getStoredVoiceReferenceAudioBase64,
   getUseClonedVoicePreference,
 } from "@/lib/customVoicePreference";
 import { getStoredTtsGender, MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
@@ -184,7 +184,8 @@ export async function fetchTtsAudioUrl(
     learnsYouEnabled: learnsYou,
     implicitGuidancePresent,
   });
-  const clonedVoiceId = getUseClonedVoicePreference() ? getStoredCustomVoiceId() : null;
+  const referenceAudioBase64 =
+    getUseClonedVoicePreference() ? getStoredVoiceReferenceAudioBase64() : null;
 
   const requestBody = {
     text,
@@ -193,7 +194,6 @@ export async function fetchTtsAudioUrl(
     tuning,
     ttsGender,
     context: vibeKey,
-    ...(clonedVoiceId ? { customVoiceId: clonedVoiceId } : {}),
     ...(implicitExtras?.personalSlangProfile
       ? { personalSlangProfile: implicitExtras.personalSlangProfile }
       : {}),
@@ -274,6 +274,46 @@ export async function fetchTtsAudioUrl(
   }
 
   try {
+    if (referenceAudioBase64) {
+      try {
+        const mistralRes = await fetch("/api/tts-mistral", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...requestBody,
+            referenceAudioBase64,
+          }),
+        });
+        const mistralData = (await mistralRes.json()) as {
+          audioBase64?: string;
+          engine?: string;
+          error?: string;
+        };
+        if (mistralRes.ok && mistralData.audioBase64) {
+          console.info("[TTS]", "TTS request completed (Mistral Voxtral)", {
+            reportedEngine: mistralData.engine ?? "mistral-voxtral",
+          });
+          trackAnalyticsEvent({
+            name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,
+            ...ANALYTICS_TTS_EVENT_MODE,
+            effectiveEngine,
+            dialect,
+            usedFallbackNative: false,
+            ...analyticsDurationFieldsFromStart(ttsPerfStart),
+          });
+          return `data:audio/mp3;base64,${mistralData.audioBase64}`;
+        }
+        console.warn("[TTS]", "Mistral Voxtral did not return inline audio; falling back", {
+          ok: mistralRes.ok,
+          error: mistralData.error,
+        });
+      } catch (mistralErr) {
+        console.warn("[TTS]", "Mistral Voxtral request failed; falling back to standard TTS", {
+          error: mistralErr instanceof Error ? mistralErr.message : String(mistralErr),
+        });
+      }
+    }
+
     const startRes = await fetch("/api/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

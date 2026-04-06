@@ -1,21 +1,21 @@
-/** ElevenLabs IVC voice id returned from `/api/voice/clone`. */
-export const STREETVIBE_CUSTOM_VOICE_ID_KEY = "STREETVIBE_CUSTOM_VOICE_ID";
+/** Base64 (no `data:` prefix) of the user's ~3s reference clip for Mistral Voxtral zero-shot TTS. */
+export const STREETVIBE_VOICE_REFERENCE_AUDIO_B64_KEY = "STREETVIBE_VOICE_REFERENCE_AUDIO_B64";
 
-/** When `"1"`, TTS requests include `customVoiceId` when a voice id is stored. */
+/** When `"1"`, TTS uses `/api/tts-mistral` when a reference clip is stored. */
 export const STREETVIBE_USE_CLONED_VOICE_KEY = "STREETVIBE_USE_CLONED_VOICE";
 
-export function getStoredCustomVoiceId(): string | null {
+export function getStoredVoiceReferenceAudioBase64(): string | null {
   if (typeof window === "undefined") return null;
-  const v = localStorage.getItem(STREETVIBE_CUSTOM_VOICE_ID_KEY);
+  const v = localStorage.getItem(STREETVIBE_VOICE_REFERENCE_AUDIO_B64_KEY);
   return v && v.trim() !== "" ? v.trim() : null;
 }
 
-export function setStoredCustomVoiceId(voiceId: string): void {
-  localStorage.setItem(STREETVIBE_CUSTOM_VOICE_ID_KEY, voiceId.trim());
+export function setStoredVoiceReferenceAudioBase64(base64: string): void {
+  localStorage.setItem(STREETVIBE_VOICE_REFERENCE_AUDIO_B64_KEY, base64.trim());
 }
 
-export function clearStoredCustomVoiceId(): void {
-  localStorage.removeItem(STREETVIBE_CUSTOM_VOICE_ID_KEY);
+export function clearStoredVoiceReferenceAudio(): void {
+  localStorage.removeItem(STREETVIBE_VOICE_REFERENCE_AUDIO_B64_KEY);
 }
 
 export function getUseClonedVoicePreference(): boolean {

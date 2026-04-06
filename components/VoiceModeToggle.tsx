@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  getStoredCustomVoiceId,
+  getStoredVoiceReferenceAudioBase64,
   getUseClonedVoicePreference,
   setUseClonedVoicePreference,
 } from "@/lib/customVoicePreference";
@@ -16,11 +16,11 @@ type Props = {
 
 export function VoiceModeToggle({ accent, voiceRefreshSignal = 0, className = "" }: Props) {
   const [useCloned, setUseCloned] = useState(false);
-  const [hasVoiceId, setHasVoiceId] = useState(false);
+  const [hasReference, setHasReference] = useState(false);
 
   const refresh = useCallback(() => {
     setUseCloned(getUseClonedVoicePreference());
-    setHasVoiceId(Boolean(getStoredCustomVoiceId()));
+    setHasReference(Boolean(getStoredVoiceReferenceAudioBase64()));
   }, []);
 
   useEffect(() => {
@@ -77,8 +77,8 @@ export function VoiceModeToggle({ accent, voiceRefreshSignal = 0, className = ""
           My voice
         </button>
       </div>
-      {useCloned && !hasVoiceId ? (
-        <p className="text-[8px] leading-snug text-amber-400/80">Record a sample below to enable cloning.</p>
+      {useCloned && !hasReference ? (
+        <p className="text-[8px] leading-snug text-amber-400/80">Record a ~3s clip below to enable cloning.</p>
       ) : null}
     </div>
   );
