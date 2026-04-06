@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:voices": "node scripts/generate-voice-tests.mjs"
   },
   "dependencies": {
     "@mistralai/mistralai": "^2.1.2",
