@@ -55,14 +55,16 @@ export async function POST(req: NextRequest) {
   }
 
   const refRaw =
-    typeof body.referenceAudioBase64 === "string"
-      ? body.referenceAudioBase64
-      : typeof body.refAudio === "string"
-        ? body.refAudio
-        : null;
+    typeof body.referenceAudio === "string"
+      ? body.referenceAudio
+      : typeof body.referenceAudioBase64 === "string"
+        ? body.referenceAudioBase64
+        : typeof body.refAudio === "string"
+          ? body.refAudio
+          : null;
   if (!refRaw || refRaw.trim() === "") {
     return NextResponse.json(
-      { error: "Missing referenceAudioBase64 (or refAudio)" },
+      { error: "Missing referenceAudio (3s voice prompt, base64)" },
       { status: 400, headers: corsHeaders }
     );
   }
@@ -103,6 +105,7 @@ export async function POST(req: NextRequest) {
 
   const client = new Mistral({ apiKey });
 
+  /** Non-streaming: full MP3 as base64 in JSON (`audioData`), per Mistral speech.complete API. */
   try {
     const response = await client.audio.speech.complete({
       model: VOXTRAL_MODEL,

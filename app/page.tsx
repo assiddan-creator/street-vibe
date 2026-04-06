@@ -1,13 +1,15 @@
 "use client";
 
 import type { CSSProperties, MouseEvent } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
-import { FlipButtonSkeleton, PopupWordSkeleton } from "@/components/ui/Skeleton";
+import { FlipButtonSkeleton, PopupWordSkeleton, TtsPlaySkeleton } from "@/components/ui/Skeleton";
 import { HistoryVaultSheet } from "@/components/HistoryVaultSheet";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { LearnsYouControls } from "@/components/LearnsYouControls";
+import { VoiceCalibrationMistral } from "@/components/VoiceCalibrationMistral";
+import { VoiceModeToggle } from "@/components/VoiceModeToggle";
 import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { AmbientAccentGlows } from "@/components/AmbientAccentGlows";
 import { GraffitiLogo } from "@/components/GraffitiLogo";
@@ -53,6 +55,7 @@ import {
 import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
+import { fetchTtsAudioUrl } from "@/lib/ttsClient";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
 export default function Home() {
@@ -78,6 +81,13 @@ export default function Home() {
   } | null>(null);
   const [popupLoading, setPopupLoading] = useState(false);
   const [ttsGender, setTtsGender] = useState<TtsVoiceGender>("male");
+  const [ttsEngine, setTtsEngine] = useState<"minimax" | "google" | "native">("minimax");
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const [ttsPlaying, setTtsPlaying] = useState(false);
+  const [ttsError, setTtsError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsPlayAttemptForCurrentTranslationRef = useRef(0);
+  const [voiceRefreshSignal, setVoiceRefreshSignal] = useState(0);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
 
@@ -151,6 +161,10 @@ export default function Home() {
   const restoreFromHistory = useCallback(
     (entry: HistoryVaultEntry) => {
       setHistoryOpen(false);
+      audioRef.current?.pause();
+      audioRef.current = null;
+      setTtsPlaying(false);
+      setTtsError(null);
       setOutputLang(entry.dialect);
       setInputLanguage(entry.inputLanguage);
       setInputText(entry.sourceText);
@@ -169,6 +183,10 @@ export default function Home() {
   useEffect(() => {
     setDialect(outputLang);
   }, [outputLang, setDialect]);
+
+  useEffect(() => {
+    ttsPlayAttemptForCurrentTranslationRef.current = 0;
+  }, [translatedText]);
 
   const translateText = async (text: string, dialect: string) => {
     const trimmed = text.trim();
@@ -313,6 +331,45 @@ export default function Home() {
     setDictionaryPills([]);
     setNativeTransliteration(null);
     setError(null);
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setTtsPlaying(false);
+    setTtsError(null);
+  };
+
+  const handlePlayTranslation = async () => {
+    const text = translatedText.trim();
+    if (!text) return;
+    ttsPlayAttemptForCurrentTranslationRef.current += 1;
+    if (ttsPlayAttemptForCurrentTranslationRef.current > 1) {
+      trackAnalyticsEvent({
+        name: ANALYTICS_EVENT_NAMES.TTS_REPLAYED,
+        mode: ANALYTICS_MODE.TEXT,
+        dialect: outputLang,
+        requestedEngine: ttsEngine,
+      });
+    }
+    setTtsLoading(true);
+    setTtsError(null);
+    try {
+      if (ttsEngine === "native") setTtsPlaying(true);
+      const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
+      const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context, implicitExtras);
+      if (url === null) {
+        setTtsPlaying(false);
+        return;
+      }
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setTtsPlaying(true);
+      audio.onended = () => setTtsPlaying(false);
+      void audio.play();
+    } catch (e) {
+      setTtsError(e instanceof Error ? e.message : "Playback failed");
+      setTtsPlaying(false);
+    } finally {
+      setTtsLoading(false);
+    }
   };
 
   const handleWordClick = async (word: string, e: MouseEvent<HTMLElement>) => {
@@ -644,8 +701,10 @@ export default function Home() {
           {micError ? <p className="mt-1 text-center text-[10px] text-red-400">{micError}</p> : null}
         </div>
 
-        <div className="mx-auto mt-2 flex w-full max-w-[min(100%,200px)] flex-col items-center px-3 pb-1 sm:px-4">
+        <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
+          <VoiceModeToggle accent={theme.accent} voiceRefreshSignal={voiceRefreshSignal} />
           <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
+          <VoiceCalibrationMistral onVoicePromptSaved={() => setVoiceRefreshSignal((n) => n + 1)} />
         </div>
 
         <div
@@ -851,10 +910,57 @@ export default function Home() {
                 hebrewContext={hebrewContext}
                 onWordClick={(token, e) => void handleWordClick(token, e)}
                 onAutoCopied={notifyCopiedToast}
+                afterTranslation={
+                  translatedText.trim() ? (
+                    <div className="mt-3 flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => void handlePlayTranslation()}
+                        disabled={ttsLoading || ttsPlaying}
+                        className="relative w-full overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3 text-sm font-bold text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.99] disabled:opacity-45"
+                        style={{
+                          borderColor: `${theme.accent}35`,
+                          color: theme.accent,
+                          fontFamily: "'Permanent Marker', cursive",
+                          boxShadow: `inset 0 1px 0 ${theme.accent}22`,
+                        }}
+                      >
+                        {ttsLoading ? (
+                          <TtsPlaySkeleton />
+                        ) : ttsPlaying ? (
+                          "🔊 Playing..."
+                        ) : (
+                          "▶ Read aloud (Street Voice)"
+                        )}
+                      </button>
+                      {ttsError ? <p className="text-center text-[10px] text-red-400">{ttsError}</p> : null}
+                    </div>
+                  ) : null
+                }
               />
               {nativeTransliteration?.trim() ? (
                 <NativeTransliterationCard text={nativeTransliteration} sourceLanguage={selectedInputLang} />
               ) : null}
+              <div className="mt-2 flex flex-col gap-1.5 border-t border-white/5 pt-3">
+                <p className="text-center text-[8px] uppercase tracking-widest text-white/20">⚙️ Voice engine</p>
+                <div style={{ "--accent": theme.accent } as CSSProperties}>
+                  <select
+                    value={ttsEngine}
+                    onChange={(e) => setTtsEngine(e.target.value as "minimax" | "google" | "native")}
+                    className="w-full rounded-none border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/30 outline-none"
+                  >
+                    <option value="minimax" className="bg-zinc-900 text-white">
+                      MiniMax (Replicate)
+                    </option>
+                    <option value="google" className="bg-zinc-900 text-white">
+                      Google Cloud
+                    </option>
+                    <option value="native" className="bg-zinc-900 text-white">
+                      Native Browser
+                    </option>
+                  </select>
+                </div>
+              </div>
             </div>
           </section>
         </div>

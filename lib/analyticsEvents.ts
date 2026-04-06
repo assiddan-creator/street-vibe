@@ -317,7 +317,7 @@ export type AnalyticsEventPayload =
     }
   | {
       name: typeof ANALYTICS_EVENT_NAMES.TTS_REPLAYED;
-      mode: typeof ANALYTICS_MODE.SPEAK;
+      mode: StreetVibeMode;
       dialect: string;
       requestedEngine: AnalyticsTtsEngine;
     }

@@ -1,16 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { setStoredVoiceReferenceAudioBase64 } from "@/lib/customVoicePreference";
+import {
+  getStoredVoiceReferenceAudioBase64,
+  setStoredVoiceReferenceAudioBase64,
+} from "@/lib/customVoicePreference";
 
-const MAX_RECORD_MS = 3000;
+/** Exactly 3.0s capture window (Mistral zero-shot voice prompt). */
+const VOICE_PROMPT_MS = 3000;
 
-/** Short emotional prompt — model needs ~2–3s for zero-shot cloning. */
-export const VOICE_CALIBRATION_SCRIPT = `Record about three seconds in the emotional tone you want Street Vibe to copy — hyped, soft, deadpan, or warm. Stay close to the mic, one clear voice, minimal background noise. Say anything that feels natural; how it sounds matters more than the words.`;
+/** Instruction copy aligned with Mistral Voxtral docs (2–3s emotional reference). */
+export const VOICE_CALIBRATION_MISTRAL_SCRIPT = `Record exactly three seconds of emotional speech — this clip becomes your voice prompt for zero-shot cloning. Pick a tone you want translations to sound like: hype, soft, tired, playful, or serious. One voice, minimal background noise, speak clearly into the mic.`;
 
 type Props = {
-  /** Fires after the clip is saved to localStorage (base64). */
-  onCalibrated?: () => void;
+  onVoicePromptSaved?: () => void;
   className?: string;
 };
 
@@ -33,11 +36,12 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
+export function VoiceCalibrationMistral({ onVoicePromptSaved, className = "" }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [referenceBase64, setReferenceBase64] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -46,6 +50,14 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
   const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef(0);
   const stoppedRef = useRef(false);
+
+  useEffect(() => {
+    const existing = getStoredVoiceReferenceAudioBase64();
+    if (existing) {
+      setReferenceBase64(existing);
+      setSaved(true);
+    }
+  }, []);
 
   const stopTick = useCallback(() => {
     if (tickRef.current) {
@@ -87,6 +99,7 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
   const startRecording = async () => {
     setError(null);
     setSaved(false);
+    setReferenceBase64(null);
     stoppedRef.current = false;
     chunksRef.current = [];
     try {
@@ -118,7 +131,7 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
       clearAutoStop();
       autoStopRef.current = setTimeout(() => {
         stopRecording();
-      }, MAX_RECORD_MS);
+      }, VOICE_PROMPT_MS);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Microphone access denied");
       setPhase("error");
@@ -135,10 +148,10 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
     stopTick();
 
     const durationMs = Date.now() - startTimeRef.current;
-    if (durationMs < 400) {
+    if (durationMs < 500) {
       cleanupStream();
       mediaRecorderRef.current = null;
-      setError("Too short — hold a few seconds with clear emotion.");
+      setError("Too short — keep recording toward the 3s mark.");
       setPhase("error");
       return;
     }
@@ -150,43 +163,46 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
       const blob = new Blob(chunksRef.current, { type: mime });
       chunksRef.current = [];
 
-      if (blob.size < 400) {
-        setError("Clip too small — try again with a louder take.");
+      if (blob.size < 200) {
+        setError("Clip too small — try again.");
         setPhase("error");
         return;
       }
 
-      void saveLocal(blob);
+      void savePrompt(blob);
     };
 
     rec.stop();
     setPhase("idle");
   };
 
-  const saveLocal = async (blob: Blob) => {
+  const savePrompt = async (blob: Blob) => {
     setPhase("saving");
     setError(null);
     try {
       const b64 = await blobToBase64(blob);
+      setReferenceBase64(b64);
       setStoredVoiceReferenceAudioBase64(b64);
       setSaved(true);
       setPhase("done");
-      onCalibrated?.();
+      onVoicePromptSaved?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save clip");
+      setError(e instanceof Error ? e.message : "Could not save voice prompt");
       setPhase("error");
     }
   };
 
   const fmtTime = (ms: number) => {
-    const s = Math.min(ms / 1000, MAX_RECORD_MS / 1000);
+    const s = Math.min(ms / 1000, VOICE_PROMPT_MS / 1000);
     return `${s.toFixed(1)}s`;
   };
 
   return (
     <div className={`flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left ${className}`}>
-      <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">Voice calibration</p>
-      <p className="max-h-28 overflow-y-auto text-[11px] leading-relaxed text-white/70">{VOICE_CALIBRATION_SCRIPT}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">Mistral voice prompt</p>
+      <p className="max-h-28 overflow-y-auto text-[11px] leading-relaxed text-white/70">
+        {VOICE_CALIBRATION_MISTRAL_SCRIPT}
+      </p>
 
       <div className="flex flex-wrap items-center gap-2">
         {phase !== "recording" && phase !== "saving" ? (
@@ -195,29 +211,31 @@ export function VoiceCalibration({ onCalibrated, className = "" }: Props) {
             onClick={() => void startRecording()}
             className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-medium text-white/90 transition hover:bg-white/15"
           >
-            {saved ? "Record again" : "Start recording"}
+            {saved ? "Record again" : "Record 3s prompt"}
           </button>
         ) : null}
 
         {phase === "recording" ? (
           <>
             <span className="font-mono text-[11px] text-emerald-400/90">
-              {fmtTime(elapsedMs)} / {(MAX_RECORD_MS / 1000).toFixed(0)}s
+              {fmtTime(elapsedMs)} / {(VOICE_PROMPT_MS / 1000).toFixed(0)}s
             </span>
             <button
               type="button"
               onClick={stopRecording}
               className="rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1.5 text-[11px] font-medium text-red-200 transition hover:bg-red-500/25"
             >
-              Stop
+              Stop early
             </button>
           </>
         ) : null}
 
         {phase === "saving" ? <span className="text-[11px] text-white/50">Saving…</span> : null}
 
-        {phase === "done" && saved ? (
-          <span className="text-[11px] text-emerald-400/90">Saved locally — use “My voice” to hear it in TTS.</span>
+        {phase === "done" && saved && referenceBase64 ? (
+          <span className="text-[11px] text-emerald-400/90">
+            Voice prompt saved — enable “My voice” for Mistral Voxtral TTS.
+          </span>
         ) : null}
       </div>
 

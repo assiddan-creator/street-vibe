@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
 import { FlipButtonSkeleton, PopupWordSkeleton, TtsPlaySkeleton } from "@/components/ui/Skeleton";
 import { LearnsYouControls } from "@/components/LearnsYouControls";
-import { VoiceCalibration } from "@/components/VoiceCalibration";
+import { VoiceCalibrationMistral } from "@/components/VoiceCalibrationMistral";
 import { VoiceModeToggle } from "@/components/VoiceModeToggle";
 import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { HistoryVaultSheet } from "@/components/HistoryVaultSheet";
@@ -685,7 +685,7 @@ export default function SpeakPage() {
         <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
           <VoiceModeToggle accent={theme.accent} voiceRefreshSignal={voiceRefreshSignal} />
           <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
-          <VoiceCalibration onCalibrated={() => setVoiceRefreshSignal((n) => n + 1)} />
+          <VoiceCalibrationMistral onVoicePromptSaved={() => setVoiceRefreshSignal((n) => n + 1)} />
         </div>
 
         {/* שלב B */}

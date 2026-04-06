@@ -281,7 +281,7 @@ export async function fetchTtsAudioUrl(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...requestBody,
-            referenceAudioBase64,
+            referenceAudio: referenceAudioBase64,
           }),
         });
         const mistralData = (await mistralRes.json()) as {
