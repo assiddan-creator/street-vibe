@@ -17,7 +17,9 @@ import { resolveMinimaxEmotionFromVibe } from "@/lib/minimaxTtsEmotion";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 import {
+  getMistralQuickPromptBase64,
   getMistralVoiceId,
+  TTS_ERR_MISTRAL_QUICK_PROMPT_REQUIRED,
   TTS_ERR_MISTRAL_VOICE_ID_REQUIRED,
 } from "@/lib/customVoicePreference";
 import { getStoredTtsGender, MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
@@ -101,7 +103,8 @@ export type TtsClientEngine =
   | "google"
   | "native"
   | "mistral_clone"
-  | "mistral_builtin";
+  | "mistral_builtin"
+  | "mistral_quick";
 
 /** Poll Replicate until TTS prediction completes; returns playable URL (https or data:). `null` when engine is native (playback via Web Speech API). */
 export async function fetchTtsAudioUrl(
@@ -176,15 +179,26 @@ export async function fetchTtsAudioUrl(
   const tuning = CONTEXT_TUNING[context ?? "default"] ?? CONTEXT_TUNING.default;
   const vibeKey = context ?? "default";
 
-  if (engine === "mistral_clone" || engine === "mistral_builtin") {
+  if (engine === "mistral_clone" || engine === "mistral_builtin" || engine === "mistral_quick") {
     const isClone = engine === "mistral_clone";
-    const analyticsEngine = isClone ? ANALYTICS_ENGINE.MISTRAL_CLONE : ANALYTICS_ENGINE.MISTRAL_BUILTIN;
+    const isQuick = engine === "mistral_quick";
+    const analyticsEngine = isClone
+      ? ANALYTICS_ENGINE.MISTRAL_CLONE
+      : isQuick
+        ? ANALYTICS_ENGINE.MISTRAL_QUICK
+        : ANALYTICS_ENGINE.MISTRAL_BUILTIN;
 
     let cloneVoiceId: string | null = null;
+    let quickRef: string | null = null;
     if (isClone) {
       cloneVoiceId = getMistralVoiceId();
       if (!cloneVoiceId) {
         throw new Error(TTS_ERR_MISTRAL_VOICE_ID_REQUIRED);
+      }
+    } else if (isQuick) {
+      quickRef = getMistralQuickPromptBase64();
+      if (!quickRef) {
+        throw new Error(TTS_ERR_MISTRAL_QUICK_PROMPT_REQUIRED);
       }
     }
 
@@ -208,13 +222,14 @@ export async function fetchTtsAudioUrl(
       tuning,
       ttsGender,
       context: vibeKey,
-      mistral_mode: isClone ? "clone" : "builtin",
+      mistral_mode: isClone ? "clone" : isQuick ? "quick" : "builtin",
       emotion: vibeKey,
       ...(implicitExtras?.personalSlangProfile
         ? { personalSlangProfile: implicitExtras.personalSlangProfile }
         : {}),
       ...(implicitExtras?.personaPresetId ? { personaPresetId: implicitExtras.personaPresetId } : {}),
       ...(isClone && cloneVoiceId ? { voice_id: cloneVoiceId } : {}),
+      ...(isQuick && quickRef ? { referenceAudio: quickRef } : {}),
     };
 
     try {
@@ -231,7 +246,7 @@ export async function fetchTtsAudioUrl(
       if (mistralRes.ok && mistralData.audioBase64) {
         console.info("[TTS]", "TTS request completed (Mistral Voxtral)", {
           reportedEngine: mistralData.engine ?? "mistral-voxtral",
-          mistralMode: isClone ? "clone" : "builtin",
+          mistralMode: isClone ? "clone" : isQuick ? "quick" : "builtin",
         });
         trackAnalyticsEvent({
           name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,

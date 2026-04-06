@@ -1,22 +1,48 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getMistralVoiceId, setMistralVoiceId } from "@/lib/customVoicePreference";
+import type { TtsClientEngine } from "@/lib/ttsClient";
+import {
+  getMistralQuickPromptBase64,
+  getMistralVoiceId,
+  setMistralQuickPromptBase64,
+  setMistralVoiceId,
+} from "@/lib/customVoicePreference";
 
 /** Target range for a stable Mistral Voice Profile (docs: longer clean samples help cross-lingual cloning). */
 const MIN_PROFILE_MS = 30_000;
 const MAX_PROFILE_MS = 60_000;
 
+/** Fast zero-shot reference (Mistral docs: ~3–25s; product uses 5s). */
+const QUICK_MS = 5_000;
+
 export const VOICE_CALIBRATION_MISTRAL_SCRIPT = `Record 30–60 seconds of clear, expressive speech in a quiet space. Read naturally — varied sentences help the model lock your timbre and rhythm for stable cross-lingual TTS. Stop when you’re done, or recording ends automatically at ${MAX_PROFILE_MS / 1000} seconds.`;
 
+const QUICK_SCRIPT = `Record exactly ${QUICK_MS / 1000} seconds of clear speech in a quiet space. Recording stops automatically — this clip is used only for fast zero-shot cloning (engine: Mistral Quick Clone).`;
+
 type Props = {
+  /** Drives 5s quick vs 30–60s persistent profile UI. */
+  ttsEngine: TtsClientEngine;
   onVoiceProfileSaved?: () => void;
   className?: string;
 };
 
 type Phase = "idle" | "recording" | "uploading" | "done" | "error";
 
-export function VoiceCalibrationMistral({ onVoiceProfileSaved, className = "" }: Props) {
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => {
+      const d = r.result as string;
+      const i = d.indexOf(",");
+      resolve(i >= 0 ? d.slice(i + 1) : d);
+    };
+    r.onerror = () => reject(new Error("Could not read audio"));
+    r.readAsDataURL(blob);
+  });
+}
+
+export function VoiceCalibrationMistral({ ttsEngine, onVoiceProfileSaved, className = "" }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +57,13 @@ export function VoiceCalibrationMistral({ onVoiceProfileSaved, className = "" }:
   const startTimeRef = useRef(0);
   const stoppedRef = useRef(false);
 
+  const isBuiltin = ttsEngine === "mistral_builtin";
+  const isQuick = ttsEngine === "mistral_quick";
+  const isClone = ttsEngine === "mistral_clone";
+
+  const isMistralUiEngine =
+    ttsEngine === "mistral_quick" || ttsEngine === "mistral_clone" || ttsEngine === "mistral_builtin";
+
   useEffect(() => {
     const existing = getMistralVoiceId();
     if (existing) {
@@ -38,6 +71,12 @@ export function VoiceCalibrationMistral({ onVoiceProfileSaved, className = "" }:
       setSaved(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (isQuick && getMistralQuickPromptBase64()) {
+      setSaved(true);
+    }
+  }, [isQuick, ttsEngine]);
 
   const stopTick = useCallback(() => {
     if (tickRef.current) {
@@ -82,6 +121,7 @@ export function VoiceCalibrationMistral({ onVoiceProfileSaved, className = "" }:
     setVoiceIdState(null);
     stoppedRef.current = false;
     chunksRef.current = [];
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -109,13 +149,77 @@ export function VoiceCalibrationMistral({ onVoiceProfileSaved, className = "" }:
       }, 200);
 
       clearAutoStop();
+      const maxMs = isQuick ? QUICK_MS : MAX_PROFILE_MS;
       autoStopRef.current = setTimeout(() => {
-        stopRecording();
-      }, MAX_PROFILE_MS);
+        if (isQuick) {
+          void finalizeQuickRecording();
+        } else {
+          stopRecording();
+        }
+      }, maxMs);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Microphone access denied");
       setPhase("error");
     }
+  };
+
+  const cancelRecording = () => {
+    if (stoppedRef.current) return;
+    stoppedRef.current = true;
+    clearAutoStop();
+    stopTick();
+    const rec = mediaRecorderRef.current;
+    if (rec && rec.state !== "inactive") {
+      rec.onstop = () => {
+        cleanupStream();
+        mediaRecorderRef.current = null;
+        chunksRef.current = [];
+      };
+      rec.stop();
+    } else {
+      cleanupStream();
+    }
+    setPhase("idle");
+    setElapsedMs(0);
+  };
+
+  const finalizeQuickRecording = () => {
+    const rec = mediaRecorderRef.current;
+    if (!rec || rec.state === "inactive") return;
+    if (stoppedRef.current) return;
+    stoppedRef.current = true;
+    clearAutoStop();
+    stopTick();
+    setPhase("uploading");
+
+    rec.onstop = () => {
+      void (async () => {
+        cleanupStream();
+        mediaRecorderRef.current = null;
+        const mime = rec.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: mime });
+        chunksRef.current = [];
+
+        if (blob.size < 500) {
+          setError("Clip too small — try again.");
+          setPhase("error");
+          return;
+        }
+
+        try {
+          const b64 = await blobToBase64(blob);
+          setMistralQuickPromptBase64(b64);
+          setSaved(true);
+          setPhase("done");
+          onVoiceProfileSaved?.();
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Save failed");
+          setPhase("error");
+        }
+      })();
+    };
+
+    rec.stop();
   };
 
   const stopRecording = () => {
@@ -192,19 +296,38 @@ export function VoiceCalibrationMistral({ onVoiceProfileSaved, className = "" }:
     }
   };
 
-  const fmtTime = (ms: number) => {
-    const totalS = Math.floor(Math.min(ms / 1000, MAX_PROFILE_MS / 1000));
+  const fmtTime = (ms: number, capMs: number) => {
+    const totalS = Math.floor(Math.min(ms / 1000, capMs / 1000));
     const m = Math.floor(totalS / 60);
     const s = totalS % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
+  if (!isMistralUiEngine) {
+    return null;
+  }
+
+  if (isBuiltin) {
+    return (
+      <div
+        className={`flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left ${className}`}
+      >
+        <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">Mistral voice profile</p>
+        <p className="text-[11px] leading-relaxed text-white/55">
+          Built-in mode uses preset character voices — no microphone sample needed. Switch to Clone or Quick to record a
+          sample.
+        </p>
+      </div>
+    );
+  }
+
+  const scriptText = isQuick ? QUICK_SCRIPT : VOICE_CALIBRATION_MISTRAL_SCRIPT;
+  const title = isQuick ? "Mistral quick clone (5s)" : "Mistral voice profile";
+
   return (
     <div className={`flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left ${className}`}>
-      <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">Mistral voice profile</p>
-      <p className="max-h-32 overflow-y-auto text-[11px] leading-relaxed text-white/70">
-        {VOICE_CALIBRATION_MISTRAL_SCRIPT}
-      </p>
+      <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">{title}</p>
+      <p className="max-h-32 overflow-y-auto text-[11px] leading-relaxed text-white/70">{scriptText}</p>
 
       <div className="flex flex-wrap items-center gap-2">
         {phase !== "recording" && phase !== "uploading" ? (
@@ -220,31 +343,50 @@ export function VoiceCalibrationMistral({ onVoiceProfileSaved, className = "" }:
         {phase === "recording" ? (
           <>
             <span className="font-mono text-[11px] text-emerald-400/90">
-              {fmtTime(elapsedMs)} / {MAX_PROFILE_MS / 1000}s max
+              {isQuick
+                ? `${fmtTime(elapsedMs, QUICK_MS)} / ${QUICK_MS / 1000}s`
+                : `${fmtTime(elapsedMs, MAX_PROFILE_MS)} / ${MAX_PROFILE_MS / 1000}s max`}
             </span>
-            <button
-              type="button"
-              onClick={stopRecording}
-              disabled={elapsedMs < MIN_PROFILE_MS}
-              className="rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1.5 text-[11px] font-medium text-red-200 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-35"
-              title={
-                elapsedMs < MIN_PROFILE_MS
-                  ? `Stop unlocks after ${MIN_PROFILE_MS / 1000}s`
-                  : "Finish and upload"
-              }
-            >
-              Stop &amp; upload
-            </button>
+            {isQuick ? (
+              <button
+                type="button"
+                onClick={cancelRecording}
+                className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-white/70 transition hover:bg-white/10"
+              >
+                Cancel
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={stopRecording}
+                disabled={elapsedMs < MIN_PROFILE_MS}
+                className="rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1.5 text-[11px] font-medium text-red-200 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-35"
+                title={
+                  elapsedMs < MIN_PROFILE_MS
+                    ? `Stop unlocks after ${MIN_PROFILE_MS / 1000}s`
+                    : "Finish and upload"
+                }
+              >
+                Stop &amp; upload
+              </button>
+            )}
           </>
         ) : null}
 
         {phase === "uploading" ? (
-          <span className="text-[11px] text-white/50">Creating voice profile…</span>
+          <span className="text-[11px] text-white/50">
+            {isQuick ? "Saving quick clip…" : "Creating voice profile…"}
+          </span>
         ) : null}
 
-        {phase === "done" && saved && voiceId ? (
+        {phase === "done" && saved && isClone && voiceId ? (
           <span className="text-[11px] text-emerald-400/90">
             Profile saved — choose “Mistral Clone (My Voice)” in Voice engine to hear it.
+          </span>
+        ) : null}
+        {phase === "done" && saved && isQuick ? (
+          <span className="text-[11px] text-emerald-400/90">
+            Quick clip saved — choose “Mistral Quick Clone (5s Vibe)” in Voice engine to hear it.
           </span>
         ) : null}
       </div>

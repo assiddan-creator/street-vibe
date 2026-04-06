@@ -51,7 +51,10 @@ import {
   categorizeTranslateAnalyticsFailure,
   trackAnalyticsEvent,
 } from "@/lib/analyticsEvents";
-import { TTS_ERR_MISTRAL_VOICE_ID_REQUIRED } from "@/lib/customVoicePreference";
+import {
+  TTS_ERR_MISTRAL_QUICK_PROMPT_REQUIRED,
+  TTS_ERR_MISTRAL_VOICE_ID_REQUIRED,
+} from "@/lib/customVoicePreference";
 import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
@@ -69,7 +72,7 @@ export default function SpeakPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [slangLevel, setSlangLevel] = useState<1 | 2 | 3>(2);
   const [context, setContext] = useState<string>("dm");
-  const [ttsEngine, setTtsEngine] = useState<TtsClientEngine>("minimax");
+  const [ttsEngine, setTtsEngine] = useState<TtsClientEngine>("mistral_builtin");
   const [ttsLoading, setTtsLoading] = useState(false);
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
@@ -363,6 +366,14 @@ export default function SpeakPage() {
         setTtsError(null);
         setToast("Record your Mistral voice profile first (30–60s sample below).");
         setTtsPlaying(false);
+      } else if (
+        ttsEngine === "mistral_quick" &&
+        e instanceof Error &&
+        e.message === TTS_ERR_MISTRAL_QUICK_PROMPT_REQUIRED
+      ) {
+        setTtsError(null);
+        setToast("Record your 5s quick clone clip below first.");
+        setTtsPlaying(false);
       } else {
         setTtsError(e instanceof Error ? e.message : "Playback failed");
         setTtsPlaying(false);
@@ -617,7 +628,7 @@ export default function SpeakPage() {
           <VoiceGenderSegment
             accent={theme.accent}
             idle={isIdle}
-            disabled={ttsEngine === "mistral_clone"}
+            disabled={ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"}
             value={ttsGender}
             onChange={(value) => {
               setTtsGender(value);
@@ -697,7 +708,10 @@ export default function SpeakPage() {
         <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
           <VoiceModeToggle accent={theme.accent} voiceRefreshSignal={voiceRefreshSignal} />
           <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
-          <VoiceCalibrationMistral onVoiceProfileSaved={() => setVoiceRefreshSignal((n) => n + 1)} />
+          <VoiceCalibrationMistral
+            ttsEngine={ttsEngine}
+            onVoiceProfileSaved={() => setVoiceRefreshSignal((n) => n + 1)}
+          />
         </div>
 
         {/* שלב B */}
@@ -781,11 +795,17 @@ export default function SpeakPage() {
             </p>
             <div
               className={`mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl transition-opacity ${
-                ttsEngine === "mistral_clone" ? "pointer-events-none opacity-40" : ""
+                ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"
+                  ? "pointer-events-none opacity-40"
+                  : ""
               }`}
               role="group"
               aria-label="Message vibe"
-              title={ttsEngine === "mistral_clone" ? "Uses your cloned voice timbre only" : undefined}
+              title={
+                ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"
+                  ? "Uses your recorded voice timbre only"
+                  : undefined
+              }
             >
               {VIBE_SEGMENTS.map(({ value, text, icon }) => {
                 const on = context === value;
@@ -793,7 +813,7 @@ export default function SpeakPage() {
                   <button
                     key={value}
                     type="button"
-                    disabled={ttsEngine === "mistral_clone"}
+                    disabled={ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"}
                     onClick={() => {
                       setContext(value);
                       trackAnalyticsEvent({
@@ -955,20 +975,20 @@ export default function SpeakPage() {
                 onChange={(e) => setTtsEngine(e.target.value as TtsClientEngine)}
                 className="w-full rounded-none border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/30 outline-none"
               >
-                <option value="minimax" className="bg-zinc-900 text-white">
-                  MiniMax (Replicate)
-                </option>
-                <option value="google" className="bg-zinc-900 text-white">
-                  Google Cloud
+                {/*
+                Legacy engines — restore in UI by uncommenting:
+                <option value="minimax" className="bg-zinc-900 text-white">MiniMax (Replicate)</option>
+                <option value="google" className="bg-zinc-900 text-white">Google Cloud</option>
+                <option value="native" className="bg-zinc-900 text-white">Native Browser</option>
+                */}
+                <option value="mistral_quick" className="bg-zinc-900 text-white">
+                  Mistral Quick Clone (5s Vibe)
                 </option>
                 <option value="mistral_clone" className="bg-zinc-900 text-white">
                   Mistral Clone (My Voice)
                 </option>
                 <option value="mistral_builtin" className="bg-zinc-900 text-white">
                   Mistral Built-in (Characters)
-                </option>
-                <option value="native" className="bg-zinc-900 text-white">
-                  Native Browser
                 </option>
               </select>
             </div>

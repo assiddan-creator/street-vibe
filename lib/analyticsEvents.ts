@@ -25,6 +25,7 @@ export const ANALYTICS_ENGINE = {
   MISTRAL: "mistral",
   MISTRAL_CLONE: "mistral_clone",
   MISTRAL_BUILTIN: "mistral_builtin",
+  MISTRAL_QUICK: "mistral_quick",
 } as const;
 
 export type AnalyticsTtsEngine = (typeof ANALYTICS_ENGINE)[keyof typeof ANALYTICS_ENGINE];
@@ -485,7 +486,8 @@ function isAnalyticsEngine(x: string): x is AnalyticsTtsEngine {
     x === ANALYTICS_ENGINE.NATIVE ||
     x === ANALYTICS_ENGINE.MISTRAL ||
     x === ANALYTICS_ENGINE.MISTRAL_CLONE ||
-    x === ANALYTICS_ENGINE.MISTRAL_BUILTIN
+    x === ANALYTICS_ENGINE.MISTRAL_BUILTIN ||
+    x === ANALYTICS_ENGINE.MISTRAL_QUICK
   );
 }
 

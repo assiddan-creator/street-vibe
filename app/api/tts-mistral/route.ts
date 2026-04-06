@@ -51,9 +51,11 @@ export async function POST(req: NextRequest) {
   }
 
   const modeRaw = typeof body.mistral_mode === "string" ? body.mistral_mode.trim().toLowerCase() : "";
-  const mistralMode: "clone" | "builtin" = modeRaw === "builtin" ? "builtin" : "clone";
+  const mistralMode: "clone" | "builtin" | "quick" =
+    modeRaw === "builtin" ? "builtin" : modeRaw === "quick" ? "quick" : "clone";
 
   let voiceId: string | null = null;
+  let refAudioB64: string | null = null;
 
   if (mistralMode === "builtin") {
     const gender: TtsVoiceGender = body.ttsGender === "female" ? "female" : "male";
@@ -64,6 +66,20 @@ export async function POST(req: NextRequest) {
           ? body.context.trim()
           : "dm";
     voiceId = resolveMistralBuiltinVoiceId(gender, emotionFromBody);
+  } else if (mistralMode === "quick") {
+    const refRaw =
+      typeof body.referenceAudio === "string"
+        ? body.referenceAudio
+        : typeof body.reference_audio === "string"
+          ? body.reference_audio
+          : null;
+    refAudioB64 = refRaw && refRaw.trim() !== "" ? refRaw.trim() : null;
+    if (!refAudioB64 || refAudioB64.length < 100) {
+      return NextResponse.json(
+        { error: "Missing or invalid referenceAudio (quick zero-shot)" },
+        { status: 400, headers: corsHeaders }
+      );
+    }
   } else {
     const voiceIdRaw =
       typeof body.voice_id === "string"
@@ -113,12 +129,20 @@ export async function POST(req: NextRequest) {
 
   /** Non-streaming: full MP3 as base64 in JSON (`audioData`). */
   try {
-    const response = await client.audio.speech.complete({
-      model: VOXTRAL_MODEL,
-      input: ttsInput,
-      voiceId,
-      responseFormat: "mp3",
-    });
+    const response =
+      mistralMode === "quick" && refAudioB64
+        ? await client.audio.speech.complete({
+            model: VOXTRAL_MODEL,
+            input: ttsInput,
+            refAudio: refAudioB64,
+            responseFormat: "mp3",
+          })
+        : await client.audio.speech.complete({
+            model: VOXTRAL_MODEL,
+            input: ttsInput,
+            voiceId: voiceId!,
+            responseFormat: "mp3",
+          });
 
     const audioData =
       "audioData" in response && typeof response.audioData === "string" ? response.audioData : null;
@@ -129,10 +153,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const engineLabel =
+      mistralMode === "builtin"
+        ? "mistral-voxtral-builtin"
+        : mistralMode === "quick"
+          ? "mistral-voxtral-quick"
+          : "mistral-voxtral-clone";
+
     return NextResponse.json(
       {
         audioBase64: audioData,
-        engine: mistralMode === "builtin" ? "mistral-voxtral-builtin" : "mistral-voxtral-clone",
+        engine: engineLabel,
       },
       { status: 200, headers: corsHeaders }
     );

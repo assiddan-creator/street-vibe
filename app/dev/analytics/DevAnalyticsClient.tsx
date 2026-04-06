@@ -231,8 +231,8 @@ export function DevAnalyticsClient() {
           <Row label="Effective: minimax / google / native" value={`${r.engineEffectiveCounts.minimax ?? 0} / ${r.engineEffectiveCounts.google ?? 0} / ${r.engineEffectiveCounts.native ?? 0}`} />
           <Row label="Requested: minimax / google / native" value={`${r.engineRequestedCounts.minimax ?? 0} / ${r.engineRequestedCounts.google ?? 0} / ${r.engineRequestedCounts.native ?? 0}`} />
           <Row
-            label="Requested: mistral_clone / mistral_builtin / legacy mistral"
-            value={`${r.engineRequestedCounts.mistral_clone ?? 0} / ${r.engineRequestedCounts.mistral_builtin ?? 0} / ${r.engineRequestedCounts.mistral ?? 0}`}
+            label="Requested: mistral_quick / clone / builtin / legacy mistral"
+            value={`${r.engineRequestedCounts.mistral_quick ?? 0} / ${r.engineRequestedCounts.mistral_clone ?? 0} / ${r.engineRequestedCounts.mistral_builtin ?? 0} / ${r.engineRequestedCounts.mistral ?? 0}`}
           />
         </Section>
 
