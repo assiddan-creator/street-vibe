@@ -23,12 +23,6 @@ const corsHeaders = {
 
 const VOXTRAL_MODEL = "voxtral-mini-tts-2603";
 
-function normalizeReferenceAudioBase64(raw: string): string {
-  const t = raw.trim();
-  const m = /^data:[^;]+;base64,(.+)$/i.exec(t);
-  return m ? m[1].replace(/\s/g, "") : t.replace(/\s/g, "");
-}
-
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
@@ -54,24 +48,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing text" }, { status: 400, headers: corsHeaders });
   }
 
-  const refRaw =
-    typeof body.referenceAudio === "string"
-      ? body.referenceAudio
-      : typeof body.referenceAudioBase64 === "string"
-        ? body.referenceAudioBase64
-        : typeof body.refAudio === "string"
-          ? body.refAudio
-          : null;
-  if (!refRaw || refRaw.trim() === "") {
+  const voiceIdRaw =
+    typeof body.voice_id === "string"
+      ? body.voice_id
+      : typeof body.voiceId === "string"
+        ? body.voiceId
+        : null;
+  const voiceId = voiceIdRaw && voiceIdRaw.trim() !== "" ? voiceIdRaw.trim() : null;
+  if (!voiceId) {
     return NextResponse.json(
-      { error: "Missing referenceAudio (3s voice prompt, base64)" },
+      { error: "Missing voice_id (Mistral Voice Profile)" },
       { status: 400, headers: corsHeaders }
     );
-  }
-
-  const referenceAudioBase64 = normalizeReferenceAudioBase64(refRaw);
-  if (referenceAudioBase64.length < 100) {
-    return NextResponse.json({ error: "Reference audio too short" }, { status: 400, headers: corsHeaders });
   }
 
   const devRawTts = process.env.NODE_ENV === "development" && body.devRawTts === true;
@@ -105,12 +93,12 @@ export async function POST(req: NextRequest) {
 
   const client = new Mistral({ apiKey });
 
-  /** Non-streaming: full MP3 as base64 in JSON (`audioData`), per Mistral speech.complete API. */
+  /** Non-streaming: full MP3 as base64 in JSON (`audioData`). */
   try {
     const response = await client.audio.speech.complete({
       model: VOXTRAL_MODEL,
       input: ttsInput,
-      refAudio: referenceAudioBase64,
+      voiceId,
       responseFormat: "mp3",
     });
 

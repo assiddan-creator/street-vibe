@@ -51,7 +51,7 @@ import {
   categorizeTranslateAnalyticsFailure,
   trackAnalyticsEvent,
 } from "@/lib/analyticsEvents";
-import { TTS_ERR_MISTRAL_VOICE_PROMPT_REQUIRED } from "@/lib/customVoicePreference";
+import { TTS_ERR_MISTRAL_VOICE_ID_REQUIRED } from "@/lib/customVoicePreference";
 import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
@@ -355,9 +355,9 @@ export default function SpeakPage() {
       audio.onended = () => setTtsPlaying(false);
       void audio.play();
     } catch (e) {
-      if (e instanceof Error && e.message === TTS_ERR_MISTRAL_VOICE_PROMPT_REQUIRED) {
+      if (e instanceof Error && e.message === TTS_ERR_MISTRAL_VOICE_ID_REQUIRED) {
         setTtsError(null);
-        setToast("Record your 3s voice calibration first (Mistral voice prompt below).");
+        setToast("Record your Mistral voice profile first (30–60s sample below).");
         setTtsPlaying(false);
       } else {
         setTtsError(e instanceof Error ? e.message : "Playback failed");
@@ -692,7 +692,7 @@ export default function SpeakPage() {
         <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
           <VoiceModeToggle accent={theme.accent} voiceRefreshSignal={voiceRefreshSignal} />
           <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
-          <VoiceCalibrationMistral onVoicePromptSaved={() => setVoiceRefreshSignal((n) => n + 1)} />
+          <VoiceCalibrationMistral onVoiceProfileSaved={() => setVoiceRefreshSignal((n) => n + 1)} />
         </div>
 
         {/* שלב B */}

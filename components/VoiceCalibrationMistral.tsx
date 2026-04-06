@@ -1,47 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  getMistralVoicePromptBase64,
-  setMistralVoicePromptBase64,
-} from "@/lib/customVoicePreference";
+import { getMistralVoiceId, setMistralVoiceId } from "@/lib/customVoicePreference";
 
-/** Exactly 3.0s capture window (Mistral zero-shot voice prompt). */
-const VOICE_PROMPT_MS = 3000;
+/** Target range for a stable Mistral Voice Profile (docs: longer clean samples help cross-lingual cloning). */
+const MIN_PROFILE_MS = 30_000;
+const MAX_PROFILE_MS = 60_000;
 
-/** Instruction copy aligned with Mistral Voxtral docs (2–3s emotional reference). */
-export const VOICE_CALIBRATION_MISTRAL_SCRIPT = `Record exactly three seconds of emotional speech — this clip becomes your voice prompt for zero-shot cloning. Pick a tone you want translations to sound like: hype, soft, tired, playful, or serious. One voice, minimal background noise, speak clearly into the mic.`;
+export const VOICE_CALIBRATION_MISTRAL_SCRIPT = `Record 30–60 seconds of clear, expressive speech in a quiet space. Read naturally — varied sentences help the model lock your timbre and rhythm for stable cross-lingual TTS. Stop when you’re done, or recording ends automatically at ${MAX_PROFILE_MS / 1000} seconds.`;
 
 type Props = {
-  onVoicePromptSaved?: () => void;
+  onVoiceProfileSaved?: () => void;
   className?: string;
 };
 
-type Phase = "idle" | "recording" | "saving" | "done" | "error";
+type Phase = "idle" | "recording" | "uploading" | "done" | "error";
 
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onloadend = () => {
-      const s = r.result;
-      if (typeof s !== "string") {
-        reject(new Error("Could not read audio"));
-        return;
-      }
-      const comma = s.indexOf(",");
-      resolve(comma >= 0 ? s.slice(comma + 1) : s);
-    };
-    r.onerror = () => reject(new Error("Read failed"));
-    r.readAsDataURL(blob);
-  });
-}
-
-export function VoiceCalibrationMistral({ onVoicePromptSaved, className = "" }: Props) {
+export function VoiceCalibrationMistral({ onVoiceProfileSaved, className = "" }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [referenceBase64, setReferenceBase64] = useState<string | null>(null);
+  const [voiceId, setVoiceIdState] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -52,9 +32,9 @@ export function VoiceCalibrationMistral({ onVoicePromptSaved, className = "" }: 
   const stoppedRef = useRef(false);
 
   useEffect(() => {
-    const existing = getMistralVoicePromptBase64();
+    const existing = getMistralVoiceId();
     if (existing) {
-      setReferenceBase64(existing);
+      setVoiceIdState(existing);
       setSaved(true);
     }
   }, []);
@@ -99,7 +79,7 @@ export function VoiceCalibrationMistral({ onVoicePromptSaved, className = "" }: 
   const startRecording = async () => {
     setError(null);
     setSaved(false);
-    setReferenceBase64(null);
+    setVoiceIdState(null);
     stoppedRef.current = false;
     chunksRef.current = [];
     try {
@@ -119,19 +99,19 @@ export function VoiceCalibrationMistral({ onVoicePromptSaved, className = "" }: 
         cleanupStream();
       };
 
-      rec.start(100);
+      rec.start(250);
       setPhase("recording");
       startTimeRef.current = Date.now();
       setElapsedMs(0);
       stopTick();
       tickRef.current = setInterval(() => {
         setElapsedMs(Date.now() - startTimeRef.current);
-      }, 100);
+      }, 200);
 
       clearAutoStop();
       autoStopRef.current = setTimeout(() => {
         stopRecording();
-      }, VOICE_PROMPT_MS);
+      }, MAX_PROFILE_MS);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Microphone access denied");
       setPhase("error");
@@ -148,10 +128,12 @@ export function VoiceCalibrationMistral({ onVoicePromptSaved, className = "" }: 
     stopTick();
 
     const durationMs = Date.now() - startTimeRef.current;
-    if (durationMs < 500) {
+    if (durationMs < MIN_PROFILE_MS) {
       cleanupStream();
       mediaRecorderRef.current = null;
-      setError("Too short — keep recording toward the 3s mark.");
+      setError(
+        `Need at least ${MIN_PROFILE_MS / 1000}s of sample audio for a voice profile — keep going (${Math.ceil((MIN_PROFILE_MS - durationMs) / 1000)}s left).`
+      );
       setPhase("error");
       return;
     }
@@ -163,78 +145,106 @@ export function VoiceCalibrationMistral({ onVoicePromptSaved, className = "" }: 
       const blob = new Blob(chunksRef.current, { type: mime });
       chunksRef.current = [];
 
-      if (blob.size < 200) {
-        setError("Clip too small — try again.");
+      if (blob.size < 2000) {
+        setError("Clip too small — try again with a louder take.");
         setPhase("error");
         return;
       }
 
-      void savePrompt(blob);
+      void uploadProfile(blob);
     };
 
     rec.stop();
     setPhase("idle");
   };
 
-  const savePrompt = async (blob: Blob) => {
-    setPhase("saving");
+  const uploadProfile = async (blob: Blob) => {
+    setPhase("uploading");
     setError(null);
     try {
-      const b64 = await blobToBase64(blob);
-      setReferenceBase64(b64);
-      setMistralVoicePromptBase64(b64);
+      const fd = new FormData();
+      const ext = blob.type.includes("webm")
+        ? "webm"
+        : blob.type.includes("mp4")
+          ? "m4a"
+          : blob.type.includes("ogg")
+            ? "ogg"
+            : "webm";
+      fd.append("file", blob, `voice-profile.${ext}`);
+      fd.append("name", `streetvibe-profile-${Date.now()}`);
+
+      const res = await fetch("/api/mistral-voice-profile", { method: "POST", body: fd });
+      const data = (await res.json()) as { voice_id?: string; error?: string; details?: string };
+
+      if (!res.ok || !data.voice_id) {
+        const msg = data.error || data.details || "Voice profile creation failed";
+        throw new Error(typeof msg === "string" ? msg : "Voice profile failed");
+      }
+
+      setMistralVoiceId(data.voice_id);
+      setVoiceIdState(data.voice_id);
       setSaved(true);
       setPhase("done");
-      onVoicePromptSaved?.();
+      onVoiceProfileSaved?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save voice prompt");
+      setError(e instanceof Error ? e.message : "Upload failed");
       setPhase("error");
     }
   };
 
   const fmtTime = (ms: number) => {
-    const s = Math.min(ms / 1000, VOICE_PROMPT_MS / 1000);
-    return `${s.toFixed(1)}s`;
+    const totalS = Math.floor(Math.min(ms / 1000, MAX_PROFILE_MS / 1000));
+    const m = Math.floor(totalS / 60);
+    const s = totalS % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
   return (
     <div className={`flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left ${className}`}>
-      <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">Mistral voice prompt</p>
-      <p className="max-h-28 overflow-y-auto text-[11px] leading-relaxed text-white/70">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">Mistral voice profile</p>
+      <p className="max-h-32 overflow-y-auto text-[11px] leading-relaxed text-white/70">
         {VOICE_CALIBRATION_MISTRAL_SCRIPT}
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
-        {phase !== "recording" && phase !== "saving" ? (
+        {phase !== "recording" && phase !== "uploading" ? (
           <button
             type="button"
             onClick={() => void startRecording()}
             className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-medium text-white/90 transition hover:bg-white/15"
           >
-            {saved ? "Record again" : "Record 3s prompt"}
+            {saved ? "Record again" : "Start recording"}
           </button>
         ) : null}
 
         {phase === "recording" ? (
           <>
             <span className="font-mono text-[11px] text-emerald-400/90">
-              {fmtTime(elapsedMs)} / {(VOICE_PROMPT_MS / 1000).toFixed(0)}s
+              {fmtTime(elapsedMs)} / {MAX_PROFILE_MS / 1000}s max
             </span>
             <button
               type="button"
               onClick={stopRecording}
-              className="rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1.5 text-[11px] font-medium text-red-200 transition hover:bg-red-500/25"
+              disabled={elapsedMs < MIN_PROFILE_MS}
+              className="rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1.5 text-[11px] font-medium text-red-200 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-35"
+              title={
+                elapsedMs < MIN_PROFILE_MS
+                  ? `Stop unlocks after ${MIN_PROFILE_MS / 1000}s`
+                  : "Finish and upload"
+              }
             >
-              Stop early
+              Stop &amp; upload
             </button>
           </>
         ) : null}
 
-        {phase === "saving" ? <span className="text-[11px] text-white/50">Saving…</span> : null}
+        {phase === "uploading" ? (
+          <span className="text-[11px] text-white/50">Creating voice profile…</span>
+        ) : null}
 
-        {phase === "done" && saved && referenceBase64 ? (
+        {phase === "done" && saved && voiceId ? (
           <span className="text-[11px] text-emerald-400/90">
-            Voice prompt saved — enable “My voice” for Mistral Voxtral TTS.
+            Profile saved — use engine “Mistral Voxtral (Clone)” to hear it.
           </span>
         ) : null}
       </div>

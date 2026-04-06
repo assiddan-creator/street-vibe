@@ -17,8 +17,8 @@ import { resolveMinimaxEmotionFromVibe } from "@/lib/minimaxTtsEmotion";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
 import { isPremiumSlang } from "@/lib/streetVibeTheme";
 import {
-  getMistralVoicePromptBase64,
-  TTS_ERR_MISTRAL_VOICE_PROMPT_REQUIRED,
+  getMistralVoiceId,
+  TTS_ERR_MISTRAL_VOICE_ID_REQUIRED,
 } from "@/lib/customVoicePreference";
 import { getStoredTtsGender, MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
 
@@ -172,9 +172,9 @@ export async function fetchTtsAudioUrl(
   const vibeKey = context ?? "default";
 
   if (engine === "mistral") {
-    const referenceAudio = getMistralVoicePromptBase64();
-    if (!referenceAudio) {
-      throw new Error(TTS_ERR_MISTRAL_VOICE_PROMPT_REQUIRED);
+    const voiceId = getMistralVoiceId();
+    if (!voiceId) {
+      throw new Error(TTS_ERR_MISTRAL_VOICE_ID_REQUIRED);
     }
 
     const ttsPerfStart = performance.now();
@@ -201,7 +201,7 @@ export async function fetchTtsAudioUrl(
         ? { personalSlangProfile: implicitExtras.personalSlangProfile }
         : {}),
       ...(implicitExtras?.personaPresetId ? { personaPresetId: implicitExtras.personaPresetId } : {}),
-      referenceAudio,
+      voice_id: voiceId,
     };
 
     try {
