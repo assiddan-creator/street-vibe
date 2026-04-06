@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  getStoredVoiceReferenceAudioBase64,
-  setStoredVoiceReferenceAudioBase64,
+  getMistralVoicePromptBase64,
+  setMistralVoicePromptBase64,
 } from "@/lib/customVoicePreference";
 
 /** Exactly 3.0s capture window (Mistral zero-shot voice prompt). */
@@ -52,7 +52,7 @@ export function VoiceCalibrationMistral({ onVoicePromptSaved, className = "" }: 
   const stoppedRef = useRef(false);
 
   useEffect(() => {
-    const existing = getStoredVoiceReferenceAudioBase64();
+    const existing = getMistralVoicePromptBase64();
     if (existing) {
       setReferenceBase64(existing);
       setSaved(true);
@@ -182,7 +182,7 @@ export function VoiceCalibrationMistral({ onVoicePromptSaved, className = "" }: 
     try {
       const b64 = await blobToBase64(blob);
       setReferenceBase64(b64);
-      setStoredVoiceReferenceAudioBase64(b64);
+      setMistralVoicePromptBase64(b64);
       setSaved(true);
       setPhase("done");
       onVoicePromptSaved?.();

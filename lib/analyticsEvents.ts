@@ -21,6 +21,7 @@ export const ANALYTICS_ENGINE = {
   MINIMAX: "minimax",
   GOOGLE: "google",
   NATIVE: "native",
+  MISTRAL: "mistral",
 } as const;
 
 export type AnalyticsTtsEngine = (typeof ANALYTICS_ENGINE)[keyof typeof ANALYTICS_ENGINE];
@@ -475,7 +476,12 @@ function topNFromMap(m: Map<string, number>, n: number): { key: string; count: n
 }
 
 function isAnalyticsEngine(x: string): x is AnalyticsTtsEngine {
-  return x === ANALYTICS_ENGINE.MINIMAX || x === ANALYTICS_ENGINE.GOOGLE || x === ANALYTICS_ENGINE.NATIVE;
+  return (
+    x === ANALYTICS_ENGINE.MINIMAX ||
+    x === ANALYTICS_ENGINE.GOOGLE ||
+    x === ANALYTICS_ENGINE.NATIVE ||
+    x === ANALYTICS_ENGINE.MISTRAL
+  );
 }
 
 /**

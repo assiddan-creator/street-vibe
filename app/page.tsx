@@ -55,7 +55,8 @@ import {
 import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
-import { fetchTtsAudioUrl } from "@/lib/ttsClient";
+import { TTS_ERR_MISTRAL_VOICE_PROMPT_REQUIRED } from "@/lib/customVoicePreference";
+import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
 export default function Home() {
@@ -81,7 +82,7 @@ export default function Home() {
   } | null>(null);
   const [popupLoading, setPopupLoading] = useState(false);
   const [ttsGender, setTtsGender] = useState<TtsVoiceGender>("male");
-  const [ttsEngine, setTtsEngine] = useState<"minimax" | "google" | "native">("minimax");
+  const [ttsEngine, setTtsEngine] = useState<TtsClientEngine>("minimax");
   const [ttsLoading, setTtsLoading] = useState(false);
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
@@ -365,8 +366,14 @@ export default function Home() {
       audio.onended = () => setTtsPlaying(false);
       void audio.play();
     } catch (e) {
-      setTtsError(e instanceof Error ? e.message : "Playback failed");
-      setTtsPlaying(false);
+      if (e instanceof Error && e.message === TTS_ERR_MISTRAL_VOICE_PROMPT_REQUIRED) {
+        setTtsError(null);
+        setToast("Record your 3s voice calibration first (Mistral voice prompt below).");
+        setTtsPlaying(false);
+      } else {
+        setTtsError(e instanceof Error ? e.message : "Playback failed");
+        setTtsPlaying(false);
+      }
     } finally {
       setTtsLoading(false);
     }
@@ -946,7 +953,7 @@ export default function Home() {
                 <div style={{ "--accent": theme.accent } as CSSProperties}>
                   <select
                     value={ttsEngine}
-                    onChange={(e) => setTtsEngine(e.target.value as "minimax" | "google" | "native")}
+                    onChange={(e) => setTtsEngine(e.target.value as TtsClientEngine)}
                     className="w-full rounded-none border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/30 outline-none"
                   >
                     <option value="minimax" className="bg-zinc-900 text-white">
@@ -954,6 +961,9 @@ export default function Home() {
                     </option>
                     <option value="google" className="bg-zinc-900 text-white">
                       Google Cloud
+                    </option>
+                    <option value="mistral" className="bg-zinc-900 text-white">
+                      Mistral Voxtral (Clone)
                     </option>
                     <option value="native" className="bg-zinc-900 text-white">
                       Native Browser

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  getStoredVoiceReferenceAudioBase64,
+  getMistralVoicePromptBase64,
   getUseClonedVoicePreference,
   setUseClonedVoicePreference,
 } from "@/lib/customVoicePreference";
@@ -20,7 +20,7 @@ export function VoiceModeToggle({ accent, voiceRefreshSignal = 0, className = ""
 
   const refresh = useCallback(() => {
     setUseCloned(getUseClonedVoicePreference());
-    setHasReference(Boolean(getStoredVoiceReferenceAudioBase64()));
+    setHasReference(Boolean(getMistralVoicePromptBase64()));
   }, []);
 
   useEffect(() => {
