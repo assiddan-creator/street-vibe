@@ -78,7 +78,9 @@ export function VoiceModeToggle({ accent, voiceRefreshSignal = 0, className = ""
         </button>
       </div>
       {useCloned && !hasReference ? (
-        <p className="text-[8px] leading-snug text-amber-400/80">Record a ~3s clip below to enable cloning.</p>
+        <p className="text-[8px] leading-snug text-amber-400/80">
+          Record a 30–60s sample below, then pick “Mistral Clone (My Voice)”.
+        </p>
       ) : null}
     </div>
   );

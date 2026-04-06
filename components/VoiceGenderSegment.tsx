@@ -11,16 +11,21 @@ type Props = {
   onChange: (next: TtsVoiceGender) => void;
   /** Softer label when the screen is in idle / hero state. */
   idle?: boolean;
+  /** Visually disable (e.g. Mistral Clone uses profile voice only). */
+  disabled?: boolean;
   className?: string;
 };
 
 /**
  * Compact secondary control — accent from dialect theme only (fills/borders via themeAccentAlpha).
  */
-export function VoiceGenderSegment({ accent, value, onChange, idle: _unusedIdle, className }: Props) {
+export function VoiceGenderSegment({ accent, value, onChange, idle: _unusedIdle, disabled, className }: Props) {
   void _unusedIdle;
   return (
-    <div className={`${className ?? ""} flex flex-col items-center`}>
+    <div
+      className={`${className ?? ""} flex flex-col items-center transition-opacity ${disabled ? "pointer-events-none opacity-40" : ""}`}
+      title={disabled ? "Gender applies to other engines; clone uses your profile voice" : undefined}
+    >
       <p className={TOP_HELPER_LABEL_CLASS}>Voice</p>
       <div
         className="mx-auto inline-flex max-w-[8.25rem] rounded-md border border-white/[0.06] bg-black/18 p-px"
@@ -35,6 +40,7 @@ export function VoiceGenderSegment({ accent, value, onChange, idle: _unusedIdle,
               role="radio"
               aria-label={v === "male" ? "Male voice" : "Female voice"}
               aria-checked={selected}
+              disabled={disabled}
               onClick={() => onChange(v)}
               className={`min-h-[26px] min-w-0 flex-1 rounded-[5px] px-2 py-0.5 text-[10px] font-medium leading-none transition-colors ${
                 selected ? "" : "text-white/36 hover:text-white/50"

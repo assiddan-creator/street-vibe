@@ -21,7 +21,10 @@ export const ANALYTICS_ENGINE = {
   MINIMAX: "minimax",
   GOOGLE: "google",
   NATIVE: "native",
+  /** @deprecated legacy single Mistral option; prefer CLONE / BUILTIN */
   MISTRAL: "mistral",
+  MISTRAL_CLONE: "mistral_clone",
+  MISTRAL_BUILTIN: "mistral_builtin",
 } as const;
 
 export type AnalyticsTtsEngine = (typeof ANALYTICS_ENGINE)[keyof typeof ANALYTICS_ENGINE];
@@ -480,7 +483,9 @@ function isAnalyticsEngine(x: string): x is AnalyticsTtsEngine {
     x === ANALYTICS_ENGINE.MINIMAX ||
     x === ANALYTICS_ENGINE.GOOGLE ||
     x === ANALYTICS_ENGINE.NATIVE ||
-    x === ANALYTICS_ENGINE.MISTRAL
+    x === ANALYTICS_ENGINE.MISTRAL ||
+    x === ANALYTICS_ENGINE.MISTRAL_CLONE ||
+    x === ANALYTICS_ENGINE.MISTRAL_BUILTIN
   );
 }
 

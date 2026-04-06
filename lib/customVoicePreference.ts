@@ -1,10 +1,10 @@
 /** Persistent Mistral Voice Profile id from `/api/mistral-voice-profile`. */
 export const STREETVIBE_MISTRAL_VOICE_ID_KEY = "STREETVIBE_MISTRAL_VOICE_ID";
 
-/** When `"1"`, TTS can prefer the stored Mistral voice (when engine = mistral). */
+/** When `"1"`, TTS can prefer the stored Mistral voice (when engine = mistral_clone). */
 export const STREETVIBE_USE_CLONED_VOICE_KEY = "STREETVIBE_USE_CLONED_VOICE";
 
-/** Thrown by `fetchTtsAudioUrl` when engine is `mistral` but no `STREETVIBE_MISTRAL_VOICE_ID` is stored. */
+/** Thrown by `fetchTtsAudioUrl` when engine is `mistral_clone` but no `STREETVIBE_MISTRAL_VOICE_ID` is stored. */
 export const TTS_ERR_MISTRAL_VOICE_ID_REQUIRED = "MISTRAL_VOICE_ID_REQUIRED";
 
 export function getMistralVoiceId(): string | null {

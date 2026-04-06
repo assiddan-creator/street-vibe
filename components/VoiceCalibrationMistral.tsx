@@ -244,7 +244,7 @@ export function VoiceCalibrationMistral({ onVoiceProfileSaved, className = "" }:
 
         {phase === "done" && saved && voiceId ? (
           <span className="text-[11px] text-emerald-400/90">
-            Profile saved — use engine “Mistral Voxtral (Clone)” to hear it.
+            Profile saved — choose “Mistral Clone (My Voice)” in Voice engine to hear it.
           </span>
         ) : null}
       </div>

@@ -355,7 +355,11 @@ export default function SpeakPage() {
       audio.onended = () => setTtsPlaying(false);
       void audio.play();
     } catch (e) {
-      if (e instanceof Error && e.message === TTS_ERR_MISTRAL_VOICE_ID_REQUIRED) {
+      if (
+        ttsEngine === "mistral_clone" &&
+        e instanceof Error &&
+        e.message === TTS_ERR_MISTRAL_VOICE_ID_REQUIRED
+      ) {
         setTtsError(null);
         setToast("Record your Mistral voice profile first (30–60s sample below).");
         setTtsPlaying(false);
@@ -613,6 +617,7 @@ export default function SpeakPage() {
           <VoiceGenderSegment
             accent={theme.accent}
             idle={isIdle}
+            disabled={ttsEngine === "mistral_clone"}
             value={ttsGender}
             onChange={(value) => {
               setTtsGender(value);
@@ -775,9 +780,12 @@ export default function SpeakPage() {
               Vibe
             </p>
             <div
-              className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl"
+              className={`mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl transition-opacity ${
+                ttsEngine === "mistral_clone" ? "pointer-events-none opacity-40" : ""
+              }`}
               role="group"
               aria-label="Message vibe"
+              title={ttsEngine === "mistral_clone" ? "Uses your cloned voice timbre only" : undefined}
             >
               {VIBE_SEGMENTS.map(({ value, text, icon }) => {
                 const on = context === value;
@@ -785,6 +793,7 @@ export default function SpeakPage() {
                   <button
                     key={value}
                     type="button"
+                    disabled={ttsEngine === "mistral_clone"}
                     onClick={() => {
                       setContext(value);
                       trackAnalyticsEvent({
@@ -952,8 +961,11 @@ export default function SpeakPage() {
                 <option value="google" className="bg-zinc-900 text-white">
                   Google Cloud
                 </option>
-                <option value="mistral" className="bg-zinc-900 text-white">
-                  Mistral Voxtral (Clone)
+                <option value="mistral_clone" className="bg-zinc-900 text-white">
+                  Mistral Clone (My Voice)
+                </option>
+                <option value="mistral_builtin" className="bg-zinc-900 text-white">
+                  Mistral Built-in (Characters)
                 </option>
                 <option value="native" className="bg-zinc-900 text-white">
                   Native Browser

@@ -14,6 +14,8 @@ import {
   SPANISH_MADRID_DIALECT_ID,
   normalizeSpanishMadridForSpeech,
 } from "@/lib/spanishMadridSpeechNormalize";
+import type { TtsVoiceGender } from "@/lib/ttsVoiceGender";
+import { resolveMistralBuiltinVoiceId } from "@/lib/mistralBuiltinVoiceMap";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,18 +50,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing text" }, { status: 400, headers: corsHeaders });
   }
 
-  const voiceIdRaw =
-    typeof body.voice_id === "string"
-      ? body.voice_id
-      : typeof body.voiceId === "string"
-        ? body.voiceId
-        : null;
-  const voiceId = voiceIdRaw && voiceIdRaw.trim() !== "" ? voiceIdRaw.trim() : null;
-  if (!voiceId) {
-    return NextResponse.json(
-      { error: "Missing voice_id (Mistral Voice Profile)" },
-      { status: 400, headers: corsHeaders }
-    );
+  const modeRaw = typeof body.mistral_mode === "string" ? body.mistral_mode.trim().toLowerCase() : "";
+  const mistralMode: "clone" | "builtin" = modeRaw === "builtin" ? "builtin" : "clone";
+
+  let voiceId: string | null = null;
+
+  if (mistralMode === "builtin") {
+    const gender: TtsVoiceGender = body.ttsGender === "female" ? "female" : "male";
+    const emotionFromBody =
+      typeof body.emotion === "string" && body.emotion.trim() !== ""
+        ? body.emotion.trim()
+        : typeof body.context === "string" && body.context.trim() !== ""
+          ? body.context.trim()
+          : "dm";
+    voiceId = resolveMistralBuiltinVoiceId(gender, emotionFromBody);
+  } else {
+    const voiceIdRaw =
+      typeof body.voice_id === "string"
+        ? body.voice_id
+        : typeof body.voiceId === "string"
+          ? body.voiceId
+          : null;
+    voiceId = voiceIdRaw && voiceIdRaw.trim() !== "" ? voiceIdRaw.trim() : null;
+    if (!voiceId) {
+      return NextResponse.json(
+        { error: "Missing voice_id (Mistral Voice Profile clone)" },
+        { status: 400, headers: corsHeaders }
+      );
+    }
   }
 
   const devRawTts = process.env.NODE_ENV === "development" && body.devRawTts === true;
@@ -112,7 +130,10 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { audioBase64: audioData, engine: "mistral-voxtral" },
+      {
+        audioBase64: audioData,
+        engine: mistralMode === "builtin" ? "mistral-voxtral-builtin" : "mistral-voxtral-clone",
+      },
       { status: 200, headers: corsHeaders }
     );
   } catch (e: unknown) {

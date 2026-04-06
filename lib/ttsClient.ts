@@ -96,7 +96,12 @@ function textPreview(text: string, max = 200): string {
   return t.length <= max ? t : `${t.slice(0, max)}…`;
 }
 
-export type TtsClientEngine = "minimax" | "google" | "native" | "mistral";
+export type TtsClientEngine =
+  | "minimax"
+  | "google"
+  | "native"
+  | "mistral_clone"
+  | "mistral_builtin";
 
 /** Poll Replicate until TTS prediction completes; returns playable URL (https or data:). `null` when engine is native (playback via Web Speech API). */
 export async function fetchTtsAudioUrl(
@@ -171,18 +176,24 @@ export async function fetchTtsAudioUrl(
   const tuning = CONTEXT_TUNING[context ?? "default"] ?? CONTEXT_TUNING.default;
   const vibeKey = context ?? "default";
 
-  if (engine === "mistral") {
-    const voiceId = getMistralVoiceId();
-    if (!voiceId) {
-      throw new Error(TTS_ERR_MISTRAL_VOICE_ID_REQUIRED);
+  if (engine === "mistral_clone" || engine === "mistral_builtin") {
+    const isClone = engine === "mistral_clone";
+    const analyticsEngine = isClone ? ANALYTICS_ENGINE.MISTRAL_CLONE : ANALYTICS_ENGINE.MISTRAL_BUILTIN;
+
+    let cloneVoiceId: string | null = null;
+    if (isClone) {
+      cloneVoiceId = getMistralVoiceId();
+      if (!cloneVoiceId) {
+        throw new Error(TTS_ERR_MISTRAL_VOICE_ID_REQUIRED);
+      }
     }
 
     const ttsPerfStart = performance.now();
     trackAnalyticsEvent({
       name: ANALYTICS_EVENT_NAMES.TTS_REQUESTED,
       ...ANALYTICS_TTS_EVENT_MODE,
-      requestedEngine: ANALYTICS_ENGINE.MISTRAL,
-      effectiveEngine: ANALYTICS_ENGINE.MISTRAL,
+      requestedEngine: analyticsEngine,
+      effectiveEngine: analyticsEngine,
       dialect,
       ttsGender,
       vibe: vibeKey,
@@ -197,11 +208,13 @@ export async function fetchTtsAudioUrl(
       tuning,
       ttsGender,
       context: vibeKey,
+      mistral_mode: isClone ? "clone" : "builtin",
+      emotion: vibeKey,
       ...(implicitExtras?.personalSlangProfile
         ? { personalSlangProfile: implicitExtras.personalSlangProfile }
         : {}),
       ...(implicitExtras?.personaPresetId ? { personaPresetId: implicitExtras.personaPresetId } : {}),
-      voice_id: voiceId,
+      ...(isClone && cloneVoiceId ? { voice_id: cloneVoiceId } : {}),
     };
 
     try {
@@ -218,11 +231,12 @@ export async function fetchTtsAudioUrl(
       if (mistralRes.ok && mistralData.audioBase64) {
         console.info("[TTS]", "TTS request completed (Mistral Voxtral)", {
           reportedEngine: mistralData.engine ?? "mistral-voxtral",
+          mistralMode: isClone ? "clone" : "builtin",
         });
         trackAnalyticsEvent({
           name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,
           ...ANALYTICS_TTS_EVENT_MODE,
-          effectiveEngine: ANALYTICS_ENGINE.MISTRAL,
+          effectiveEngine: analyticsEngine,
           dialect,
           usedFallbackNative: false,
           ...analyticsDurationFieldsFromStart(ttsPerfStart),
@@ -258,7 +272,7 @@ export async function fetchTtsAudioUrl(
         trackAnalyticsEvent({
           name: ANALYTICS_EVENT_NAMES.TTS_FAILED,
           ...ANALYTICS_TTS_EVENT_MODE,
-          effectiveEngine: ANALYTICS_ENGINE.MISTRAL,
+          effectiveEngine: analyticsEngine,
           dialect,
           failureCategory: categorizeTtsAnalyticsFailure(e, e2),
           ...analyticsDurationFieldsFromStart(ttsPerfStart),
