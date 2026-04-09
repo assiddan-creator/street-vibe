@@ -50,6 +50,15 @@ import {
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
+/** Relax safety filters so dialect/slang prompts are not blocked spuriously (per-request). */
+const GEMINI_SAFETY_SETTINGS = [
+  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_CIVIC_INTEGRITY", threshold: "BLOCK_NONE" },
+] as const;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -507,20 +516,84 @@ async function callGeminiGenerate(
   slangRequested: boolean
 ): Promise<{ text: string; raw: unknown }> {
   const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
-  const geminiRes = await fetch(GEMINI_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: slangRequested ? 0.7 : 0.2,
-        maxOutputTokens: 1024,
-      },
-    }),
-  });
-  const data = await geminiRes.json();
-  const text = (data?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
-  return { text, raw: data };
+  const requestBody = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: slangRequested ? 0.7 : 0.2,
+      maxOutputTokens: 1024,
+    },
+    safetySettings: [...GEMINI_SAFETY_SETTINGS],
+  };
+
+  try {
+    const geminiRes = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
+
+    const rawText = await geminiRes.text();
+    let data: unknown;
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (parseErr) {
+      console.error("[translate] Gemini response is not valid JSON", {
+        status: geminiRes.status,
+        statusText: geminiRes.statusText,
+        bodyPreview: rawText.slice(0, 2500),
+        parseError: parseErr instanceof Error ? parseErr.message : String(parseErr),
+      });
+      throw new Error(`Gemini response JSON parse failed (HTTP ${geminiRes.status})`);
+    }
+
+    const payload = data as {
+      error?: { message?: string; code?: number; status?: string };
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+        finishReason?: string;
+        safetyRatings?: unknown;
+      }>;
+      promptFeedback?: { blockReason?: string; safetyRatings?: unknown };
+    };
+
+    if (!geminiRes.ok) {
+      console.error("[translate] Gemini HTTP error", {
+        status: geminiRes.status,
+        statusText: geminiRes.statusText,
+        error: payload.error,
+        body: data,
+      });
+      throw new Error(
+        payload.error?.message || `Gemini API HTTP ${geminiRes.status}`
+      );
+    }
+
+    if (payload.error) {
+      console.error("[translate] Gemini error field in success-status body", payload.error);
+      throw new Error(payload.error.message || "Gemini API error");
+    }
+
+    const text = (payload.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+
+    if (!text) {
+      console.error("[translate] Gemini returned no usable text (check finishReason / safety)", {
+        finishReason: payload.candidates?.[0]?.finishReason,
+        candidateSafety: payload.candidates?.[0]?.safetyRatings,
+        promptFeedback: payload.promptFeedback,
+        raw: data,
+      });
+    }
+
+    return { text, raw: data };
+  } catch (e: unknown) {
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error("[translate] callGeminiGenerate failed", {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+    });
+    throw err;
+  }
 }
 
 /**
@@ -559,25 +632,79 @@ async function callGeminiNativeTransliteration(
     trimmed;
 
   const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
-  const geminiRes = await fetch(GEMINI_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.35,
-        /** Long translated lines need room; 512 was cutting Hebrew read-aloud mid-phrase. */
-        maxOutputTokens: 2048,
-      },
-    }),
-  });
-  const data = await geminiRes.json();
-  const parts = data?.candidates?.[0]?.content?.parts;
-  const text =
-    Array.isArray(parts) && parts.length > 0
-      ? parts.map((p: { text?: string }) => p?.text ?? "").join("")
-      : "";
-  return text.trim();
+  const requestBody = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.35,
+      /** Long translated lines need room; 512 was cutting Hebrew read-aloud mid-phrase. */
+      maxOutputTokens: 2048,
+    },
+    safetySettings: [...GEMINI_SAFETY_SETTINGS],
+  };
+
+  try {
+    const geminiRes = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
+
+    const rawText = await geminiRes.text();
+    let data: unknown;
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (parseErr) {
+      console.error("[translate][transliteration] Gemini response is not valid JSON", {
+        status: geminiRes.status,
+        bodyPreview: rawText.slice(0, 1500),
+        parseError: parseErr instanceof Error ? parseErr.message : String(parseErr),
+      });
+      return "";
+    }
+
+    const payload = data as {
+      error?: { message?: string };
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
+      promptFeedback?: unknown;
+    };
+
+    if (!geminiRes.ok) {
+      console.error("[translate][transliteration] Gemini HTTP error", {
+        status: geminiRes.status,
+        error: payload.error,
+        body: data,
+      });
+      return "";
+    }
+
+    if (payload.error) {
+      console.error("[translate][transliteration] Gemini error field", payload.error);
+      return "";
+    }
+
+    const parts = payload.candidates?.[0]?.content?.parts;
+    const text =
+      Array.isArray(parts) && parts.length > 0
+        ? parts.map((p: { text?: string }) => p?.text ?? "").join("")
+        : "";
+
+    if (!text.trim()) {
+      console.error("[translate][transliteration] Gemini returned no text", {
+        finishReason: payload.candidates?.[0]?.finishReason,
+        promptFeedback: payload.promptFeedback,
+        raw: data,
+      });
+    }
+
+    return text.trim();
+  } catch (e: unknown) {
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error("[translate][transliteration] callGeminiNativeTransliteration failed", {
+      message: err.message,
+      stack: err.stack,
+    });
+    return "";
+  }
 }
 
 export async function OPTIONS() {
@@ -657,8 +784,14 @@ export async function POST(req: NextRequest) {
     let fullText = first.text;
 
     if (!fullText) {
+      console.error("[translate] Empty translation after primary Gemini call", {
+        raw: first.raw,
+      });
       return NextResponse.json(
-        { error: "Gemini returned no candidates", data: first.raw },
+        {
+          error: "Gemini returned no candidates",
+          details: "Model returned no text — see server logs for finishReason and safety metadata.",
+        },
         { status: 502, headers: corsHeaders }
       );
     }
@@ -757,9 +890,18 @@ export async function POST(req: NextRequest) {
       { status: 200, headers: corsHeaders }
     );
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error("[translate] POST handler error", {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+      cause: err.cause,
+    });
     return NextResponse.json(
-      { error: "Gemini request failed", details: msg },
+      {
+        error: "Translation request failed",
+        details: err.message,
+      },
       { status: 500, headers: corsHeaders }
     );
   }
