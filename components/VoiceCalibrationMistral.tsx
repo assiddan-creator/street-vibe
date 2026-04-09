@@ -9,19 +9,19 @@ import {
   setMistralVoiceId,
 } from "@/lib/customVoicePreference";
 
-/** Target range for a stable Mistral Voice Profile (docs: longer clean samples help cross-lingual cloning). */
-const MIN_PROFILE_MS = 30_000;
-const MAX_PROFILE_MS = 60_000;
+/** Mistral API caps reference audio at 30s — stay under with a 29s hard stop. */
+const MIN_PROFILE_MS = 10_000;
+const MAX_PROFILE_MS = 29_000;
 
 /** Fast zero-shot reference (Mistral docs: ~3–25s; product uses 5s). */
 const QUICK_MS = 5_000;
 
-export const VOICE_CALIBRATION_MISTRAL_SCRIPT = `Record 30–60 seconds of clear, expressive speech in a quiet space. Read naturally — varied sentences help the model lock your timbre and rhythm for stable cross-lingual TTS. Stop when you’re done, or recording ends automatically at ${MAX_PROFILE_MS / 1000} seconds.`;
+export const VOICE_CALIBRATION_MISTRAL_SCRIPT = `Record 10–25 seconds of clear, expressive speech in a quiet space. Read naturally — varied sentences help the model lock your timbre and rhythm for stable cross-lingual TTS. Stop when you’re done, or recording ends automatically at ${MAX_PROFILE_MS / 1000} seconds (Mistral’s maximum reference length is 30s).`;
 
 const QUICK_SCRIPT = `Record exactly ${QUICK_MS / 1000} seconds of clear speech in a quiet space. Recording stops automatically — this clip is used only for fast zero-shot cloning (engine: Mistral Quick Clone).`;
 
 type Props = {
-  /** Drives 5s quick vs 30–60s persistent profile UI. */
+  /** Drives 5s quick vs 10–29s persistent profile UI. */
   ttsEngine: TtsClientEngine;
   onVoiceProfileSaved?: () => void;
   className?: string;
