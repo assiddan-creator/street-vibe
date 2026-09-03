@@ -48,6 +48,7 @@ import {
   type RoutingIntentCategory,
 } from "@/lib/evaluation/ruleProfileRouting";
 import { generateReplicateText, REPLICATE_TEXT_MODEL } from "@/lib/replicateText";
+import { guardApiRequest } from "@/lib/apiRequestGuard";
 
 const MAX_TRANSLATE_INPUT_CHARS = 4000;
 
@@ -586,6 +587,9 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  const blocked = guardApiRequest(req, "translate", { limit: 30, maxBodyBytes: 32_000 });
+  if (blocked) return blocked;
+
   const apiKey = process.env.REPLICATE_API_TOKEN;
   if (!apiKey) {
     return NextResponse.json(
@@ -714,7 +718,7 @@ export async function POST(req: NextRequest) {
           fullText = combined;
         } else {
           const { translated: t2, dictRaw: d2 } = splitTranslationAndDictionary(second.text);
-          let t2s = sanitizeIsraeliStreetOutput(t2);
+          const t2s = sanitizeIsraeliStreetOutput(t2);
           if (containsLatinLeak(t2s)) {
             console.warn("[translate][Israeli Street] Latin leakage remains after retry", {
               latinTokenCount: countLatinTokens(t2s),

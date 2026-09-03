@@ -8,8 +8,6 @@ import { HistoryVaultSheet } from "@/components/HistoryVaultSheet";
 import { StreetVibeNav } from "@/components/StreetVibeNav";
 import { useCityTheme } from "@/components/theme/CityThemeProvider";
 import { LearnsYouControls } from "@/components/LearnsYouControls";
-import { VoiceCalibrationMistral } from "@/components/VoiceCalibrationMistral";
-import { VoiceModeToggle } from "@/components/VoiceModeToggle";
 import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { AmbientAccentGlows } from "@/components/AmbientAccentGlows";
 import { GraffitiLogo } from "@/components/GraffitiLogo";
@@ -85,13 +83,12 @@ export default function Home() {
   } | null>(null);
   const [popupLoading, setPopupLoading] = useState(false);
   const [ttsGender, setTtsGender] = useState<TtsVoiceGender>("male");
-  const [ttsEngine, setTtsEngine] = useState<TtsClientEngine>("mistral_builtin");
+  const [ttsEngine] = useState<TtsClientEngine>("minimax");
   const [ttsLoading, setTtsLoading] = useState(false);
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsPlayAttemptForCurrentTranslationRef = useRef(0);
-  const [voiceRefreshSignal, setVoiceRefreshSignal] = useState(0);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
 
@@ -592,7 +589,7 @@ export default function Home() {
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="All languages — Google voice" className="bg-zinc-900 text-white">
+              <optgroup label="All languages — Replicate voice" className="bg-zinc-900 text-white">
                 {OUTPUT_STANDARD_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                     {o.label}
@@ -627,7 +624,7 @@ export default function Home() {
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="All languages — Google voice" className="bg-zinc-900 text-white">
+                <optgroup label="All languages — Replicate voice" className="bg-zinc-900 text-white">
                   {OUTPUT_STANDARD_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                       {o.label}
@@ -665,14 +662,25 @@ export default function Home() {
         </div>
         </div>
 
-        <div className={`flex flex-col items-center transition-all duration-500 ${isActive ? "mb-4 mt-0" : "mb-8 mt-8"}`}>
+        <div className="w-full" style={{ "--accent": theme.accent } as CSSProperties}>
+          <input
+            type="text"
+            value={inputDisplayValue}
+            readOnly={isListening}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Type or say it plain…"
+            className={`${GLASS_INPUT} border-white/5 bg-white/3`}
+          />
+        </div>
+
+        <div className={`flex flex-col items-center transition-all duration-500 ${isActive ? "mb-4 mt-0" : "mb-5 mt-5"}`}>
           <button
             type="button"
             onClick={toggleMic}
             aria-label={isListening ? "Stop listening" : "Tap to speak"}
-            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out active:scale-95 ${
-              isActive ? "h-24 w-24" : "h-48 w-48"
-            } ${isListening ? "mic-pulse border-transparent" : isIdle ? "animate-pulse-slow" : ""}`}
+            className={`flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out active:scale-95 ${
+              isListening ? "mic-pulse border-transparent" : isIdle ? "animate-pulse-slow" : ""
+            }`}
             style={
               isListening
                 ? {
@@ -688,7 +696,7 @@ export default function Home() {
               <img src={micBall} alt="mic" className="h-full w-full rounded-full object-cover" draggable={false} />
             ) : (
               <svg
-                className={`${isActive ? "h-10 w-10" : "h-24 w-24"} ${isListening ? "text-black/90" : "text-white"}`}
+                className={`h-10 w-10 ${isListening ? "text-black/90" : "text-white"}`}
                 fill="currentColor"
                 viewBox="0 0 24 24"
                 aria-hidden
@@ -714,7 +722,7 @@ export default function Home() {
                 className="mt-3 text-center text-base uppercase tracking-widest"
                 style={{ color: theme.accent, opacity: 0.7, letterSpacing: "0.15em" }}
               >
-                tap to speak
+                or tap to speak
               </span>
               <p className="mt-1 text-center text-[9px] tracking-wider text-white/25">
                 speak or type in any language
@@ -725,29 +733,10 @@ export default function Home() {
         </div>
 
         <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
-          <VoiceModeToggle accent={theme.accent} voiceRefreshSignal={voiceRefreshSignal} />
           <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
-          <VoiceCalibrationMistral
-            ttsEngine={ttsEngine}
-            onVoiceProfileSaved={() => setVoiceRefreshSignal((n) => n + 1)}
-          />
         </div>
 
-        <div
-          className={`flex min-w-0 w-full flex-col gap-6 transition-all duration-500 ${
-            isActive ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-8 opacity-0"
-          }`}
-        >
-          <div style={{ "--accent": theme.accent } as CSSProperties}>
-            <input
-              type="text"
-              value={inputDisplayValue}
-              readOnly={isListening}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Say it plain…"
-              className={`${GLASS_INPUT} border-white/5 bg-white/3`}
-            />
-          </div>
+        <div className="flex min-w-0 w-full flex-col gap-6 transition-all duration-500">
 
           {showPremiumIntensityControls ? (
             <div className="flex flex-col gap-2">
@@ -886,7 +875,7 @@ export default function Home() {
             <button
               type="button"
               onClick={handleFlipIt}
-              disabled={loading}
+              disabled={loading || !inputDisplayValue.trim()}
               className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3.5 font-bold text-white shadow-none backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
               style={{
                 fontFamily: "'Permanent Marker', cursive",
@@ -977,31 +966,10 @@ export default function Home() {
               {nativeTransliteration?.trim() ? (
                 <NativeTransliterationCard text={nativeTransliteration} sourceLanguage={selectedInputLang} />
               ) : null}
-              <div className="mt-2 flex flex-col gap-1.5 border-t border-white/5 pt-3">
-                <p className="text-center text-[8px] uppercase tracking-widest text-white/20">⚙️ Voice engine</p>
-                <div style={{ "--accent": theme.accent } as CSSProperties}>
-                  <select
-                    value={ttsEngine}
-                    onChange={(e) => setTtsEngine(e.target.value as TtsClientEngine)}
-                    className="w-full rounded-none border-0 border-b border-white/10 bg-transparent py-1 text-center text-[10px] text-white/30 outline-none"
-                  >
-                    {/*
-                    Legacy engines — restore in UI by uncommenting:
-                    <option value="minimax" className="bg-zinc-900 text-white">MiniMax (Replicate)</option>
-                    <option value="google" className="bg-zinc-900 text-white">Google Cloud</option>
-                    <option value="native" className="bg-zinc-900 text-white">Native Browser</option>
-                    */}
-                    <option value="mistral_quick" className="bg-zinc-900 text-white">
-                      Mistral Quick Clone (5s Vibe)
-                    </option>
-                    <option value="mistral_clone" className="bg-zinc-900 text-white">
-                      Mistral Clone (My Voice)
-                    </option>
-                    <option value="mistral_builtin" className="bg-zinc-900 text-white">
-                      Mistral Built-in (Characters)
-                    </option>
-                  </select>
-                </div>
+              <div className="mt-2 border-t border-white/5 pt-3">
+                <p className="text-center text-[8px] uppercase tracking-widest text-white/20">
+                  Voice by Replicate
+                </p>
               </div>
             </div>
           </section>

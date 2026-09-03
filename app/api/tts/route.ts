@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { guardApiRequest } from "@/lib/apiRequestGuard";
 import {
   GOOGLE_VOICE_DEFAULT,
   GOOGLE_VOICE_MAP,
@@ -22,7 +23,6 @@ import { getPreferredVibeFallback, parseOptionalPersonalProfileFromBody } from "
 import { shapeTextForGoogleTts } from "@/lib/googleSpeechWriter";
 import { isKnownPremiumDialect } from "@/lib/dialectRegistry";
 import { getDialectPack, getDialectPackTtsHints } from "@/lib/dialectPacks";
-import { isPremiumSlang } from "@/lib/streetVibeTheme";
 import {
   ARABIC_EGYPTIAN_DIALECT_ID,
   normalizeArabicPremiumForSpeech,
@@ -53,6 +53,9 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  const blocked = guardApiRequest(req, "tts", { limit: 20, maxBodyBytes: 32_000 });
+  if (blocked) return blocked;
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -88,8 +91,7 @@ export async function POST(req: NextRequest) {
 
   const engine = typeof body.engine === "string" && body.engine ? body.engine : "minimax";
 
-  const resolvedEngine =
-    engine === "minimax" && !isPremiumSlang(typeof dialect === "string" ? dialect : "") ? "google" : engine;
+  const resolvedEngine = engine;
 
   if (resolvedEngine === "google") {
     const geminiKey = process.env.GEMINI_API_KEY;

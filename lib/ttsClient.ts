@@ -15,7 +15,6 @@ import {
 } from "@/lib/googleTtsVoiceConfig";
 import { resolveMinimaxEmotionFromVibe } from "@/lib/minimaxTtsEmotion";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
-import { isPremiumSlang } from "@/lib/streetVibeTheme";
 import {
   getMistralQuickPromptBase64,
   getMistralVoiceId,
@@ -81,8 +80,8 @@ export function getEffectiveTtsEngine(
   engine: "minimax" | "google" | "native",
   dialect: string
 ): "minimax" | "google" | "native" {
+  void dialect;
   if (engine === "native") return "native";
-  if (engine === "minimax" && !isPremiumSlang(dialect)) return "google";
   return engine;
 }
 
@@ -490,19 +489,12 @@ export async function fetchTtsAudioUrl(
     const replicatePathUsed =
       engine === "minimax" && getEffectiveTtsEngine("minimax", dialect) === "minimax";
     if (replicatePathUsed) {
-      console.warn("[TTS]", "Replicate/MiniMax failed; falling back to Google Cloud TTS", {
+      console.warn("[TTS]", "Replicate/MiniMax failed; falling back to native browser TTS", {
         requestedEngine: engine,
         effectiveEngine,
         dialect,
         error: e instanceof Error ? e.message : String(e),
       });
-      try {
-        return await fetchTtsAudioUrl(text, dialect, "google", context, implicitExtras);
-      } catch (eGoogle) {
-        console.warn("[TTS]", "Google TTS fallback failed; falling back to Native browser TTS", {
-          error: eGoogle instanceof Error ? eGoogle.message : String(eGoogle),
-        });
-      }
     } else {
       console.warn("[TTS]", "API engine failed; falling back to Native browser TTS", {
         requestedEngine: engine,

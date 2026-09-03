@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { guardApiRequest } from "@/lib/apiRequestGuard";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +12,9 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  const blocked = guardApiRequest(req, "tts-poll", { limit: 240, maxBodyBytes: 4_000 });
+  if (blocked) return blocked;
+
   const apiKey = process.env.REPLICATE_API_TOKEN;
   if (!apiKey) {
     return NextResponse.json(
