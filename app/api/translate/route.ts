@@ -48,15 +48,34 @@ import {
   type RoutingIntentCategory,
 } from "@/lib/evaluation/ruleProfileRouting";
 import { generateReplicateText, REPLICATE_TEXT_MODEL } from "@/lib/replicateText";
+import { generateGeminiText, GEMINI_TEXT_MODEL } from "@/lib/geminiText";
 import { guardApiRequest } from "@/lib/apiRequestGuard";
 
 const MAX_TRANSLATE_INPUT_CHARS = 4000;
+
+/** Model calls can outlast the platform's 10s default; allow up to the plan ceiling. */
+export const maxDuration = 60;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
+
+/** Turn a raw provider/network error into one short, non-technical line for the UI. */
+function friendlyTranslateError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes("did not finish") || m.includes("timeout") || m.includes("timed out")) {
+    return "The engine is warming up. Give it a second and hit Flip it again.";
+  }
+  if (m.includes("429") || m.includes("rate") || m.includes("too many")) {
+    return "Busy right now — try again in a few seconds.";
+  }
+  if (m.includes("no translation") || m.includes("no text") || m.includes("empty")) {
+    return "That one didn't come through. Rephrase it or hit Flip it again.";
+  }
+  return "Translation hiccup. Try again in a moment.";
+}
 
 /** Shared anti-overcook layer for all premium dialects — complements dialect packs, does not replace them. */
 function formatPremiumAntiOvercookGuard(opts: {
@@ -503,28 +522,73 @@ RULE PROFILE above applies to tone/word choice only; it must not change this out
   };
 }
 
-async function callReplicateGenerate(
-  apiKey: string,
-  prompt: string,
-  slangRequested: boolean
-): Promise<{ text: string; raw: unknown }> {
-  try {
-    return await generateReplicateText({
-      apiToken: apiKey,
-      prompt,
-      creative: slangRequested,
-      maxOutputTokens: 1024,
-    });
-  } catch (e: unknown) {
-    const err = e instanceof Error ? e : new Error(String(e));
-    console.error("[translate] Replicate text generation failed", {
-      message: err.message,
-      stack: err.stack,
-      name: err.name,
+/**
+ * Generate translation text. Tries the direct Gemini API first (fast + cheap),
+ * then falls back to the Replicate-hosted model so a bad key/model or a transient
+ * Gemini error degrades to "slower", never "broken". Each path retries once.
+ */
+async function generateTranslationText({
+  geminiKey,
+  replicateToken,
+  prompt,
+  creative,
+  maxOutputTokens,
+}: {
+  geminiKey: string | undefined;
+  replicateToken: string;
+  prompt: string;
+  creative: boolean;
+  maxOutputTokens: number;
+}): Promise<{ text: string; raw: unknown; engine: "gemini" | "replicate" }> {
+  if (geminiKey) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const result = await generateGeminiText({
+          apiKey: geminiKey,
+          prompt,
+          creative,
+          maxOutputTokens,
+        });
+        if (result.text.trim()) return { ...result, engine: "gemini" };
+      } catch (e: unknown) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        console.warn("[translate] Gemini direct call failed", {
+          attempt,
+          message: err.message,
+          model: GEMINI_TEXT_MODEL,
+        });
+      }
+    }
+    console.warn("[translate] Gemini path exhausted; falling back to Replicate", {
       model: REPLICATE_TEXT_MODEL,
     });
-    throw err;
   }
+
+  let lastErr: Error | null = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const result = await generateReplicateText({
+        apiToken: replicateToken,
+        prompt,
+        creative,
+        maxOutputTokens,
+      });
+      if (result.text.trim() || attempt === 2) return { ...result, engine: "replicate" };
+      console.warn("[translate] Empty output from Replicate; retrying once", {
+        model: REPLICATE_TEXT_MODEL,
+      });
+    } catch (e: unknown) {
+      lastErr = e instanceof Error ? e : new Error(String(e));
+      console.error("[translate] Replicate text generation failed", {
+        attempt,
+        message: lastErr.message,
+        name: lastErr.name,
+        model: REPLICATE_TEXT_MODEL,
+      });
+      if (attempt === 2) throw lastErr;
+    }
+  }
+  throw lastErr ?? new Error("Text generation returned no output");
 }
 
 /**
@@ -533,6 +597,7 @@ async function callReplicateGenerate(
  */
 async function callReplicateNativeTransliteration(
   apiKey: string,
+  geminiKey: string | undefined,
   translatedLine: string,
   readerLanguageBcp47: string
 ): Promise<string> {
@@ -563,8 +628,9 @@ async function callReplicateNativeTransliteration(
     trimmed;
 
   try {
-    const result = await generateReplicateText({
-      apiToken: apiKey,
+    const result = await generateTranslationText({
+      geminiKey,
+      replicateToken: apiKey,
       prompt,
       creative: false,
       /** Long translated lines need room; 512 was cutting Hebrew read-aloud mid-phrase. */
@@ -573,7 +639,7 @@ async function callReplicateNativeTransliteration(
     return result.text.trim();
   } catch (e: unknown) {
     const err = e instanceof Error ? e : new Error(String(e));
-    console.error("[translate][transliteration] Replicate request failed", {
+    console.error("[translate][transliteration] request failed", {
       message: err.message,
       stack: err.stack,
       model: REPLICATE_TEXT_MODEL,
@@ -590,10 +656,13 @@ export async function POST(req: NextRequest) {
   const blocked = guardApiRequest(req, "translate", { limit: 30, maxBodyBytes: 32_000 });
   if (blocked) return blocked;
 
-  const apiKey = process.env.REPLICATE_API_TOKEN;
-  if (!apiKey) {
+  const apiKey = process.env.REPLICATE_API_TOKEN ?? "";
+  // Dedicated key for the Generative Language API (AI Studio). Falls back to
+  // GEMINI_API_KEY, but that one is often a Cloud key scoped to Text-to-Speech only.
+  const geminiKey = process.env.GEMINI_TEXT_API_KEY || process.env.GEMINI_API_KEY;
+  if (!geminiKey && !apiKey) {
     return NextResponse.json(
-      { error: "Missing REPLICATE_API_TOKEN env var" },
+      { error: "Server missing a text model key (GEMINI_API_KEY or REPLICATE_API_TOKEN)" },
       { status: 500, headers: corsHeaders }
     );
   }
@@ -617,6 +686,48 @@ export async function POST(req: NextRequest) {
     sourceLanguage,
     uiLocale,
   } = body || {};
+
+  // Lazy read-aloud step: the client asks for the phonetic line *after* it already
+  // has the translation, so the main response is no longer blocked on a second model call.
+  if (body.mode === "transliterate") {
+    const translitBlocked = guardApiRequest(req, "translate-translit", {
+      limit: 60,
+      maxBodyBytes: 16_000,
+    });
+    if (translitBlocked) return translitBlocked;
+
+    const line = typeof body.line === "string" ? body.line.trim() : "";
+    if (!line) {
+      return NextResponse.json(
+        { nativeTransliteration: "" },
+        { status: 200, headers: corsHeaders }
+      );
+    }
+    const readerLang = resolveEffectiveSourceLanguageForTransliteration(
+      typeof sourceLanguage === "string" ? sourceLanguage : undefined,
+      typeof uiLocale === "string" ? uiLocale : undefined
+    );
+    if (translationRedundantForReader(line, readerLang)) {
+      return NextResponse.json(
+        { nativeTransliteration: "" },
+        { status: 200, headers: corsHeaders }
+      );
+    }
+    try {
+      const raw = await callReplicateNativeTransliteration(apiKey, geminiKey, line, readerLang);
+      const clean =
+        raw && looksLikePlausibleNativeTransliteration(raw, readerLang) ? raw.trim() : "";
+      return NextResponse.json(
+        { nativeTransliteration: clean },
+        { status: 200, headers: corsHeaders }
+      );
+    } catch {
+      return NextResponse.json(
+        { nativeTransliteration: "" },
+        { status: 200, headers: corsHeaders }
+      );
+    }
+  }
 
   if (!text || !currentLang) {
     return NextResponse.json(
@@ -664,7 +775,13 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    const first = await callReplicateGenerate(apiKey, prompt, slangRequested);
+    const first = await generateTranslationText({
+      geminiKey,
+      replicateToken: apiKey,
+      prompt,
+      creative: slangRequested,
+      maxOutputTokens: 1024,
+    });
     let fullText = first.text;
 
     if (!fullText) {
@@ -673,7 +790,7 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json(
         {
-          error: "Replicate returned no translation",
+          error: friendlyTranslateError("no translation"),
           details: `Model ${REPLICATE_TEXT_MODEL} returned no text.`,
         },
         { status: 502, headers: corsHeaders }
@@ -712,7 +829,13 @@ export async function POST(req: NextRequest) {
         });
         const retryPrompt =
           prompt + ISRAELI_STREET_RETRY_REINFORCEMENT + formatIsraeliStreetRetryFromConfig();
-        const second = await callReplicateGenerate(apiKey, retryPrompt, slangRequested);
+        const second = await generateTranslationText({
+          geminiKey,
+          replicateToken: apiKey,
+          prompt: retryPrompt,
+          creative: slangRequested,
+          maxOutputTokens: 1024,
+        });
         if (!second.text) {
           console.warn("[translate][Israeli Street] Retry returned empty; keeping sanitized first-pass translation");
           fullText = combined;
@@ -747,29 +870,14 @@ export async function POST(req: NextRequest) {
     }
     const translatedMain = cleanedMain;
 
-    const sourceLangStr =
-      typeof sourceLanguage === "string" ? sourceLanguage : undefined;
-    const uiLocaleStr = typeof uiLocale === "string" ? uiLocale : undefined;
-
-    let nativeTransliteration: string | undefined;
-    const readerLang = resolveEffectiveSourceLanguageForTransliteration(sourceLangStr, uiLocaleStr);
-    if (translatedMain.trim() && !translationRedundantForReader(translatedMain, readerLang)) {
-      try {
-        const raw = await callReplicateNativeTransliteration(apiKey, translatedMain, readerLang);
-        if (raw && looksLikePlausibleNativeTransliteration(raw, readerLang)) {
-          nativeTransliteration = raw.trim();
-        }
-      } catch {
-        /* omit optional field */
-      }
-    }
-
+    // Read-aloud phonetics are fetched separately by the client (mode: "transliterate")
+    // right after this response lands, so a slow second model call can't delay the result.
     return NextResponse.json(
       {
         fullText,
         sourceText: rawInput,
         translatedText: translatedMain,
-        ...(nativeTransliteration ? { nativeTransliteration } : {}),
+        engine: first.engine,
       },
       { status: 200, headers: corsHeaders }
     );
@@ -782,11 +890,8 @@ export async function POST(req: NextRequest) {
       cause: err.cause,
     });
     return NextResponse.json(
-      {
-        error: "Translation request failed",
-        details: err.message,
-      },
-      { status: 500, headers: corsHeaders }
+      { error: friendlyTranslateError(err.message), details: err.message },
+      { status: 502, headers: corsHeaders }
     );
   }
 }

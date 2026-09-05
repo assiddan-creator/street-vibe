@@ -26,7 +26,7 @@ export const GLASS_SELECT_COMPACT =
   "w-full max-w-[min(100%,280px)] rounded-lg border border-white/10 bg-black/30 backdrop-blur-md text-white transition-[border-color,box-shadow] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0";
 
 export const GLASS_INPUT =
-  "w-full rounded-lg border border-white/10 bg-black/30 backdrop-blur-md px-2.5 py-2 text-xs text-white placeholder:text-white/40 transition-[box-shadow,border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0 read-only:opacity-95";
+  "w-full rounded-lg border border-white/10 bg-black/30 backdrop-blur-md px-3 py-2.5 text-sm text-white placeholder:text-white/55 transition-[box-shadow,border-color] duration-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-0 read-only:opacity-95";
 
 /** Scrolls vertically when tall; horizontal overflow visible so RTL / long lines wrap instead of clipping (see `min-w-0` on card + text blocks). */
 export const GLASS_OUTPUT_CARD =

@@ -42,10 +42,10 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
   }, []);
 
   const labelClass = belowHero
-    ? `text-[9px] font-medium leading-none ${idle ? "text-white/40" : "text-white/50"}`
+    ? `text-[11px] font-medium leading-none ${idle ? "text-white/55" : "text-white/65"}`
     : idle
-      ? "text-[8px] uppercase tracking-wider text-white/28"
-      : "text-[8px] uppercase tracking-wider text-white/36";
+      ? "text-[10px] uppercase tracking-wider text-white/45"
+      : "text-[10px] uppercase tracking-wider text-white/55";
 
   const wrapClass = belowHero
     ? "w-full"
@@ -82,7 +82,7 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
               type="button"
               onClick={reset}
               title="Reset learned preferences"
-              className="mt-0.5 text-left text-[8px] leading-none text-white/35 transition-colors hover:text-white/50"
+              className="mt-0.5 text-left text-[10px] leading-none text-white/50 transition-colors hover:text-white/70"
             >
               Reset
             </button>
@@ -141,7 +141,7 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
         type="button"
         onClick={reset}
         title="Reset learned preferences"
-        className="max-w-[4.125rem] text-center text-[8px] text-white/25 hover:text-white/40"
+        className="max-w-[4.125rem] text-center text-[10px] text-white/45 hover:text-white/65"
       >
         Reset
       </button>

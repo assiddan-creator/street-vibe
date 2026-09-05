@@ -76,9 +76,9 @@ export function TranslationResultCard({
       <div className="output-card-scroll max-h-[min(70vh,560px)] min-h-0 w-full min-w-0 overflow-y-auto overflow-x-visible">
         <div className="w-full min-w-0 space-y-5">
           <section className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.04] p-4 backdrop-blur-xl">
-            <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.2em] text-white/40">{labels.source}</p>
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">{labels.source}</p>
             <p
-              className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-white/75 ${hebrewContext ? "text-right" : ""}`}
+              className={`whitespace-pre-wrap break-words text-[15px] leading-relaxed text-white/85 ${hebrewContext ? "text-right" : ""}`}
               dir={hebrewContext ? "rtl" : "auto"}
             >
               {originalText.trim() || "—"}
@@ -89,7 +89,7 @@ export function TranslationResultCard({
             className="min-w-0 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4 shadow-none backdrop-blur-xl"
             style={{ boxShadow: `inset 0 1px 0 0 ${accent}18` }}
           >
-            <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.2em] text-white/45">{labels.translation}</p>
+            <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">{labels.translation}</p>
             <div className="min-h-[3rem] min-w-0">
               {loading ? (
                 <TranslationBlockSkeleton accent={accent} />
@@ -127,7 +127,7 @@ export function TranslationResultCard({
         {dictionaryPills.map((pill, i) => (
           <span
             key={`${pill}-${i}`}
-            className="whitespace-pre-wrap break-words rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium leading-tight shadow-none backdrop-blur-md transition-all duration-300"
+            className="whitespace-pre-wrap break-words rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[13px] font-medium leading-tight shadow-none backdrop-blur-md transition-all duration-300"
             style={{
               borderColor: `${accent}35`,
               color: accent,

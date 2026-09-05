@@ -1,0 +1,1089 @@
+"use client";
+
+import type { CSSProperties, MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
+import { FlipButtonSkeleton, PopupWordSkeleton, TtsPlaySkeleton } from "@/components/ui/Skeleton";
+import { HistoryVaultSheet } from "@/components/HistoryVaultSheet";
+import { useCityTheme } from "@/components/theme/CityThemeProvider";
+import { LearnsYouControls } from "@/components/LearnsYouControls";
+import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
+import { AmbientAccentGlows } from "@/components/AmbientAccentGlows";
+import { GraffitiLogo } from "@/components/GraffitiLogo";
+import { Toast } from "@/components/Toast";
+import { NativeTransliterationCard } from "@/components/NativeTransliterationCard";
+import { TranslationResultCard } from "@/components/TranslationResultCard";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import {
+  GLASS_INPUT,
+  GLASS_SELECT,
+  GLASS_SELECT_COMPACT,
+} from "@/lib/themeUiClasses";
+import { SLANG_INTENSITY_SEGMENTS, VIBE_SEGMENTS } from "@/lib/slangSegmentControls";
+import { exampleInputsFor } from "@/lib/exampleInputs";
+import { shareOrDownloadCard } from "@/lib/shareImage";
+import {
+  INPUT_LANGUAGES,
+  OUTPUT_PREMIUM_OPTIONS,
+  OUTPUT_STANDARD_OPTIONS,
+  parseDictionaryPills,
+  resolveTheme,
+  splitTranslationAndDictionary,
+} from "@/lib/streetVibeTheme";
+import { getCityThemeForDialect } from "@/lib/themeConfig";
+import { lookupSlang } from "@/lib/slangDictionary";
+import {
+  ANALYTICS_EVENT_NAMES,
+  ANALYTICS_MODE,
+  analyticsDurationFieldsFromStart,
+  categorizeTranslateAnalyticsFailure,
+  trackAnalyticsEvent,
+} from "@/lib/analyticsEvents";
+import {
+  getImplicitSoftExtrasForRequests,
+  getLearnsYouEnabled,
+  recordInteractionSignal,
+} from "@/lib/implicitPreferenceEngine";
+import { themeAccentAlpha } from "@/lib/themeAccent";
+import {
+  appendHistoryVaultEntry,
+  clearHistoryVault,
+  loadHistoryVault,
+  type HistoryVaultEntry,
+} from "@/lib/historyVault";
+import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
+import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
+import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
+import {
+  TTS_ERR_MISTRAL_QUICK_PROMPT_REQUIRED,
+  TTS_ERR_MISTRAL_VOICE_ID_REQUIRED,
+} from "@/lib/customVoicePreference";
+import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
+import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
+
+export function TranslatorView() {
+  const [outputLang, setOutputLang] = useState("Jamaican Patois");
+  const [inputLanguage, setInputLanguage] = useState("he-IL");
+  const [inputText, setInputText] = useState("");
+  const [originalText, setOriginalText] = useState("");
+  const [translatedText, setTranslatedText] = useState("");
+  const [dictionaryPills, setDictionaryPills] = useState<string[]>([]);
+  const [nativeTransliteration, setNativeTransliteration] = useState<string | null>(null);
+  const [uiLocale, setUiLocale] = useState("en");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [slangLevel, setSlangLevel] = useState<1 | 2 | 3>(2);
+  const [context, setContext] = useState<string>("dm");
+  const [popupWord, setPopupWord] = useState<{
+    word: string;
+    meaning: string;
+    example: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [ttsGender, setTtsGender] = useState<TtsVoiceGender>("male");
+  const [ttsEngine] = useState<TtsClientEngine>("minimax");
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const [ttsPlaying, setTtsPlaying] = useState(false);
+  const [ttsError, setTtsError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsPlayAttemptForCurrentTranslationRef = useRef(0);
+  /** Bumped per translation so a slow read-aloud fetch can't land on a newer result. */
+  const translitReqIdRef = useRef(0);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
+  const [sharing, setSharing] = useState(false);
+
+  useEffect(() => {
+    setTtsGender(getStoredTtsGender());
+  }, []);
+
+  useEffect(() => {
+    setHistoryEntries(loadHistoryVault());
+  }, []);
+
+  useEffect(() => {
+    setUiLocale(typeof navigator !== "undefined" ? navigator.language : "en");
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 2800);
+    return () => window.clearTimeout(t);
+  }, [toast]);
+
+  const notifyCopiedToast = useCallback(() => {
+    setToast("Copied! Ready to paste.");
+  }, []);
+
+  const openHistory = useCallback(() => {
+    setHistoryEntries(loadHistoryVault());
+    setHistoryOpen(true);
+  }, []);
+
+  const handleClearHistoryVault = useCallback(() => {
+    clearHistoryVault();
+    setHistoryEntries([]);
+  }, []);
+
+  const copySlangFromHistory = useCallback(
+    async (slang: string) => {
+      if (!slang.trim()) return;
+      try {
+        await navigator.clipboard.writeText(slang);
+        notifyCopiedToast();
+      } catch {
+        /* ignore */
+      }
+    },
+    [notifyCopiedToast]
+  );
+
+  const selectedInputLang = inputLanguage;
+
+  const onFinalSpeech = useCallback((text: string) => {
+    setInputText((prev) => (prev + " " + text).trim());
+  }, []);
+
+  const { isListening, interimText, error: micError, toggle: toggleMic } = useSpeechRecognition({
+    lang: selectedInputLang,
+    onFinalResult: onFinalSpeech,
+  });
+
+  const inputDisplayValue = useMemo(() => {
+    if (isListening && interimText) {
+      return [inputText.trim(), interimText].filter(Boolean).join(" ");
+    }
+    return inputText;
+  }, [inputText, interimText, isListening]);
+
+  // Auto-grow the input as it fills, capped so it never eats the screen.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [inputDisplayValue]);
+
+  const exampleInputs = useMemo(() => exampleInputsFor(inputLanguage), [inputLanguage]);
+
+  const theme = resolveTheme(outputLang);
+  const showPremiumIntensityControls = usesPremiumStreetIntensityControls(outputLang);
+  const { setDialect } = useCityTheme();
+
+  const restoreFromHistory = useCallback(
+    (entry: HistoryVaultEntry) => {
+      setHistoryOpen(false);
+      audioRef.current?.pause();
+      audioRef.current = null;
+      setTtsPlaying(false);
+      setTtsError(null);
+      setOutputLang(entry.dialect);
+      setInputLanguage(entry.inputLanguage);
+      setInputText(entry.sourceText);
+      setOriginalText(entry.sourceText);
+      setTranslatedText(entry.translatedSlang);
+      setContext(entry.vibe);
+      setSlangLevel(entry.slangLevel);
+      setNativeTransliteration(entry.nativeTransliteration);
+      setDictionaryPills([]);
+      setError(null);
+      setDialect(entry.dialect);
+    },
+    [setDialect]
+  );
+
+  useEffect(() => {
+    setDialect(outputLang);
+  }, [outputLang, setDialect]);
+
+  useEffect(() => {
+    ttsPlayAttemptForCurrentTranslationRef.current = 0;
+  }, [translatedText]);
+
+  const translateText = async (text: string, dialect: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    setLoading(true);
+    setError(null);
+    setOriginalText(trimmed);
+    setTranslatedText("");
+    setDictionaryPills([]);
+    setNativeTransliteration(null);
+    const translitReqId = ++translitReqIdRef.current;
+
+    const learnsYouOn = getLearnsYouEnabled();
+    const implicitExtras = getImplicitSoftExtrasForRequests(learnsYouOn, false, undefined);
+    const implicitPresent = Boolean(
+      implicitExtras?.personalSlangProfile || implicitExtras?.personaPresetId
+    );
+    const translatePerfStart = performance.now();
+    trackAnalyticsEvent({
+      name: ANALYTICS_EVENT_NAMES.TRANSLATE_REQUESTED,
+      mode: ANALYTICS_MODE.TEXT,
+      targetDialect: dialect,
+      sourceLanguage: selectedInputLang,
+      slangLevel,
+      vibe: context,
+      textLengthChars: trimmed.length,
+      learnsYouEnabled: learnsYouOn,
+      implicitGuidancePresent: implicitPresent,
+    });
+
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: trimmed,
+          currentLang: dialect,
+          translationMode: "slang",
+          slangLevel,
+          isPremiumSelected: usesPremiumStreetIntensityControls(dialect),
+          context,
+          previousMessage: null,
+          sourceLanguage: selectedInputLang,
+          uiLocale,
+          ...implicitExtras,
+        }),
+      });
+
+      const data = (await res.json()) as {
+        fullText?: string;
+        translatedText?: string;
+        nativeTransliteration?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        const err = new Error(data.error || "Translation failed") as Error & { httpStatus?: number };
+        err.httpStatus = res.status;
+        throw err;
+      }
+
+      trackAnalyticsEvent({
+        name: ANALYTICS_EVENT_NAMES.TRANSLATE_SUCCEEDED,
+        mode: ANALYTICS_MODE.TEXT,
+        targetDialect: dialect,
+        learnsYouEnabled: learnsYouOn,
+        implicitGuidancePresent: implicitPresent,
+        ...analyticsDurationFieldsFromStart(translatePerfStart),
+      });
+
+      if (getLearnsYouEnabled()) {
+        recordInteractionSignal({
+          type: "translate_success",
+          snapshot: {
+            dialectId: dialect,
+            slangLevel,
+            context,
+            ttsGender,
+            inputLanguage: selectedInputLang,
+            timestampMs: Date.now(),
+          },
+        });
+      }
+
+      const fullText = String(data.fullText ?? "").trim();
+      const { translated, dictRaw } = splitTranslationAndDictionary(fullText);
+      const pills = parseDictionaryPills(dictRaw);
+      const translatedFinal = String(data.translatedText ?? translated).trim();
+
+      setTranslatedText(translatedFinal);
+      setDictionaryPills(pills);
+      setNativeTransliteration(data.nativeTransliteration?.trim() || null);
+
+      // Read-aloud phonetics: fetched separately so the result isn't blocked on it.
+      if (translatedFinal && !data.nativeTransliteration) {
+        void fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "transliterate",
+            line: translatedFinal,
+            sourceLanguage: selectedInputLang,
+            uiLocale,
+          }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d: { nativeTransliteration?: string } | null) => {
+            const t = d?.nativeTransliteration?.trim();
+            if (t && translitReqIdRef.current === translitReqId) setNativeTransliteration(t);
+          })
+          .catch(() => {});
+      }
+
+      if (translatedFinal) {
+        appendHistoryVaultEntry({
+          sourceText: trimmed,
+          translatedSlang: translatedFinal,
+          nativeTransliteration: data.nativeTransliteration?.trim() || null,
+          dialect,
+          vibe: context,
+          slangLevel,
+          inputLanguage: selectedInputLang,
+        });
+        setHistoryEntries(loadHistoryVault());
+      }
+    } catch (e) {
+      trackAnalyticsEvent({
+        name: ANALYTICS_EVENT_NAMES.TRANSLATE_FAILED,
+        mode: ANALYTICS_MODE.TEXT,
+        targetDialect: dialect,
+        failureCategory: categorizeTranslateAnalyticsFailure(e),
+        learnsYouEnabled: getLearnsYouEnabled(),
+        ...analyticsDurationFieldsFromStart(translatePerfStart),
+      });
+      setError(e instanceof Error ? e.message : "Translation failed");
+      setTranslatedText("");
+      setDictionaryPills([]);
+      setNativeTransliteration(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFlipIt = () => {
+    void translateText(inputDisplayValue.trim(), outputLang);
+  };
+
+  const handleShare = async () => {
+    if (sharing || !translatedText.trim()) return;
+    setSharing(true);
+    try {
+      const result = await shareOrDownloadCard({
+        original: (originalText || inputDisplayValue).trim(),
+        translated: translatedText.trim(),
+        dialectLabel: outputLang,
+        city: theme.city,
+        flag: theme.flag,
+        accent: theme.accent,
+      });
+      if (result === "downloaded") setToast("Image saved — ready to post");
+    } catch {
+      setToast("Couldn't make the image");
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    const text = translatedText.trim();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      notifyCopiedToast();
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handleClear = () => {
+    setInputText("");
+    setOriginalText("");
+    setTranslatedText("");
+    setDictionaryPills([]);
+    setNativeTransliteration(null);
+    setError(null);
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setTtsPlaying(false);
+    setTtsError(null);
+  };
+
+  const handlePlayTranslation = async () => {
+    const text = translatedText.trim();
+    if (!text) return;
+    ttsPlayAttemptForCurrentTranslationRef.current += 1;
+    if (ttsPlayAttemptForCurrentTranslationRef.current > 1) {
+      trackAnalyticsEvent({
+        name: ANALYTICS_EVENT_NAMES.TTS_REPLAYED,
+        mode: ANALYTICS_MODE.TEXT,
+        dialect: outputLang,
+        requestedEngine: ttsEngine,
+      });
+    }
+    setTtsLoading(true);
+    setTtsError(null);
+    try {
+      if (ttsEngine === "native") setTtsPlaying(true);
+      const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
+      const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context, implicitExtras);
+      if (url === null) {
+        setTtsPlaying(false);
+        return;
+      }
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setTtsPlaying(true);
+      audio.onended = () => setTtsPlaying(false);
+      void audio.play();
+    } catch (e) {
+      if (
+        ttsEngine === "mistral_clone" &&
+        e instanceof Error &&
+        e.message === TTS_ERR_MISTRAL_VOICE_ID_REQUIRED
+      ) {
+        setTtsError(null);
+        setToast("Record your Mistral voice profile first (30–60s sample below).");
+        setTtsPlaying(false);
+      } else if (
+        ttsEngine === "mistral_quick" &&
+        e instanceof Error &&
+        e.message === TTS_ERR_MISTRAL_QUICK_PROMPT_REQUIRED
+      ) {
+        setTtsError(null);
+        setToast("Record your 5s quick clone clip below first.");
+        setTtsPlaying(false);
+      } else {
+        setTtsError(e instanceof Error ? e.message : "Playback failed");
+        setTtsPlaying(false);
+      }
+    } finally {
+      setTtsLoading(false);
+    }
+  };
+
+  const handleWordClick = async (word: string, e: MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const x = rect.left;
+    const y = rect.bottom + window.scrollY + 6;
+    const clean = word.replace(/[^a-zA-ZÀ-ÿА-яёÀ-ÿ\u3040-\u30FF\uAC00-\uD7AF]/g, "").trim();
+    if (!clean) return;
+    const local = lookupSlang(clean, outputLang);
+    if (local) {
+      setPopupWord({ word: clean, meaning: local.meaning, example: local.example, x, y });
+      return;
+    }
+    setPopupLoading(true);
+    setPopupWord({ word: clean, meaning: "...", example: "", x, y });
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: `In the context of ${outputLang} slang, the sentence is: "${translatedText}". What does the word "${clean}" mean in THIS specific context? Reply in this exact format: MEANING: <one line meaning in context> | EXAMPLE: <one example sentence>`,
+          currentLang: "English",
+          translationMode: "standard",
+          slangLevel: 1,
+          isPremiumSelected: false,
+          context: "default",
+          previousMessage: null,
+        }),
+      });
+      const data = (await res.json()) as { fullText?: string };
+      const full = data.fullText ?? "";
+      const meaning = full.match(/MEANING:\s*(.+?)(\||$)/)?.[1]?.trim() ?? full;
+      const example = full.match(/EXAMPLE:\s*(.+)/)?.[1]?.trim() ?? "";
+      setPopupWord({ word: clean, meaning, example, x, y });
+    } catch {
+      setPopupWord(null);
+    } finally {
+      setPopupLoading(false);
+    }
+  };
+
+  const cityTheme = getCityThemeForDialect(outputLang);
+  const micBall = cityTheme.micBall ?? null;
+  const isActive = inputText.trim().length > 0 || originalText.trim().length > 0;
+  const isIdle = !isActive;
+  const hebrewContext = shouldOfferHebrewTransliteration(selectedInputLang, uiLocale);
+
+  return (
+    <div className="relative w-full">
+      <AmbientAccentGlows accent={theme.accent} />
+      <div className="relative z-10 w-full">
+      <Toast message={toast} accent={theme.accent} />
+      <HistoryVaultSheet
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        accent={theme.accent}
+        entries={historyEntries}
+        onClear={handleClearHistoryVault}
+        onCopySlang={copySlangFromHistory}
+        onRestore={restoreFromHistory}
+      />
+      {popupWord && (
+        <div
+          className="fixed z-50 max-w-[260px] rounded-xl border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-md"
+          style={{ left: Math.min(popupWord.x, window.innerWidth - 280), top: popupWord.y }}
+        >
+          <button
+            type="button"
+            onClick={() => setPopupWord(null)}
+            className="absolute right-2 top-2 text-white/55 hover:text-white"
+          >
+            ✕
+          </button>
+          <p className="mb-1 pr-6 text-[13px] font-bold text-white">{popupWord.word}</p>
+          {popupLoading ? (
+            <PopupWordSkeleton />
+          ) : (
+            <p className="text-[13px] text-white/85">{popupWord.meaning}</p>
+          )}
+          {popupWord.example ? (
+            <p className="mt-1 text-[12px] italic text-white/60">&quot;{popupWord.example}&quot;</p>
+          ) : null}
+        </div>
+      )}
+
+      <div
+        className="mx-auto flex min-w-0 w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-4 pt-3"
+        onClick={() => setPopupWord(null)}
+      >
+        <header className="mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-3 py-2 backdrop-blur-xl">
+          <GraffitiLogo accent={theme.accent} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
+        </header>
+
+        <div className={TOP_STACK_CLASS}>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="input-lang" className={TOP_HELPER_LABEL_CLASS}>
+            I speak
+          </label>
+          {isIdle ? (
+            <div
+              className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
+              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.accent, "10")}` }}
+            >
+            <select
+              id="input-lang"
+              value={inputLanguage}
+              onChange={(e) => {
+                const v = e.target.value;
+                setInputLanguage(v);
+                trackAnalyticsEvent({
+                  name: ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED,
+                  sourceLanguage: v,
+                  mode: ANALYTICS_MODE.TEXT,
+                });
+                if (getLearnsYouEnabled()) {
+                  recordInteractionSignal({
+                    type: "input_language_select",
+                    inputLanguage: v,
+                    timestampMs: Date.now(),
+                  });
+                }
+              }}
+              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[13px] text-white/85 outline-none ring-0"
+            >
+              {INPUT_LANGUAGES.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            </div>
+          ) : (
+            <div style={{ "--accent": theme.accent } as CSSProperties}>
+              <select
+                id="input-lang"
+                value={inputLanguage}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setInputLanguage(v);
+                  trackAnalyticsEvent({
+                    name: ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED,
+                    sourceLanguage: v,
+                    mode: ANALYTICS_MODE.TEXT,
+                  });
+                  if (getLearnsYouEnabled()) {
+                    recordInteractionSignal({
+                      type: "input_language_select",
+                      inputLanguage: v,
+                      timestampMs: Date.now(),
+                    });
+                  }
+                }}
+                className={`${GLASS_SELECT_COMPACT} px-2.5 py-1.5 text-center text-[12px] font-medium leading-tight text-white/90`}
+              >
+                {INPUT_LANGUAGES.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="output-lang" className={TOP_HELPER_LABEL_CLASS}>
+            Translate to
+          </label>
+          {isIdle ? (
+            <div
+              className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
+              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.accent, "10")}` }}
+            >
+            <select
+              id="output-lang"
+              value={outputLang}
+              onChange={(e) => {
+                const v = e.target.value;
+                setOutputLang(v);
+                trackAnalyticsEvent({
+                  name: ANALYTICS_EVENT_NAMES.TARGET_DIALECT_SELECTED,
+                  targetDialect: v,
+                  mode: ANALYTICS_MODE.TEXT,
+                });
+                if (getLearnsYouEnabled()) {
+                  recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
+                }
+              }}
+              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[13px] text-white/85 outline-none ring-0"
+            >
+              <optgroup label="Street slang — AI voice" className="bg-zinc-900 text-white">
+                {OUTPUT_PREMIUM_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="All languages — Replicate voice" className="bg-zinc-900 text-white">
+                {OUTPUT_STANDARD_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+            </div>
+          ) : (
+            <div style={{ "--accent": theme.accent } as CSSProperties}>
+              <select
+                id="output-lang"
+                value={outputLang}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setOutputLang(v);
+                  trackAnalyticsEvent({
+                    name: ANALYTICS_EVENT_NAMES.TARGET_DIALECT_SELECTED,
+                    targetDialect: v,
+                    mode: ANALYTICS_MODE.TEXT,
+                  });
+                  if (getLearnsYouEnabled()) {
+                    recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
+                  }
+                }}
+                className={`${GLASS_SELECT} px-3 py-2.5 text-center text-[13px] font-medium leading-snug text-white/90`}
+              >
+                <optgroup label="Street slang — AI voice" className="bg-zinc-900 text-white">
+                  {OUTPUT_PREMIUM_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="All languages — Replicate voice" className="bg-zinc-900 text-white">
+                  {OUTPUT_STANDARD_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="flex w-full justify-center">
+          <VoiceGenderSegment
+            accent={theme.accent}
+            idle={isIdle}
+            disabled={ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"}
+            value={ttsGender}
+            onChange={(value) => {
+              setTtsGender(value);
+              setStoredTtsGender(value);
+              trackAnalyticsEvent({
+              name: ANALYTICS_EVENT_NAMES.VOICE_GENDER_SELECTED,
+              ttsGender: value,
+              mode: ANALYTICS_MODE.TEXT,
+            });
+              if (getLearnsYouEnabled()) {
+                recordInteractionSignal({
+                  type: "tts_gender_select",
+                  gender: value,
+                  timestampMs: Date.now(),
+                });
+              }
+            }}
+          />
+        </div>
+        </div>
+
+        <div className="w-full" style={{ "--accent": theme.accent } as CSSProperties}>
+          <textarea
+            ref={inputRef}
+            rows={1}
+            value={inputDisplayValue}
+            readOnly={isListening}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (!loading && inputDisplayValue.trim()) handleFlipIt();
+              }
+            }}
+            placeholder="Type or say it plain…"
+            className={`${GLASS_INPUT} resize-none border-white/5 bg-white/3 leading-relaxed`}
+          />
+          {isIdle && !inputText.trim() && !isListening ? (
+            <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+              {exampleInputs.map((phrase) => (
+                <button
+                  key={phrase}
+                  type="button"
+                  onClick={() => {
+                    setInputText(phrase);
+                    inputRef.current?.focus();
+                  }}
+                  className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[12px] text-white/60 transition-colors hover:border-white/20 hover:text-white/85"
+                  style={{ borderColor: `${theme.accent}22` }}
+                >
+                  {phrase}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className={`flex flex-col items-center transition-all duration-500 ${isActive ? "mb-4 mt-0" : "mb-5 mt-5"}`}>
+          <button
+            type="button"
+            onClick={toggleMic}
+            aria-label={isListening ? "Stop listening" : "Tap to speak"}
+            className={`flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out active:scale-95 ${
+              isListening ? "mic-pulse border-transparent" : isIdle ? "animate-pulse-slow" : ""
+            }`}
+            style={
+              isListening
+                ? {
+                    background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
+                    boxShadow: `0 12px 56px ${theme.accent}77, 0 0 100px ${theme.accent}55, 0 8px 28px rgba(0,0,0,0.45)`,
+                  }
+                : {
+                    boxShadow: `0 0 0 1px ${theme.accent}28, 0 0 120px -8px ${theme.accent}99, 0 24px 64px ${theme.accent}44, 0 12px 40px rgba(0,0,0,0.55)`,
+                  }
+            }
+          >
+            {micBall ? (
+              <img src={micBall} alt="mic" className="h-full w-full rounded-full object-cover" draggable={false} />
+            ) : (
+              <svg
+                className={`h-10 w-10 ${isListening ? "text-black/90" : "text-white"}`}
+                fill="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden
+              >
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14C5.52 16.16 8.53 19 12 19s6.48-2.84 6.93-6.86c.09-.6-.39-1.14-1-1.14z" />
+              </svg>
+            )}
+          </button>
+          {isListening ? (
+            <span
+              className="mt-2 text-center text-[13px] transition-all duration-300"
+              style={{ color: theme.accent }}
+            >
+              listening...
+            </span>
+          ) : isActive ? (
+            <span className="mt-2 text-center text-[13px] text-white/55 transition-all duration-300">
+              tap to speak again
+            </span>
+          ) : (
+            <>
+              <span
+                className="mt-3 text-center text-base uppercase tracking-widest"
+                style={{ color: theme.accent, opacity: 0.85, letterSpacing: "0.15em" }}
+              >
+                or tap to speak
+              </span>
+              <p className="mt-1 text-center text-[11px] tracking-wider text-white/50">
+                speak or type in any language
+              </p>
+            </>
+          )}
+          {micError ? <p className="mt-1 text-center text-[12px] text-red-400">{micError}</p> : null}
+        </div>
+
+        <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
+          <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
+        </div>
+
+        <div className="flex min-w-0 w-full flex-col gap-6 transition-all duration-500">
+
+          {showPremiumIntensityControls ? (
+            <div className="flex flex-col gap-2">
+              <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
+                <MaterialSymbol name="bolt" className="text-[13px]" />
+                Intensity
+              </p>
+              <div
+                className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl"
+                role="group"
+                aria-label="Slang intensity"
+              >
+                {SLANG_INTENSITY_SEGMENTS.map(({ level, text, icon }) => {
+                  const on = slangLevel === level;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => {
+                        setSlangLevel(level);
+                        trackAnalyticsEvent({
+                          name: ANALYTICS_EVENT_NAMES.SLANG_LEVEL_SELECTED,
+                          slangLevel: level,
+                          mode: ANALYTICS_MODE.TEXT,
+                        });
+                        if (getLearnsYouEnabled()) {
+                          recordInteractionSignal({
+                            type: "slang_level_select",
+                            level,
+                            timestampMs: Date.now(),
+                          });
+                        }
+                      }}
+                      className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition-all duration-300 ${
+                        on ? "" : "bg-transparent text-white/60 hover:text-white/80"
+                      }`}
+                      style={
+                        on
+                          ? {
+                              color: theme.accent,
+                              backgroundColor: `${theme.accent}24`,
+                              boxShadow: `0 0 24px -8px ${theme.accent}aa, inset 0 1px 0 ${theme.accent}44`,
+                            }
+                          : undefined
+                      }
+                    >
+                      <MaterialSymbol name={icon} className="text-[15px]" />
+                      {text}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex flex-col gap-2">
+            <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
+              <MaterialSymbol name="masks" className="text-[13px]" />
+              Vibe
+            </p>
+            <div
+              className={`mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl transition-opacity ${
+                ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"
+                  ? "pointer-events-none opacity-40"
+                  : ""
+              }`}
+              role="group"
+              aria-label="Message vibe"
+              title={
+                ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"
+                  ? "Uses your recorded voice timbre only"
+                  : undefined
+              }
+            >
+              {VIBE_SEGMENTS.map(({ value, text, icon }) => {
+                const on = context === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"}
+                    onClick={() => {
+                      setContext(value);
+                      trackAnalyticsEvent({
+                        name: ANALYTICS_EVENT_NAMES.VIBE_SELECTED,
+                        vibe: value,
+                        mode: ANALYTICS_MODE.TEXT,
+                      });
+                      if (getLearnsYouEnabled()) {
+                        recordInteractionSignal({
+                          type: "context_select",
+                          context: value,
+                          timestampMs: Date.now(),
+                        });
+                      }
+                    }}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition-all duration-300 ${
+                      on ? "" : "bg-transparent text-white/60 hover:text-white/80"
+                    }`}
+                    style={
+                      on
+                        ? {
+                            color: theme.accent,
+                            backgroundColor: `${theme.accent}24`,
+                            boxShadow: `0 0 24px -8px ${theme.accent}aa, inset 0 1px 0 ${theme.accent}44`,
+                          }
+                        : undefined
+                    }
+                  >
+                    <MaterialSymbol name={icon} className="text-[15px]" />
+                    {text}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex w-full items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => void handleCopy()}
+              aria-label="Copy"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white/75 shadow-none backdrop-blur-xl transition-all duration-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white active:scale-[0.97]"
+              style={{ borderColor: `${theme.accent}35` }}
+            >
+              <svg className="h-[20px] w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFlipIt}
+              disabled={loading || !inputDisplayValue.trim()}
+              className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3.5 font-bold text-white shadow-none backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
+              style={{
+                fontFamily: "'Permanent Marker', cursive",
+                fontSize: "1.05rem",
+                borderColor: `${theme.accent}30`,
+                boxShadow: `0 0 0 1px ${theme.accent}20, inset 0 1px 0 ${theme.accent}18`,
+              }}
+            >
+              {cityTheme.bg?.wide ? (
+                <img
+                  src={cityTheme.bg.wide}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover opacity-75"
+                  draggable={false}
+                />
+              ) : null}
+              <div
+                className="absolute inset-0"
+                style={{ background: `linear-gradient(135deg, ${theme.accent}28 0%, rgba(0,0,0,0.55) 100%)` }}
+              />
+              <span className="relative z-10 flex w-full justify-center drop-shadow-lg">
+                {loading ? <FlipButtonSkeleton /> : "Flip it 🔥"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleClear}
+              aria-label="Clear"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white/75 shadow-none backdrop-blur-xl transition-all duration-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white active:scale-[0.97]"
+              style={{ borderColor: `${theme.accent}35` }}
+            >
+              <svg className="h-[20px] w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <section
+            className={`min-w-0 w-full shrink-0 overflow-visible transition-all duration-500 ${
+              translatedText || loading || error ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+            }`}
+          >
+            <div className="flex w-full min-w-0 flex-col gap-4 overflow-visible">
+              <TranslationResultCard
+                accent={theme.accent}
+                originalText={originalText}
+                translatedText={translatedText}
+                dictionaryPills={dictionaryPills}
+                loading={loading}
+                error={error}
+                hebrewContext={hebrewContext}
+                onWordClick={(token, e) => void handleWordClick(token, e)}
+                onAutoCopied={notifyCopiedToast}
+                afterTranslation={
+                  translatedText.trim() ? (
+                    <div className="mt-3 flex flex-col gap-1">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handlePlayTranslation()}
+                          disabled={ttsLoading || ttsPlaying}
+                          className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3 text-sm font-bold text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.99] disabled:opacity-45"
+                          style={{
+                            borderColor: `${theme.accent}35`,
+                            color: theme.accent,
+                            fontFamily: "'Permanent Marker', cursive",
+                            boxShadow: `inset 0 1px 0 ${theme.accent}22`,
+                          }}
+                        >
+                          {ttsLoading ? (
+                            <TtsPlaySkeleton />
+                          ) : ttsPlaying ? (
+                            "🔊 Playing..."
+                          ) : (
+                            "▶ Read aloud"
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleShare()}
+                          disabled={sharing}
+                          aria-label="Share as image"
+                          className="flex w-14 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.97] disabled:opacity-45"
+                          style={{ borderColor: `${theme.accent}35`, color: theme.accent }}
+                        >
+                          {sharing ? (
+                            <span className="text-[13px]">…</span>
+                          ) : (
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                      {ttsError ? <p className="text-center text-[12px] text-red-400">{ttsError}</p> : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const src = (originalText || inputDisplayValue).trim();
+                          if (src && !loading) void translateText(src, outputLang);
+                        }}
+                        disabled={loading}
+                        className="mt-1 self-center rounded-full px-3 py-1 text-[12px] font-medium text-white/55 transition-colors hover:text-white/90 disabled:opacity-40"
+                      >
+                        ↻ Try another take
+                      </button>
+                    </div>
+                  ) : null
+                }
+              />
+              {nativeTransliteration?.trim() ? (
+                <NativeTransliterationCard text={nativeTransliteration} sourceLanguage={selectedInputLang} />
+              ) : null}
+              <div className="mt-2 border-t border-white/5 pt-3">
+                <p className="text-center text-[11px] uppercase tracking-widest text-white/40">
+                  Voice by Replicate
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+      </div>
+    </div>
+  );
+}
