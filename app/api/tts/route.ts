@@ -38,6 +38,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+/** Google path synthesizes inline and can exceed the platform's 10s default. */
+export const maxDuration = 60;
+
 /** Replicate MiniMax model — speech-2.8-turbo */
 const REPLICATE_MINIMAX_VERSION = "minimax/speech-2.8-turbo";
 

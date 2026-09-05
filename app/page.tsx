@@ -89,6 +89,8 @@ export default function Home() {
   const [ttsError, setTtsError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsPlayAttemptForCurrentTranslationRef = useRef(0);
+  /** Bumped per translation so a slow read-aloud fetch can't land on a newer result. */
+  const translitReqIdRef = useRef(0);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
 
@@ -199,6 +201,7 @@ export default function Home() {
     setTranslatedText("");
     setDictionaryPills([]);
     setNativeTransliteration(null);
+    const translitReqId = ++translitReqIdRef.current;
 
     const learnsYouOn = getLearnsYouEnabled();
     const implicitExtras = getImplicitSoftExtrasForRequests(learnsYouOn, false, undefined);
@@ -279,6 +282,26 @@ export default function Home() {
       setTranslatedText(translatedFinal);
       setDictionaryPills(pills);
       setNativeTransliteration(data.nativeTransliteration?.trim() || null);
+
+      // Read-aloud phonetics: fetched separately so the result isn't blocked on it.
+      if (translatedFinal && !data.nativeTransliteration) {
+        void fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "transliterate",
+            line: translatedFinal,
+            sourceLanguage: selectedInputLang,
+            uiLocale,
+          }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d: { nativeTransliteration?: string } | null) => {
+            const t = d?.nativeTransliteration?.trim();
+            if (t && translitReqIdRef.current === translitReqId) setNativeTransliteration(t);
+          })
+          .catch(() => {});
+      }
 
       if (translatedFinal) {
         appendHistoryVaultEntry({

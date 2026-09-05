@@ -77,6 +77,8 @@ export default function SpeakPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   /** Resets when `translatedText` changes; first play = 1, replays ≥2. */
   const ttsPlayAttemptForCurrentTranslationRef = useRef(0);
+  /** Bumped per translation so a slow read-aloud fetch can't land on a newer result. */
+  const translitReqIdRef = useRef(0);
   const [popupWord, setPopupWord] = useState<{
     word: string;
     meaning: string;
@@ -191,6 +193,7 @@ export default function SpeakPage() {
     setTranslatedText("");
     setDictionaryPills([]);
     setNativeTransliteration(null);
+    const translitReqId = ++translitReqIdRef.current;
 
     const learnsYouOn = getLearnsYouEnabled();
     const implicitExtras = getImplicitSoftExtrasForRequests(learnsYouOn, false, undefined);
@@ -267,6 +270,26 @@ export default function SpeakPage() {
       setTranslatedText(translatedFinal);
       setDictionaryPills(parseDictionaryPills(dictRaw));
       setNativeTransliteration(data.nativeTransliteration?.trim() || null);
+
+      // Read-aloud phonetics: fetched separately so the result isn't blocked on it.
+      if (translatedFinal && !data.nativeTransliteration) {
+        void fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "transliterate",
+            line: translatedFinal,
+            sourceLanguage: inputLanguage,
+            uiLocale,
+          }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d: { nativeTransliteration?: string } | null) => {
+            const t = d?.nativeTransliteration?.trim();
+            if (t && translitReqIdRef.current === translitReqId) setNativeTransliteration(t);
+          })
+          .catch(() => {});
+      }
 
       if (translatedFinal) {
         appendHistoryVaultEntry({
