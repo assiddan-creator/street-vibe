@@ -20,6 +20,7 @@ import {
   GLASS_SELECT_COMPACT,
 } from "@/lib/themeUiClasses";
 import { SLANG_INTENSITY_SEGMENTS, VIBE_SEGMENTS } from "@/lib/slangSegmentControls";
+import { exampleInputsFor } from "@/lib/exampleInputs";
 import {
   INPUT_LANGUAGES,
   OUTPUT_PREMIUM_OPTIONS,
@@ -90,6 +91,7 @@ export function TranslatorView() {
   const ttsPlayAttemptForCurrentTranslationRef = useRef(0);
   /** Bumped per translation so a slow read-aloud fetch can't land on a newer result. */
   const translitReqIdRef = useRef(0);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
 
@@ -155,6 +157,16 @@ export function TranslatorView() {
     }
     return inputText;
   }, [inputText, interimText, isListening]);
+
+  // Auto-grow the input as it fills, capped so it never eats the screen.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [inputDisplayValue]);
+
+  const exampleInputs = useMemo(() => exampleInputsFor(inputLanguage), [inputLanguage]);
 
   const theme = resolveTheme(outputLang);
   const showPremiumIntensityControls = usesPremiumStreetIntensityControls(outputLang);
@@ -683,14 +695,39 @@ export function TranslatorView() {
         </div>
 
         <div className="w-full" style={{ "--accent": theme.accent } as CSSProperties}>
-          <input
-            type="text"
+          <textarea
+            ref={inputRef}
+            rows={1}
             value={inputDisplayValue}
             readOnly={isListening}
             onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (!loading && inputDisplayValue.trim()) handleFlipIt();
+              }
+            }}
             placeholder="Type or say it plain…"
-            className={`${GLASS_INPUT} border-white/5 bg-white/3`}
+            className={`${GLASS_INPUT} resize-none border-white/5 bg-white/3 leading-relaxed`}
           />
+          {isIdle && !inputText.trim() && !isListening ? (
+            <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+              {exampleInputs.map((phrase) => (
+                <button
+                  key={phrase}
+                  type="button"
+                  onClick={() => {
+                    setInputText(phrase);
+                    inputRef.current?.focus();
+                  }}
+                  className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[12px] text-white/60 transition-colors hover:border-white/20 hover:text-white/85"
+                  style={{ borderColor: `${theme.accent}22` }}
+                >
+                  {phrase}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className={`flex flex-col items-center transition-all duration-500 ${isActive ? "mb-4 mt-0" : "mb-5 mt-5"}`}>
@@ -979,6 +1016,17 @@ export function TranslatorView() {
                         )}
                       </button>
                       {ttsError ? <p className="text-center text-[12px] text-red-400">{ttsError}</p> : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const src = (originalText || inputDisplayValue).trim();
+                          if (src && !loading) void translateText(src, outputLang);
+                        }}
+                        disabled={loading}
+                        className="mt-1 self-center rounded-full px-3 py-1 text-[12px] font-medium text-white/55 transition-colors hover:text-white/90 disabled:opacity-40"
+                      >
+                        ↻ Try another take
+                      </button>
                     </div>
                   ) : null
                 }
