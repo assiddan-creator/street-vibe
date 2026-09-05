@@ -54,10 +54,6 @@ import {
 import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
-import {
-  TTS_ERR_MISTRAL_QUICK_PROMPT_REQUIRED,
-  TTS_ERR_MISTRAL_VOICE_ID_REQUIRED,
-} from "@/lib/customVoicePreference";
 import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
@@ -477,26 +473,8 @@ export function TranslatorView() {
       audio.onended = () => setTtsPlaying(false);
       void audio.play();
     } catch (e) {
-      if (
-        ttsEngine === "mistral_clone" &&
-        e instanceof Error &&
-        e.message === TTS_ERR_MISTRAL_VOICE_ID_REQUIRED
-      ) {
-        setTtsError(null);
-        setToast("Record your Mistral voice profile first (30–60s sample below).");
-        setTtsPlaying(false);
-      } else if (
-        ttsEngine === "mistral_quick" &&
-        e instanceof Error &&
-        e.message === TTS_ERR_MISTRAL_QUICK_PROMPT_REQUIRED
-      ) {
-        setTtsError(null);
-        setToast("Record your 5s quick clone clip below first.");
-        setTtsPlaying(false);
-      } else {
-        setTtsError(e instanceof Error ? e.message : "Playback failed");
-        setTtsPlaying(false);
-      }
+      setTtsError(e instanceof Error ? e.message : "Playback failed");
+      setTtsPlaying(false);
     } finally {
       setTtsLoading(false);
     }
@@ -780,7 +758,6 @@ export function TranslatorView() {
           <VoiceGenderSegment
             accent={theme.accent}
             idle={isIdle}
-            disabled={ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"}
             value={ttsGender}
             onChange={(value) => {
               setTtsGender(value);
@@ -965,18 +942,9 @@ export function TranslatorView() {
               Vibe
             </p>
             <div
-              className={`mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl transition-opacity ${
-                ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"
-                  ? "pointer-events-none opacity-40"
-                  : ""
-              }`}
+              className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl transition-opacity"
               role="group"
               aria-label="Message vibe"
-              title={
-                ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"
-                  ? "Uses your recorded voice timbre only"
-                  : undefined
-              }
             >
               {VIBE_SEGMENTS.map(({ value, text, icon }) => {
                 const on = context === value;
@@ -984,7 +952,6 @@ export function TranslatorView() {
                   <button
                     key={value}
                     type="button"
-                    disabled={ttsEngine === "mistral_clone" || ttsEngine === "mistral_quick"}
                     onClick={() => {
                       setContext(value);
                       trackAnalyticsEvent({
