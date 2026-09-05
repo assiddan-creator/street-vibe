@@ -8,6 +8,17 @@
 /** Override with GEMINI_TEXT_MODEL if the default is unavailable on the key. */
 export const GEMINI_TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-3.6-flash";
 
+/**
+ * Gemini 3.x Flash thinks by default and, unbounded, spends the whole output
+ * budget on thoughts (finishReason MAX_TOKENS, no answer). It also rejects
+ * budget 0. A small positive budget keeps latency ~2s with a complete answer.
+ * Override via GEMINI_THINKING_BUDGET.
+ */
+const THINKING_BUDGET = (() => {
+  const raw = Math.floor(Number(process.env.GEMINI_THINKING_BUDGET));
+  return Number.isFinite(raw) && raw >= 1 ? raw : 256;
+})();
+
 /** Street slang / flirt / angry vibes trip the default filters; keep only the hard blocks. */
 const SAFETY_SETTINGS = [
   "HARM_CATEGORY_HARASSMENT",
@@ -57,7 +68,10 @@ export async function generateGeminiText({
           generationConfig: {
             temperature: creative ? 0.7 : 0.2,
             topP: 0.95,
-            maxOutputTokens,
+            // Thinking tokens count against the output budget, so add them on top
+            // of the answer tokens the caller asked for.
+            maxOutputTokens: maxOutputTokens + THINKING_BUDGET,
+            thinkingConfig: { thinkingBudget: THINKING_BUDGET },
           },
           safetySettings: SAFETY_SETTINGS,
         }),

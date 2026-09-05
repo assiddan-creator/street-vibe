@@ -539,7 +539,7 @@ async function generateTranslationText({
   prompt: string;
   creative: boolean;
   maxOutputTokens: number;
-}): Promise<{ text: string; raw: unknown }> {
+}): Promise<{ text: string; raw: unknown; engine: "gemini" | "replicate" }> {
   if (geminiKey) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
@@ -549,7 +549,7 @@ async function generateTranslationText({
           creative,
           maxOutputTokens,
         });
-        if (result.text.trim()) return result;
+        if (result.text.trim()) return { ...result, engine: "gemini" };
       } catch (e: unknown) {
         const err = e instanceof Error ? e : new Error(String(e));
         console.warn("[translate] Gemini direct call failed", {
@@ -573,7 +573,7 @@ async function generateTranslationText({
         creative,
         maxOutputTokens,
       });
-      if (result.text.trim() || attempt === 2) return result;
+      if (result.text.trim() || attempt === 2) return { ...result, engine: "replicate" };
       console.warn("[translate] Empty output from Replicate; retrying once", {
         model: REPLICATE_TEXT_MODEL,
       });
@@ -877,6 +877,7 @@ export async function POST(req: NextRequest) {
         fullText,
         sourceText: rawInput,
         translatedText: translatedMain,
+        engine: first.engine,
       },
       { status: 200, headers: corsHeaders }
     );
