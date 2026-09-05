@@ -481,18 +481,18 @@ export function TranslatorView() {
           <button
             type="button"
             onClick={() => setPopupWord(null)}
-            className="absolute right-2 top-2 text-white/40 hover:text-white"
+            className="absolute right-2 top-2 text-white/55 hover:text-white"
           >
             ✕
           </button>
-          <p className="mb-1 pr-6 text-[11px] font-bold text-white">{popupWord.word}</p>
+          <p className="mb-1 pr-6 text-[13px] font-bold text-white">{popupWord.word}</p>
           {popupLoading ? (
             <PopupWordSkeleton />
           ) : (
-            <p className="text-[11px] text-white/80">{popupWord.meaning}</p>
+            <p className="text-[13px] text-white/85">{popupWord.meaning}</p>
           )}
           {popupWord.example ? (
-            <p className="mt-1 text-[10px] italic text-white/50">&quot;{popupWord.example}&quot;</p>
+            <p className="mt-1 text-[12px] italic text-white/60">&quot;{popupWord.example}&quot;</p>
           ) : null}
         </div>
       )}
@@ -534,7 +534,7 @@ export function TranslatorView() {
                   });
                 }
               }}
-              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[11px] text-white/72 outline-none ring-0"
+              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[13px] text-white/85 outline-none ring-0"
             >
               {INPUT_LANGUAGES.map((opt) => (
                 <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -600,7 +600,7 @@ export function TranslatorView() {
                   recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                 }
               }}
-              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[11px] text-white/72 outline-none ring-0"
+              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[13px] text-white/85 outline-none ring-0"
             >
               <optgroup label="Street slang — AI voice" className="bg-zinc-900 text-white">
                 {OUTPUT_PREMIUM_OPTIONS.map((o) => (
@@ -727,29 +727,29 @@ export function TranslatorView() {
           </button>
           {isListening ? (
             <span
-              className="mt-2 text-center text-[11px] transition-all duration-300"
+              className="mt-2 text-center text-[13px] transition-all duration-300"
               style={{ color: theme.accent }}
             >
               listening...
             </span>
           ) : isActive ? (
-            <span className="mt-2 text-center text-[11px] text-white/40 transition-all duration-300">
+            <span className="mt-2 text-center text-[13px] text-white/55 transition-all duration-300">
               tap to speak again
             </span>
           ) : (
             <>
               <span
                 className="mt-3 text-center text-base uppercase tracking-widest"
-                style={{ color: theme.accent, opacity: 0.7, letterSpacing: "0.15em" }}
+                style={{ color: theme.accent, opacity: 0.85, letterSpacing: "0.15em" }}
               >
                 or tap to speak
               </span>
-              <p className="mt-1 text-center text-[9px] tracking-wider text-white/25">
+              <p className="mt-1 text-center text-[11px] tracking-wider text-white/50">
                 speak or type in any language
               </p>
             </>
           )}
-          {micError ? <p className="mt-1 text-center text-[10px] text-red-400">{micError}</p> : null}
+          {micError ? <p className="mt-1 text-center text-[12px] text-red-400">{micError}</p> : null}
         </div>
 
         <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
@@ -760,7 +760,7 @@ export function TranslatorView() {
 
           {showPremiumIntensityControls ? (
             <div className="flex flex-col gap-2">
-              <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[10px] font-medium uppercase tracking-widest text-white/45">
+              <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
                 <MaterialSymbol name="bolt" className="text-[13px]" />
                 Intensity
               </p>
@@ -790,8 +790,8 @@ export function TranslatorView() {
                           });
                         }
                       }}
-                      className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-semibold transition-all duration-300 ${
-                        on ? "" : "bg-transparent text-white/45 hover:text-white/65"
+                      className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition-all duration-300 ${
+                        on ? "" : "bg-transparent text-white/60 hover:text-white/80"
                       }`}
                       style={
                         on
@@ -813,7 +813,7 @@ export function TranslatorView() {
           ) : null}
 
           <div className="flex flex-col gap-2">
-            <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[10px] font-medium uppercase tracking-widest text-white/45">
+            <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
               <MaterialSymbol name="masks" className="text-[13px]" />
               Vibe
             </p>
@@ -853,8 +853,8 @@ export function TranslatorView() {
                         });
                       }
                     }}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-semibold transition-all duration-300 ${
-                      on ? "" : "bg-transparent text-white/45 hover:text-white/65"
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition-all duration-300 ${
+                      on ? "" : "bg-transparent text-white/60 hover:text-white/80"
                     }`}
                     style={
                       on
@@ -978,7 +978,7 @@ export function TranslatorView() {
                           "▶ Read aloud (Street Voice)"
                         )}
                       </button>
-                      {ttsError ? <p className="text-center text-[10px] text-red-400">{ttsError}</p> : null}
+                      {ttsError ? <p className="text-center text-[12px] text-red-400">{ttsError}</p> : null}
                     </div>
                   ) : null
                 }
@@ -987,7 +987,7 @@ export function TranslatorView() {
                 <NativeTransliterationCard text={nativeTransliteration} sourceLanguage={selectedInputLang} />
               ) : null}
               <div className="mt-2 border-t border-white/5 pt-3">
-                <p className="text-center text-[8px] uppercase tracking-widest text-white/20">
+                <p className="text-center text-[11px] uppercase tracking-widest text-white/40">
                   Voice by Replicate
                 </p>
               </div>
