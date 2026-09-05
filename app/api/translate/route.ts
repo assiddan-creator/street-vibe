@@ -743,6 +743,57 @@ export async function POST(req: NextRequest) {
       { status: 413, headers: corsHeaders }
     );
   }
+
+  // Reply helper: given a message the user received, return 3 short comebacks
+  // in the chosen dialect voice + vibe.
+  if (body.mode === "reply") {
+    const dialectId = String(currentLang);
+    const primaryLanguage = getDialectPrimaryLanguage(dialectId);
+    const vibe = typeof context === "string" && context.trim() ? context.trim() : "friend";
+    const level = parseInt(String(slangLevel), 10) || 2;
+    const replyPrompt =
+      `A friend just sent you this message:\n'''${rawInput}'''\n\n` +
+      `Write 3 different replies you could send back, in natural ${primaryLanguage} the way it's spoken in "${dialectId}".\n` +
+      `SCRIPT LOCK: ${SCRIPT_OUTPUT_UNIVERSAL_RULE}\n${getDialectScriptLock(dialectId)}\n` +
+      `Vibe: ${vibe}. Slang intensity ${level}/3 (1 = mostly standard, 3 = heavy local slang).\n` +
+      `Rules:\n` +
+      `- Exactly 3 replies, each on its own line. No numbering, no bullets, no quotes, no labels, no commentary before or after.\n` +
+      `- Each reply is one short, sendable chat message. Match the length and energy of the incoming message.\n` +
+      `- Vary the angle across the three (e.g. agree / tease / deflect) but all fit the vibe.\n` +
+      `- Same language and script as the SCRIPT LOCK above; never explain the slang.`;
+    try {
+      const out = await generateTranslationText({
+        geminiKey,
+        replicateToken: apiKey,
+        prompt: replyPrompt,
+        creative: true,
+        maxOutputTokens: 512,
+      });
+      const replies = out.text
+        .split(/\r?\n+/)
+        .map((l) => l.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, "").replace(/^["'“”]+|["'“”]+$/g, "").trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      if (replies.length === 0) {
+        return NextResponse.json(
+          { error: friendlyTranslateError("no text") },
+          { status: 502, headers: corsHeaders }
+        );
+      }
+      return NextResponse.json(
+        { replies, engine: out.engine },
+        { status: 200, headers: corsHeaders }
+      );
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      console.error("[translate][reply] failed", { message: err.message });
+      return NextResponse.json(
+        { error: friendlyTranslateError(err.message), details: err.message },
+        { status: 502, headers: corsHeaders }
+      );
+    }
+  }
+
   const cleanedForTranslation = cleanSpeechForTranslation(rawInput);
   const textForTranslation = cleanedForTranslation.length > 0 ? cleanedForTranslation : rawInput;
 

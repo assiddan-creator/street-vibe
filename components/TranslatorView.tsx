@@ -96,6 +96,8 @@ export function TranslatorView() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
   const [sharing, setSharing] = useState(false);
+  const [appMode, setAppMode] = useState<"translate" | "reply">("translate");
+  const [replies, setReplies] = useState<string[]>([]);
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
@@ -346,8 +348,61 @@ export function TranslatorView() {
     }
   };
 
+  const getReplies = async (received: string, dialect: string) => {
+    const trimmed = received.trim();
+    if (!trimmed) return;
+    setLoading(true);
+    setError(null);
+    setOriginalText(trimmed);
+    setReplies([]);
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "reply",
+          text: trimmed,
+          currentLang: dialect,
+          context,
+          slangLevel,
+        }),
+      });
+      const data = (await res.json()) as { replies?: string[]; error?: string };
+      if (!res.ok) throw new Error(data.error || "Couldn't get replies");
+      setReplies(Array.isArray(data.replies) ? data.replies : []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't get replies");
+      setReplies([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFlipIt = () => {
-    void translateText(inputDisplayValue.trim(), outputLang);
+    if (appMode === "reply") {
+      void getReplies(inputDisplayValue.trim(), outputLang);
+    } else {
+      void translateText(inputDisplayValue.trim(), outputLang);
+    }
+  };
+
+  const switchAppMode = (next: "translate" | "reply") => {
+    if (next === appMode) return;
+    setAppMode(next);
+    setReplies([]);
+    setTranslatedText("");
+    setDictionaryPills([]);
+    setNativeTransliteration(null);
+    setError(null);
+  };
+
+  const copyReply = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      notifyCopiedToast();
+    } catch {
+      /* ignore */
+    }
   };
 
   const handleShare = async () => {
@@ -539,6 +594,37 @@ export function TranslatorView() {
           <GraffitiLogo accent={theme.accent} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
         </header>
 
+        <div
+          className="mx-auto mb-4 flex w-full max-w-[min(100%,260px)] items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-xl"
+          role="group"
+          aria-label="Mode"
+        >
+          {(["translate", "reply"] as const).map((m) => {
+            const on = appMode === m;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => switchAppMode(m)}
+                className={`flex-1 rounded-full px-3 py-1.5 text-[13px] font-semibold transition-all duration-300 ${
+                  on ? "" : "text-white/55 hover:text-white/80"
+                }`}
+                style={
+                  on
+                    ? {
+                        color: theme.accent,
+                        backgroundColor: `${theme.accent}24`,
+                        boxShadow: `inset 0 1px 0 ${theme.accent}44`,
+                      }
+                    : undefined
+                }
+              >
+                {m === "translate" ? "Say it" : "Reply to it"}
+              </button>
+            );
+          })}
+        </div>
+
         <div className={TOP_STACK_CLASS}>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="input-lang" className={TOP_HELPER_LABEL_CLASS}>
@@ -729,10 +815,12 @@ export function TranslatorView() {
                 if (!loading && inputDisplayValue.trim()) handleFlipIt();
               }
             }}
-            placeholder="Type or say it plain…"
+            placeholder={
+              appMode === "reply" ? "Paste what they sent you…" : "Type or say it plain…"
+            }
             className={`${GLASS_INPUT} resize-none border-white/5 bg-white/3 leading-relaxed`}
           />
-          {isIdle && !inputText.trim() && !isListening ? (
+          {appMode === "translate" && isIdle && !inputText.trim() && !isListening ? (
             <div className="mt-2 flex flex-wrap justify-center gap-1.5">
               {exampleInputs.map((phrase) => (
                 <button
@@ -976,7 +1064,13 @@ export function TranslatorView() {
                 style={{ background: `linear-gradient(135deg, ${theme.accent}28 0%, rgba(0,0,0,0.55) 100%)` }}
               />
               <span className="relative z-10 flex w-full justify-center drop-shadow-lg">
-                {loading ? <FlipButtonSkeleton /> : "Flip it 🔥"}
+                {loading ? (
+                  <FlipButtonSkeleton />
+                ) : appMode === "reply" ? (
+                  "Get replies 💬"
+                ) : (
+                  "Flip it 🔥"
+                )}
               </span>
             </button>
 
@@ -1000,10 +1094,83 @@ export function TranslatorView() {
 
           <section
             className={`min-w-0 w-full shrink-0 overflow-visible transition-all duration-500 ${
-              translatedText || loading || error ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+              translatedText || replies.length || loading || error
+                ? "translate-y-0 opacity-100"
+                : "translate-y-4 opacity-0"
             }`}
           >
             <div className="flex w-full min-w-0 flex-col gap-4 overflow-visible">
+              {appMode === "reply" ? (
+                <div className="flex w-full min-w-0 flex-col gap-3 rounded-2xl border border-white/5 bg-white/5 p-4 backdrop-blur-2xl">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">
+                    They said
+                  </p>
+                  <p
+                    className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-white/85"
+                    dir="auto"
+                  >
+                    {originalText.trim() || "—"}
+                  </p>
+                  <div className="mt-1 border-t border-white/5 pt-3">
+                    <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">
+                      Send back
+                    </p>
+                    {loading ? (
+                      <p className="text-[14px] text-white/50">cooking replies…</p>
+                    ) : error ? (
+                      <p className="text-[14px] text-red-400/95">{error}</p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {replies.map((r, i) => (
+                          <button
+                            key={`${i}-${r.slice(0, 12)}`}
+                            type="button"
+                            onClick={() => void copyReply(r)}
+                            className="group flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-right transition-colors hover:border-white/20 hover:bg-white/[0.07]"
+                            style={{ borderColor: `${theme.accent}22` }}
+                          >
+                            <span
+                              className="flex-1 whitespace-pre-wrap break-words text-[15px] leading-snug"
+                              style={{ color: theme.accent }}
+                              dir="auto"
+                            >
+                              {r}
+                            </span>
+                            <svg
+                              className="mt-0.5 h-4 w-4 shrink-0 text-white/30 transition-colors group-hover:text-white/70"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              aria-hidden
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </button>
+                        ))}
+                        {replies.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const src = (originalText || inputDisplayValue).trim();
+                              if (src && !loading) void getReplies(src, outputLang);
+                            }}
+                            disabled={loading}
+                            className="mt-1 self-center rounded-full px-3 py-1 text-[12px] font-medium text-white/55 transition-colors hover:text-white/90 disabled:opacity-40"
+                          >
+                            ↻ more options
+                          </button>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+              <>
               <TranslationResultCard
                 accent={theme.accent}
                 originalText={originalText}
@@ -1079,6 +1246,8 @@ export function TranslatorView() {
                   Voice by Replicate
                 </p>
               </div>
+              </>
+              )}
             </div>
           </section>
         </div>
