@@ -21,6 +21,7 @@ import {
 } from "@/lib/themeUiClasses";
 import { SLANG_INTENSITY_SEGMENTS, VIBE_SEGMENTS } from "@/lib/slangSegmentControls";
 import { exampleInputsFor } from "@/lib/exampleInputs";
+import { shareOrDownloadCard } from "@/lib/shareImage";
 import {
   INPUT_LANGUAGES,
   OUTPUT_PREMIUM_OPTIONS,
@@ -94,6 +95,7 @@ export function TranslatorView() {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
@@ -346,6 +348,26 @@ export function TranslatorView() {
 
   const handleFlipIt = () => {
     void translateText(inputDisplayValue.trim(), outputLang);
+  };
+
+  const handleShare = async () => {
+    if (sharing || !translatedText.trim()) return;
+    setSharing(true);
+    try {
+      const result = await shareOrDownloadCard({
+        original: (originalText || inputDisplayValue).trim(),
+        translated: translatedText.trim(),
+        dialectLabel: outputLang,
+        city: theme.city,
+        flag: theme.flag,
+        accent: theme.accent,
+      });
+      if (result === "downloaded") setToast("Image saved — ready to post");
+    } catch {
+      setToast("Couldn't make the image");
+    } finally {
+      setSharing(false);
+    }
   };
 
   const handleCopy = async () => {
@@ -995,26 +1017,44 @@ export function TranslatorView() {
                 afterTranslation={
                   translatedText.trim() ? (
                     <div className="mt-3 flex flex-col gap-1">
-                      <button
-                        type="button"
-                        onClick={() => void handlePlayTranslation()}
-                        disabled={ttsLoading || ttsPlaying}
-                        className="relative w-full overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3 text-sm font-bold text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.99] disabled:opacity-45"
-                        style={{
-                          borderColor: `${theme.accent}35`,
-                          color: theme.accent,
-                          fontFamily: "'Permanent Marker', cursive",
-                          boxShadow: `inset 0 1px 0 ${theme.accent}22`,
-                        }}
-                      >
-                        {ttsLoading ? (
-                          <TtsPlaySkeleton />
-                        ) : ttsPlaying ? (
-                          "🔊 Playing..."
-                        ) : (
-                          "▶ Read aloud (Street Voice)"
-                        )}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handlePlayTranslation()}
+                          disabled={ttsLoading || ttsPlaying}
+                          className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3 text-sm font-bold text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.99] disabled:opacity-45"
+                          style={{
+                            borderColor: `${theme.accent}35`,
+                            color: theme.accent,
+                            fontFamily: "'Permanent Marker', cursive",
+                            boxShadow: `inset 0 1px 0 ${theme.accent}22`,
+                          }}
+                        >
+                          {ttsLoading ? (
+                            <TtsPlaySkeleton />
+                          ) : ttsPlaying ? (
+                            "🔊 Playing..."
+                          ) : (
+                            "▶ Read aloud"
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleShare()}
+                          disabled={sharing}
+                          aria-label="Share as image"
+                          className="flex w-14 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.97] disabled:opacity-45"
+                          style={{ borderColor: `${theme.accent}35`, color: theme.accent }}
+                        >
+                          {sharing ? (
+                            <span className="text-[13px]">…</span>
+                          ) : (
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                       {ttsError ? <p className="text-center text-[12px] text-red-400">{ttsError}</p> : null}
                       <button
                         type="button"
