@@ -531,7 +531,6 @@ export function TranslatorView() {
       const result = await shareOrDownloadCard({
         original: (originalText || inputDisplayValue).trim(),
         translated: translatedText.trim(),
-        dialectLabel: outputLang,
         city: theme.city,
         flag: theme.flag,
         accent: theme.accent,

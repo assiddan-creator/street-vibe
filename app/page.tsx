@@ -24,7 +24,7 @@ const BEFORE_AFTER: { lang: string; tourist: string; local: string }[] = [
 const FEATURES: { title: string; body: string }[] = [
   {
     title: "11 real dialects",
-    body: "Not a generic \"casual\" setting. London roadman, Paris banlieue, Cairo, Tel Aviv, Rio, CDMX and more — tuned by a native voice.",
+    body: "Not a generic \"casual\" setting. London, Paris, Cairo, Tel Aviv, Rio, CDMX and more — each tuned by a native voice.",
   },
   {
     title: "Hear it out loud",

@@ -64,7 +64,7 @@ export const DIALECT_THEMES: DialectTheme[] = [
     bg: "#1a0a0f",
     accent: "#f472b6",
     flag: "🇲🇽",
-    city: "Mexico City",
+    city: "CDMX",
   },
   {
     id: "Rio Favela",
@@ -195,18 +195,19 @@ export const STANDARD_LANGUAGES: StandardOption[] = [
   { value: "Hebrew (Standard)", label: "Hebrew", flag: "🇮🇱" },
 ];
 
+// Labels are cool, neutral city names — the internal `value` keys are unchanged.
 export const OUTPUT_PREMIUM_OPTIONS: { value: string; label: string }[] = [
-  { value: "Jamaican Patois", label: "🇯🇲 Jamaican Patois" },
-  { value: "London Roadman", label: "🇬🇧 London Roadman" },
-  { value: "New York Brooklyn", label: "🗽 New York Brooklyn" },
+  { value: "Jamaican Patois", label: "🇯🇲 Kingston" },
+  { value: "London Roadman", label: "🇬🇧 London" },
+  { value: "New York Brooklyn", label: "🗽 Brooklyn" },
   { value: "Tokyo Gyaru", label: "🇯🇵 Tokyo" },
-  { value: "Paris Banlieue", label: "🇫🇷 Paris Banlieue" },
-  { value: "Russian Street", label: "🇷🇺 Russian Street" },
-  { value: "Mexico City Barrio", label: "🇲🇽 Mexico City Barrio" },
-  { value: "Rio Favela", label: "🇧🇷 Rio Favela" },
-  { value: "Israeli Street", label: "🇮🇱 Israeli Street" },
-  { value: "Arabic Egyptian", label: "🇪🇬 Arabic Egyptian" },
-  { value: "Spanish Madrid", label: "🇪🇸 Spanish Madrid" },
+  { value: "Paris Banlieue", label: "🇫🇷 Paris" },
+  { value: "Russian Street", label: "🇷🇺 Moscow" },
+  { value: "Mexico City Barrio", label: "🇲🇽 CDMX" },
+  { value: "Rio Favela", label: "🇧🇷 Rio" },
+  { value: "Israeli Street", label: "🇮🇱 Tel Aviv" },
+  { value: "Arabic Egyptian", label: "🇪🇬 Cairo" },
+  { value: "Spanish Madrid", label: "🇪🇸 Madrid" },
 ];
 
 export const OUTPUT_STANDARD_OPTIONS: { value: string; label: string }[] = [
