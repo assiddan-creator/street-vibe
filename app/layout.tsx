@@ -37,12 +37,12 @@ const inter = Inter({
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://street-vibe.vercel.app";
 const DESCRIPTION =
-  "Say it, then send it the way a 22-year-old from Kingston, London or Tel Aviv actually would — 11 street dialects with an AI voice to match.";
+  "Text like a local, not a tourist. Street Vibe rewrites your message the way someone who lives there would send it — for DMs, dating apps and group chats in a language that isn't your first. 11 dialects, with an AI voice to match.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Street Vibe — talk like the city",
+    default: "Street Vibe — talk like a local, not a tourist",
     template: "%s · Street Vibe",
   },
   description: DESCRIPTION,
@@ -61,13 +61,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Street Vibe",
-    title: "Street Vibe — talk like the city",
+    title: "Street Vibe — talk like a local, not a tourist",
     description: DESCRIPTION,
     url: SITE_URL,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Street Vibe — talk like the city",
+    title: "Street Vibe — talk like a local, not a tourist",
     description: DESCRIPTION,
   },
   appleWebApp: {

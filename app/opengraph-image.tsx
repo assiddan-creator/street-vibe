@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "Street Vibe — talk like the city";
+export const alt = "Street Vibe — talk like a local, not a tourist";
 
 export default function OgImage() {
   return new ImageResponse(
@@ -42,7 +42,7 @@ export default function OgImage() {
             maxWidth: 900,
           }}
         >
-          Talk like the city.
+          Talk like a local, not a tourist.
         </div>
         <div
           style={{

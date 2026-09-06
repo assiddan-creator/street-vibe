@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Street Vibe",
     description:
       "Rewrite any message into 11 real street dialects, with an AI voice to match.",
-    start_url: "/",
+    start_url: "/app",
     display: "standalone",
     background_color: "#0d0f11",
     theme_color: "#0d0f11",
