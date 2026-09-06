@@ -50,17 +50,12 @@ import {
 import { generateReplicateText, REPLICATE_TEXT_MODEL } from "@/lib/replicateText";
 import { generateGeminiText, GEMINI_TEXT_MODEL } from "@/lib/geminiText";
 import { guardApiRequest } from "@/lib/apiRequestGuard";
+import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
 
 const MAX_TRANSLATE_INPUT_CHARS = 4000;
 
 /** Model calls can outlast the platform's 10s default; allow up to the plan ceiling. */
 export const maxDuration = 60;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
 
 /** Turn a raw provider/network error into one short, non-technical line for the UI. */
 function friendlyTranslateError(raw: string): string {
@@ -648,13 +643,18 @@ async function callReplicateNativeTransliteration(
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders });
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: buildCorsHeaders(req) });
 }
 
 export async function POST(req: NextRequest) {
-  const blocked = guardApiRequest(req, "translate", { limit: 30, maxBodyBytes: 32_000 });
+  const blocked = guardApiRequest(req, "translate", {
+    limit: 30,
+    maxBodyBytes: 32_000,
+    dailyLimit: 400,
+  });
   if (blocked) return blocked;
+  const corsHeaders = buildCorsHeaders(req);
 
   const apiKey = process.env.REPLICATE_API_TOKEN ?? "";
   // Dedicated key for the Generative Language API (AI Studio). Falls back to
