@@ -69,11 +69,11 @@ begin
 
   v_limit := case
     when v_plan = 'pro'  then 1000000
-    when v_plan = 'free' and p_kind = 'translate' then 30
-    when v_plan = 'free' and p_kind = 'tts'       then 15
-    when v_plan = 'anon' and p_kind = 'translate' then 6
-    when v_plan = 'anon' and p_kind = 'tts'       then 3
-    else 6
+    when v_plan = 'free' and p_kind = 'translate' then 10
+    when v_plan = 'free' and p_kind = 'tts'       then 5
+    when v_plan = 'anon' and p_kind = 'translate' then 4
+    when v_plan = 'anon' and p_kind = 'tts'       then 2
+    else 4
   end;
 
   insert into public.usage_daily (subject, day, translate_count, tts_count)
