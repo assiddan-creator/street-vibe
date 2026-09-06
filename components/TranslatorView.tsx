@@ -92,8 +92,9 @@ export function TranslatorView() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
   const [sharing, setSharing] = useState(false);
-  const [appMode, setAppMode] = useState<"translate" | "reply">("translate");
+  const [appMode, setAppMode] = useState<"translate" | "reply" | "compare">("translate");
   const [replies, setReplies] = useState<string[]>([]);
+  const [compareResults, setCompareResults] = useState<{ dialect: string; text: string }[]>([]);
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
@@ -374,18 +375,60 @@ export function TranslatorView() {
     }
   };
 
-  const handleFlipIt = () => {
-    if (appMode === "reply") {
-      void getReplies(inputDisplayValue.trim(), outputLang);
-    } else {
-      void translateText(inputDisplayValue.trim(), outputLang);
+  const getCompare = async (source: string, primary: string) => {
+    const trimmed = source.trim();
+    if (!trimmed) return;
+    // Primary dialect + two contrasting ones, de-duped, first 3.
+    const trio = [...new Set([primary, "London Roadman", "Jamaican Patois", "Israeli Street"])].slice(0, 3);
+    setLoading(true);
+    setError(null);
+    setOriginalText(trimmed);
+    setCompareResults([]);
+    try {
+      const results = await Promise.all(
+        trio.map(async (dialect) => {
+          const res = await fetch("/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text: trimmed,
+              currentLang: dialect,
+              translationMode: "slang",
+              slangLevel,
+              isPremiumSelected: usesPremiumStreetIntensityControls(dialect),
+              context,
+              previousMessage: null,
+              sourceLanguage: selectedInputLang,
+              uiLocale,
+            }),
+          });
+          const data = (await res.json()) as { translatedText?: string; fullText?: string; error?: string };
+          if (!res.ok) throw new Error(data.error || "Translation failed");
+          const { translated } = splitTranslationAndDictionary(String(data.fullText ?? "").trim());
+          return { dialect, text: String(data.translatedText ?? translated).trim() };
+        })
+      );
+      setCompareResults(results.filter((r) => r.text));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Compare failed");
+      setCompareResults([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const switchAppMode = (next: "translate" | "reply") => {
+  const handleFlipIt = () => {
+    const src = inputDisplayValue.trim();
+    if (appMode === "reply") void getReplies(src, outputLang);
+    else if (appMode === "compare") void getCompare(src, outputLang);
+    else void translateText(src, outputLang);
+  };
+
+  const switchAppMode = (next: "translate" | "reply" | "compare") => {
     if (next === appMode) return;
     setAppMode(next);
     setReplies([]);
+    setCompareResults([]);
     setTranslatedText("");
     setDictionaryPills([]);
     setNativeTransliteration(null);
@@ -573,18 +616,18 @@ export function TranslatorView() {
         </header>
 
         <div
-          className="mx-auto mb-4 flex w-full max-w-[min(100%,260px)] items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-xl"
+          className="mx-auto mb-4 flex w-full max-w-[min(100%,300px)] items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-xl"
           role="group"
           aria-label="Mode"
         >
-          {(["translate", "reply"] as const).map((m) => {
+          {(["translate", "reply", "compare"] as const).map((m) => {
             const on = appMode === m;
             return (
               <button
                 key={m}
                 type="button"
                 onClick={() => switchAppMode(m)}
-                className={`flex-1 rounded-full px-3 py-1.5 text-[13px] font-semibold transition-all duration-300 ${
+                className={`flex-1 rounded-full px-2 py-1.5 text-[12px] font-semibold transition-all duration-300 ${
                   on ? "" : "text-white/55 hover:text-white/80"
                 }`}
                 style={
@@ -597,7 +640,7 @@ export function TranslatorView() {
                     : undefined
                 }
               >
-                {m === "translate" ? "Say it" : "Reply to it"}
+                {m === "translate" ? "Say it" : m === "reply" ? "Reply" : "Compare"}
               </button>
             );
           })}
@@ -793,7 +836,11 @@ export function TranslatorView() {
               }
             }}
             placeholder={
-              appMode === "reply" ? "Paste what they sent you…" : "Type or say it plain…"
+              appMode === "reply"
+                ? "Paste what they sent you…"
+                : appMode === "compare"
+                  ? "Type it once — hear it 3 ways…"
+                  : "Type or say it plain…"
             }
             className={`${GLASS_INPUT} resize-none border-white/5 bg-white/3 leading-relaxed`}
           />
@@ -1035,6 +1082,8 @@ export function TranslatorView() {
                   <FlipButtonSkeleton />
                 ) : appMode === "reply" ? (
                   "Get replies 💬"
+                ) : appMode === "compare" ? (
+                  "Hear it 3 ways 🎭"
                 ) : (
                   "Flip it 🔥"
                 )}
@@ -1061,13 +1110,55 @@ export function TranslatorView() {
 
           <section
             className={`min-w-0 w-full shrink-0 overflow-visible transition-all duration-500 ${
-              translatedText || replies.length || loading || error
+              translatedText || replies.length || compareResults.length || loading || error
                 ? "translate-y-0 opacity-100"
                 : "translate-y-4 opacity-0"
             }`}
           >
             <div className="flex w-full min-w-0 flex-col gap-4 overflow-visible">
-              {appMode === "reply" ? (
+              {appMode === "compare" ? (
+                <div className="flex w-full min-w-0 flex-col gap-3 rounded-2xl border border-white/5 bg-white/5 p-4 backdrop-blur-2xl">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">
+                    You said
+                  </p>
+                  <p
+                    className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-white/85"
+                    dir="auto"
+                  >
+                    {originalText.trim() || "—"}
+                  </p>
+                  <div className="mt-1 flex flex-col gap-2 border-t border-white/5 pt-3">
+                    {loading && compareResults.length === 0 ? (
+                      <p className="text-[14px] text-white/50">running it through 3 cities…</p>
+                    ) : error ? (
+                      <p className="text-[14px] text-red-400/95">{error}</p>
+                    ) : (
+                      compareResults.map((r) => (
+                        <button
+                          key={r.dialect}
+                          type="button"
+                          onClick={() => void copyReply(r.text)}
+                          className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.07]"
+                          style={{ borderColor: `${resolveTheme(r.dialect).accent}22` }}
+                        >
+                          <span
+                            className="text-[10px] font-semibold uppercase tracking-[0.18em]"
+                            style={{ color: resolveTheme(r.dialect).accent }}
+                          >
+                            {resolveTheme(r.dialect).flag} {resolveTheme(r.dialect).city}
+                          </span>
+                          <span
+                            className="whitespace-pre-wrap break-words text-[16px] leading-snug text-white/90"
+                            dir="auto"
+                          >
+                            {r.text}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : appMode === "reply" ? (
                 <div className="flex w-full min-w-0 flex-col gap-3 rounded-2xl border border-white/5 bg-white/5 p-4 backdrop-blur-2xl">
                   <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">
                     They said
