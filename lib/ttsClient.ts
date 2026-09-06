@@ -15,12 +15,6 @@ import {
 } from "@/lib/googleTtsVoiceConfig";
 import { resolveMinimaxEmotionFromVibe } from "@/lib/minimaxTtsEmotion";
 import { resolveMinimaxLanguageBoost } from "@/lib/minimaxLanguageBoost";
-import {
-  getMistralQuickPromptBase64,
-  getMistralVoiceId,
-  TTS_ERR_MISTRAL_QUICK_PROMPT_REQUIRED,
-  TTS_ERR_MISTRAL_VOICE_ID_REQUIRED,
-} from "@/lib/customVoicePreference";
 import { getStoredTtsGender, MINIMAX_VOICE_ID_BY_GENDER } from "@/lib/ttsVoiceGender";
 
 /** BCP-47 locale for Web Speech API synthesis per output dialect. */
@@ -97,13 +91,7 @@ function textPreview(text: string, max = 200): string {
   return t.length <= max ? t : `${t.slice(0, max)}…`;
 }
 
-export type TtsClientEngine =
-  | "minimax"
-  | "google"
-  | "native"
-  | "mistral_clone"
-  | "mistral_builtin"
-  | "mistral_quick";
+export type TtsClientEngine = "minimax" | "google" | "native";
 
 /** Poll Replicate until TTS prediction completes; returns playable URL (https or data:). `null` when engine is native (playback via Web Speech API). */
 export async function fetchTtsAudioUrl(
@@ -177,124 +165,6 @@ export async function fetchTtsAudioUrl(
 
   const tuning = CONTEXT_TUNING[context ?? "default"] ?? CONTEXT_TUNING.default;
   const vibeKey = context ?? "default";
-
-  if (engine === "mistral_clone" || engine === "mistral_builtin" || engine === "mistral_quick") {
-    const isClone = engine === "mistral_clone";
-    const isQuick = engine === "mistral_quick";
-    const analyticsEngine = isClone
-      ? ANALYTICS_ENGINE.MISTRAL_CLONE
-      : isQuick
-        ? ANALYTICS_ENGINE.MISTRAL_QUICK
-        : ANALYTICS_ENGINE.MISTRAL_BUILTIN;
-
-    let cloneVoiceId: string | null = null;
-    let quickRef: string | null = null;
-    if (isClone) {
-      cloneVoiceId = getMistralVoiceId();
-      if (!cloneVoiceId) {
-        throw new Error(TTS_ERR_MISTRAL_VOICE_ID_REQUIRED);
-      }
-    } else if (isQuick) {
-      quickRef = getMistralQuickPromptBase64();
-      if (!quickRef) {
-        throw new Error(TTS_ERR_MISTRAL_QUICK_PROMPT_REQUIRED);
-      }
-    }
-
-    const ttsPerfStart = performance.now();
-    trackAnalyticsEvent({
-      name: ANALYTICS_EVENT_NAMES.TTS_REQUESTED,
-      ...ANALYTICS_TTS_EVENT_MODE,
-      requestedEngine: analyticsEngine,
-      effectiveEngine: analyticsEngine,
-      dialect,
-      ttsGender,
-      vibe: vibeKey,
-      textLengthChars: text.length,
-      learnsYouEnabled: learnsYou,
-      implicitGuidancePresent,
-    });
-
-    const mistralPayload = {
-      text,
-      dialect,
-      tuning,
-      ttsGender,
-      context: vibeKey,
-      mistral_mode: isClone ? "clone" : isQuick ? "quick" : "builtin",
-      emotion: vibeKey,
-      ...(implicitExtras?.personalSlangProfile
-        ? { personalSlangProfile: implicitExtras.personalSlangProfile }
-        : {}),
-      ...(implicitExtras?.personaPresetId ? { personaPresetId: implicitExtras.personaPresetId } : {}),
-      ...(isClone && cloneVoiceId ? { voice_id: cloneVoiceId } : {}),
-      ...(isQuick && quickRef ? { referenceAudio: quickRef } : {}),
-    };
-
-    try {
-      const mistralRes = await fetch("/api/tts-mistral", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mistralPayload),
-      });
-      const mistralData = (await mistralRes.json()) as {
-        audioBase64?: string;
-        engine?: string;
-        error?: string;
-      };
-      if (mistralRes.ok && mistralData.audioBase64) {
-        console.info("[TTS]", "TTS request completed (Mistral Voxtral)", {
-          reportedEngine: mistralData.engine ?? "mistral-voxtral",
-          mistralMode: isClone ? "clone" : isQuick ? "quick" : "builtin",
-        });
-        trackAnalyticsEvent({
-          name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,
-          ...ANALYTICS_TTS_EVENT_MODE,
-          effectiveEngine: analyticsEngine,
-          dialect,
-          usedFallbackNative: false,
-          ...analyticsDurationFieldsFromStart(ttsPerfStart),
-        });
-        return `data:audio/mp3;base64,${mistralData.audioBase64}`;
-      }
-      const err = new Error(mistralData.error || "Mistral Voxtral TTS failed") as Error & { httpStatus?: number };
-      err.httpStatus = mistralRes.status;
-      throw err;
-    } catch (e) {
-      console.warn("[TTS]", "Mistral Voxtral failed; falling back to Google Cloud TTS", {
-        error: e instanceof Error ? e.message : String(e),
-      });
-      try {
-        return await fetchTtsAudioUrl(text, dialect, "google", context, implicitExtras);
-      } catch (eGoogle) {
-        console.warn("[TTS]", "Google TTS fallback failed; falling back to Native browser TTS", {
-          error: eGoogle instanceof Error ? eGoogle.message : String(eGoogle),
-        });
-      }
-      try {
-        await speakNativeTts(text, dialect);
-        trackAnalyticsEvent({
-          name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,
-          ...ANALYTICS_TTS_EVENT_MODE,
-          effectiveEngine: ANALYTICS_ENGINE.NATIVE,
-          dialect,
-          usedFallbackNative: true,
-          ...analyticsDurationFieldsFromStart(ttsPerfStart),
-        });
-        return null;
-      } catch (e2) {
-        trackAnalyticsEvent({
-          name: ANALYTICS_EVENT_NAMES.TTS_FAILED,
-          ...ANALYTICS_TTS_EVENT_MODE,
-          effectiveEngine: analyticsEngine,
-          dialect,
-          failureCategory: categorizeTtsAnalyticsFailure(e, e2),
-          ...analyticsDurationFieldsFromStart(ttsPerfStart),
-        });
-        throw e2;
-      }
-    }
-  }
 
   const effectiveEngine = getEffectiveTtsEngine(engine, dialect);
 

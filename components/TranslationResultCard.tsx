@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TranslationBlockSkeleton } from "@/components/ui/Skeleton";
 import { GLASS_OUTPUT_CARD } from "@/lib/themeUiClasses";
 
@@ -54,6 +54,35 @@ export function TranslationResultCard({
     });
   }, [loading, translatedText, error, onAutoCopied]);
 
+  // Type the result in on arrival — the model call itself isn't streamed, but a
+  // short reveal reads as "it's writing" instead of a hard pop-in.
+  const [revealed, setRevealed] = useState("");
+  useEffect(() => {
+    const full = translatedText;
+    if (loading || error || !full.trim()) {
+      setRevealed(full);
+      return;
+    }
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion || full.length <= 8) {
+      setRevealed(full);
+      return;
+    }
+    setRevealed(full.slice(0, 1));
+    const total = full.length;
+    const durationMs = Math.min(650, total * 14);
+    const start = performance.now();
+    let raf = requestAnimationFrame(function tick(now) {
+      const p = Math.min(1, (now - start) / durationMs);
+      setRevealed(full.slice(0, Math.max(1, Math.round(p * total))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [translatedText, loading, error]);
+  const shown = revealed || translatedText;
+
   const labels: ResultLabels = hebrewContext
     ? { source: "מקור", translation: "תרגום" }
     : { source: "Original", translation: "Street" };
@@ -101,7 +130,7 @@ export function TranslationResultCard({
                   style={{ color: accent }}
                 >
                   {onWordClick
-                    ? translatedText.split(/(\s+)/).map((token, i) =>
+                    ? shown.split(/(\s+)/).map((token, i) =>
                         token.trim() ? (
                           <span
                             key={i}
@@ -114,7 +143,7 @@ export function TranslationResultCard({
                           <span key={i}>{token}</span>
                         ),
                       )
-                    : translatedText}
+                    : shown}
                 </p>
               ) : null}
             </div>
