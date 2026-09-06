@@ -94,9 +94,12 @@ export function TranslatorView() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryVaultEntry[]>([]);
   const [sharing, setSharing] = useState(false);
-  const [appMode, setAppMode] = useState<"translate" | "reply" | "compare">("translate");
+  const [appMode, setAppMode] = useState<"translate" | "reply" | "compare" | "check">("translate");
   const [replies, setReplies] = useState<string[]>([]);
   const [compareResults, setCompareResults] = useState<{ dialect: string; text: string }[]>([]);
+  const [checkResult, setCheckResult] = useState<
+    { score: number; verdict: string; fixed: string; tells: string[] } | null
+  >(null);
   const [usage, setUsage] = useState<PublicUsage | null>(null);
   const [upgradeAvailable, setUpgradeAvailable] = useState(false);
 
@@ -455,18 +458,55 @@ export function TranslatorView() {
     }
   };
 
+  const getNaturalnessCheck = async (draft: string, dialect: string) => {
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    setLoading(true);
+    setError(null);
+    setOriginalText(trimmed);
+    setCheckResult(null);
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "naturalness",
+          text: trimmed,
+          currentLang: dialect,
+          context,
+          uiLocale,
+        }),
+      });
+      const data = (await res.json()) as {
+        naturalness?: { score: number; verdict: string; fixed: string; tells: string[] };
+        usage?: PublicUsage;
+        error?: string;
+      };
+      if (data.usage) setUsage(data.usage);
+      if (!res.ok || !data.naturalness) throw new Error(data.error || "Couldn't check that");
+      setCheckResult(data.naturalness);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't check that");
+      setCheckResult(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFlipIt = () => {
     const src = inputDisplayValue.trim();
     if (appMode === "reply") void getReplies(src, outputLang);
     else if (appMode === "compare") void getCompare(src, outputLang);
+    else if (appMode === "check") void getNaturalnessCheck(src, outputLang);
     else void translateText(src, outputLang);
   };
 
-  const switchAppMode = (next: "translate" | "reply" | "compare") => {
+  const switchAppMode = (next: "translate" | "reply" | "compare" | "check") => {
     if (next === appMode) return;
     setAppMode(next);
     setReplies([]);
     setCompareResults([]);
+    setCheckResult(null);
     setTranslatedText("");
     setDictionaryPills([]);
     setNativeTransliteration(null);
@@ -661,7 +701,7 @@ export function TranslatorView() {
           role="group"
           aria-label="Mode"
         >
-          {(["translate", "reply", "compare"] as const).map((m) => {
+          {(["translate", "reply", "compare", "check"] as const).map((m) => {
             const on = appMode === m;
             return (
               <button
@@ -681,7 +721,13 @@ export function TranslatorView() {
                     : undefined
                 }
               >
-                {m === "translate" ? "Say it" : m === "reply" ? "Reply" : "Compare"}
+                {m === "translate"
+                  ? "Say it"
+                  : m === "reply"
+                    ? "Reply"
+                    : m === "compare"
+                      ? "Compare"
+                      : "Check"}
               </button>
             );
           })}
@@ -883,7 +929,9 @@ export function TranslatorView() {
                 ? "Paste what they sent you…"
                 : appMode === "compare"
                   ? "Type it once — hear it 3 ways…"
-                  : "Type or say it plain…"
+                  : appMode === "check"
+                    ? "Paste what you wrote — I'll check it sounds local…"
+                    : "Type or say it plain…"
             }
             className={`${GLASS_INPUT} resize-none border-white/5 bg-white/3 leading-relaxed`}
           />
@@ -1127,6 +1175,8 @@ export function TranslatorView() {
                   "Get replies 💬"
                 ) : appMode === "compare" ? (
                   "Hear it 3 ways 🎭"
+                ) : appMode === "check" ? (
+                  "Check it 🕵️"
                 ) : (
                   "Flip it 🔥"
                 )}
@@ -1153,7 +1203,7 @@ export function TranslatorView() {
 
           <section
             className={`min-w-0 w-full shrink-0 overflow-visible transition-all duration-500 ${
-              translatedText || replies.length || compareResults.length || loading || error
+              translatedText || replies.length || compareResults.length || checkResult || loading || error
                 ? "translate-y-0 opacity-100"
                 : "translate-y-4 opacity-0"
             }`}
@@ -1268,6 +1318,107 @@ export function TranslatorView() {
                         ) : null}
                       </div>
                     )}
+                  </div>
+                </div>
+              ) : appMode === "check" ? (
+                <div className="flex w-full min-w-0 flex-col gap-3 rounded-2xl border border-white/5 bg-white/5 p-4 backdrop-blur-2xl">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">
+                    You wrote
+                  </p>
+                  <p
+                    className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-white/85"
+                    dir="auto"
+                  >
+                    {originalText.trim() || "—"}
+                  </p>
+                  <div className="mt-1 flex flex-col gap-3 border-t border-white/5 pt-3">
+                    {loading ? (
+                      <p className="text-[14px] text-white/50">reading it like a local…</p>
+                    ) : error ? (
+                      <p className="text-[14px] text-red-400/95">{error}</p>
+                    ) : checkResult ? (
+                      <>
+                        {(() => {
+                          const c =
+                            checkResult.score >= 80
+                              ? "#4ade80"
+                              : checkResult.score >= 55
+                                ? "#fbbf24"
+                                : "#f87171";
+                          return (
+                            <div className="flex items-center gap-3">
+                              <span
+                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[15px] font-bold"
+                                style={{
+                                  color: c,
+                                  border: `2px solid ${c}55`,
+                                  backgroundColor: `${c}18`,
+                                }}
+                              >
+                                {checkResult.score}
+                              </span>
+                              <span className="text-[14px] font-semibold text-white/85">
+                                {checkResult.verdict || "how local it sounds"}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                        <div>
+                          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">
+                            Send this instead
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => void copyReply(checkResult.fixed)}
+                            className="group flex w-full items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.07]"
+                            style={{ borderColor: `${theme.accent}22` }}
+                          >
+                            <span
+                              className="flex-1 whitespace-pre-wrap break-words text-[15px] leading-snug"
+                              style={{ color: theme.accent }}
+                              dir="auto"
+                            >
+                              {checkResult.fixed}
+                            </span>
+                            <svg
+                              className="mt-0.5 h-4 w-4 shrink-0 text-white/30 transition-colors group-hover:text-white/70"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              aria-hidden
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                        {checkResult.tells.length > 0 ? (
+                          <div>
+                            <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">
+                              What gave you away
+                            </p>
+                            <ul className="flex flex-col gap-1">
+                              {checkResult.tells.map((t, i) => (
+                                <li
+                                  key={`${i}-${t.slice(0, 12)}`}
+                                  className="flex items-start gap-2 text-[13px] leading-snug text-white/70"
+                                  dir="auto"
+                                >
+                                  <span style={{ color: theme.accent }}>•</span>
+                                  <span className="flex-1">{t}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <p className="text-[13px] text-white/55">Nothing obvious gave you away — this one lands.</p>
+                        )}
+                      </>
+                    ) : null}
                   </div>
                 </div>
               ) : (
