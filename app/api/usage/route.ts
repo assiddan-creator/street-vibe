@@ -6,7 +6,7 @@ import { isLemonConfigured } from "@/lib/lemonSqueezy";
 
 /** Current daily quota state for the caller — read-only, does not consume. */
 export async function GET(req: NextRequest) {
-  const blocked = guardApiRequest(req, "usage", { limit: 60, maxBodyBytes: 2_000, dailyLimit: 2_000 });
+  const blocked = await guardApiRequest(req, "usage", { limit: 60, maxBodyBytes: 2_000, dailyLimit: 2_000 });
   if (blocked) return blocked;
   const corsHeaders = buildCorsHeaders(req);
 

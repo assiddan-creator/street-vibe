@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isUpstashConfigured, upstashOverLimit } from "@/lib/rateLimit";
 
 type ApiGuardOptions = {
   limit: number;
@@ -37,14 +38,15 @@ function getClientId(req: NextRequest): string {
 }
 
 /**
- * Lightweight same-origin, body-size, and per-instance burst protection.
- * A shared rate-limit store or Vercel Firewall should be added before a paid public launch.
+ * Same-origin, body-size, and rate-limit protection for the API routes.
+ * Rate limiting uses Upstash Redis when configured (shared across all serverless
+ * instances) and falls back to a per-instance in-memory limiter otherwise.
  */
-export function guardApiRequest(
+export async function guardApiRequest(
   req: NextRequest,
   routeName: string,
   { limit, maxBodyBytes, windowMs = 60_000, dailyLimit }: ApiGuardOptions
-): NextResponse | null {
+): Promise<NextResponse | null> {
   const reqOrigin = (() => {
     try {
       return new URL(req.url).origin;
@@ -70,22 +72,47 @@ export function guardApiRequest(
 
   const now = Date.now();
   const clientKey = `${routeName}:${getClientId(req)}`;
+  const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
+  const dayLimit = dailyLimit ?? limit * 40;
 
+  const tooManyPerMin = {
+    error: "Too many requests. Please try again shortly.",
+  };
+  const tooManyPerDay = { error: "Daily limit reached. Come back tomorrow." };
+
+  // Shared store: authoritative across every serverless instance.
+  if (isUpstashConfigured()) {
+    if (await upstashOverLimit(`min:${clientKey}`, limit, windowSec)) {
+      return NextResponse.json(tooManyPerMin, {
+        status: 429,
+        headers: { "Retry-After": String(windowSec) },
+      });
+    }
+    if (await upstashOverLimit(`day:${clientKey}`, dayLimit, DAY_MS / 1000)) {
+      return NextResponse.json(tooManyPerDay, {
+        status: 429,
+        headers: { "Retry-After": "3600" },
+      });
+    }
+    return null;
+  }
+
+  // Per-instance fallback when Upstash isn't configured.
   const perMin = hit(buckets, clientKey, windowMs, now);
   if (perMin > limit) {
     const resetAt = buckets.get(clientKey)?.resetAt ?? now + windowMs;
-    return NextResponse.json(
-      { error: "Too many requests. Please try again shortly." },
-      { status: 429, headers: { "Retry-After": String(Math.max(1, Math.ceil((resetAt - now) / 1000))) } }
-    );
+    return NextResponse.json(tooManyPerMin, {
+      status: 429,
+      headers: { "Retry-After": String(Math.max(1, Math.ceil((resetAt - now) / 1000))) },
+    });
   }
 
   const perDay = hit(dailyBuckets, clientKey, DAY_MS, now);
-  if (perDay > (dailyLimit ?? limit * 40)) {
-    return NextResponse.json(
-      { error: "Daily limit reached. Come back tomorrow." },
-      { status: 429, headers: { "Retry-After": "3600" } }
-    );
+  if (perDay > dayLimit) {
+    return NextResponse.json(tooManyPerDay, {
+      status: 429,
+      headers: { "Retry-After": "3600" },
+    });
   }
 
   return null;

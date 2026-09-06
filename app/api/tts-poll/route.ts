@@ -7,7 +7,7 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const blocked = guardApiRequest(req, "tts-poll", {
+  const blocked = await guardApiRequest(req, "tts-poll", {
     limit: 240,
     maxBodyBytes: 4_000,
     dailyLimit: 4_000,

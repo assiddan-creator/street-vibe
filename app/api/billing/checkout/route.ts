@@ -23,7 +23,7 @@ export async function OPTIONS(req: NextRequest) {
 
 /** Hand back a Lemon Squeezy buy-link checkout for the signed-in user's Pro plan. */
 export async function POST(req: NextRequest) {
-  const blocked = guardApiRequest(req, "billing-checkout", { limit: 10, maxBodyBytes: 2_000 });
+  const blocked = await guardApiRequest(req, "billing-checkout", { limit: 10, maxBodyBytes: 2_000 });
   if (blocked) return blocked;
   const corsHeaders = buildCorsHeaders(req);
 
