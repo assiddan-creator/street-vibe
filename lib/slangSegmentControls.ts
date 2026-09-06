@@ -2,9 +2,9 @@
  * Icons + labels for premium intensity and vibe segmented controls (Material Symbols names).
  */
 export const SLANG_INTENSITY_SEGMENTS = [
-  { level: 1 as const, text: "Mild", icon: "eco" },
+  { level: 1 as const, text: "Natural", icon: "eco" },
   { level: 2 as const, text: "Street", icon: "local_fire_department" },
-  { level: 3 as const, text: "Raw", icon: "skull" },
+  { level: 3 as const, text: "Heavy", icon: "skull" },
 ] as const;
 
 export const VIBE_SEGMENTS = [

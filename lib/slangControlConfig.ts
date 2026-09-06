@@ -78,7 +78,7 @@ export const PREMIUM_SLANG_CONTROL: Record<StreetVibeDialectId, SlangControlConf
     strictScriptLock: true,
     allowLatinFallback: false,
     maxForeignTokens: 1,
-    preserveLocalSlangPriority: ["Japanese script", "gyaru / youth chat style"],
+    preserveLocalSlangPriority: ["Japanese script", "contemporary Tokyo youth chat (LINE / X)"],
     bannedGenericTerms: ["lol", "omg", "wtf"],
     rewriteHints: [
       "Japanese body text in hiragana/katakana/kanji—no romaji for main slang.",
@@ -135,8 +135,9 @@ export const PREMIUM_SLANG_CONTROL: Record<StreetVibeDialectId, SlangControlConf
     rewriteHints: [
       "Brazilian Portuguese only—avoid European Portuguese defaults.",
       "Keep melodic, conversational pacing.",
+      "Outfit/clothes = look / visu / produção / roupa, never 'kit'. 'gostoso' is not for events.",
     ],
-    dictionaryBiasTerms: ["mano", "mó", "firmeza", "trampo"],
+    dictionaryBiasTerms: ["mano", "mó", "firmeza", "trampo", "look", "visu"],
   },
   "Israeli Street": {
     dialectId: "Israeli Street",

@@ -9,7 +9,7 @@ export const DIALECTS: DialectOption[] = [
   { value: "Jamaican Patois", label: "Jamaican Patois", group: "street" },
   { value: "London Roadman", label: "London Roadman", group: "street" },
   { value: "New York Brooklyn", label: "New York Brooklyn", group: "street" },
-  { value: "Tokyo Gyaru", label: "Tokyo Gyaru", group: "street" },
+  { value: "Tokyo Gyaru", label: "Tokyo", group: "street" },
   { value: "Paris Banlieue", label: "Paris Banlieue", group: "street" },
   { value: "Russian Street", label: "Russian Street", group: "street" },
   { value: "Mexico City Barrio", label: "Mexico City Barrio", group: "street" },
