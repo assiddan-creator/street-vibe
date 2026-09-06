@@ -13,13 +13,21 @@ export function isLemonConfigured(): boolean {
   );
 }
 
+/** Whether a yearly buy link is configured (enables the monthly/yearly choice). */
+export function hasAnnualPlan(): boolean {
+  return !!process.env.LEMONSQUEEZY_CHECKOUT_URL_ANNUAL;
+}
+
 /** Buy-link checkout URL with the Clerk user id + email + redirect prefilled. */
 export function buildProCheckoutUrl(opts: {
   userId: string;
   email?: string | null;
   redirectUrl: string;
+  /** "year" uses LEMONSQUEEZY_CHECKOUT_URL_ANNUAL when set; otherwise monthly. */
+  interval?: "month" | "year";
 }): string | null {
-  const base = process.env.LEMONSQUEEZY_CHECKOUT_URL;
+  const annual = opts.interval === "year" ? process.env.LEMONSQUEEZY_CHECKOUT_URL_ANNUAL : undefined;
+  const base = annual || process.env.LEMONSQUEEZY_CHECKOUT_URL;
   if (!base) return null;
   const url = new URL(base);
   url.searchParams.set("checkout[custom][user_id]", opts.userId);

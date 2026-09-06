@@ -39,6 +39,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sign in to upgrade." }, { status: 401, headers: corsHeaders });
   }
 
+  // Optional { interval: "month" | "year" }; tolerate an empty/absent body.
+  let interval: "month" | "year" = "month";
+  try {
+    const body = (await req.json()) as { interval?: unknown };
+    if (body?.interval === "year") interval = "year";
+  } catch {
+    /* no body — default to monthly */
+  }
+
   let email: string | null = null;
   try {
     const { currentUser } = await import("@clerk/nextjs/server");
@@ -60,6 +69,7 @@ export async function POST(req: NextRequest) {
     userId,
     email,
     redirectUrl: `${siteUrl(req)}/?upgraded=1`,
+    interval,
   });
   if (!url) {
     return NextResponse.json(

@@ -102,6 +102,7 @@ export function TranslatorView() {
   >(null);
   const [usage, setUsage] = useState<PublicUsage | null>(null);
   const [upgradeAvailable, setUpgradeAvailable] = useState(false);
+  const [annualAvailable, setAnnualAvailable] = useState(false);
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
@@ -113,9 +114,10 @@ export function TranslatorView() {
     const load = () =>
       fetch("/api/usage")
         .then((r) => (r.ok ? r.json() : null))
-        .then((d: { metered?: boolean; upgradeAvailable?: boolean; translate?: PublicUsage } | null) => {
+        .then((d: { metered?: boolean; upgradeAvailable?: boolean; annualAvailable?: boolean; translate?: PublicUsage } | null) => {
           if (!alive || !d) return;
           setUpgradeAvailable(!!d.upgradeAvailable);
+          setAnnualAvailable(!!d.annualAvailable);
           if (d.metered && d.translate) setUsage(d.translate);
         })
         .catch(() => {});
@@ -733,7 +735,12 @@ export function TranslatorView() {
           })}
         </div>
 
-        <UsageMeter usage={usage} accent={theme.accent} upgradeAvailable={upgradeAvailable} />
+        <UsageMeter
+          usage={usage}
+          accent={theme.accent}
+          upgradeAvailable={upgradeAvailable}
+          annualAvailable={annualAvailable}
+        />
 
         <div className={TOP_STACK_CLASS}>
         <div className="flex flex-col gap-1.5">
