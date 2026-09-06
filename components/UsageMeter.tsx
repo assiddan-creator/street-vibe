@@ -18,7 +18,7 @@ const priceLabel = process.env.NEXT_PUBLIC_PRO_PRICE_LABEL || "";
 
 async function startCheckout(): Promise<string | null> {
   try {
-    const res = await fetch("/api/stripe/checkout", { method: "POST" });
+    const res = await fetch("/api/billing/checkout", { method: "POST" });
     const data = (await res.json()) as { url?: string; error?: string };
     if (res.ok && data.url) {
       window.location.href = data.url;
@@ -32,7 +32,7 @@ async function startCheckout(): Promise<string | null> {
 
 async function openPortal(): Promise<string | null> {
   try {
-    const res = await fetch("/api/stripe/portal", { method: "POST" });
+    const res = await fetch("/api/billing/portal", { method: "POST" });
     const data = (await res.json()) as { url?: string; error?: string };
     if (res.ok && data.url) {
       window.location.href = data.url;

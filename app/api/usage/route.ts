@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { guardApiRequest } from "@/lib/apiRequestGuard";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
 import { peekUsage } from "@/lib/usage";
-import { isStripeConfigured, proPriceId } from "@/lib/stripe";
+import { isLemonConfigured } from "@/lib/lemonSqueezy";
 
 /** Current daily quota state for the caller — read-only, does not consume. */
 export async function GET(req: NextRequest) {
@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   if (blocked) return blocked;
   const corsHeaders = buildCorsHeaders(req);
 
-  const upgradeAvailable = isStripeConfigured() && !!proPriceId();
+  const upgradeAvailable = isLemonConfigured();
   const usage = await peekUsage(req);
   // `metered: false` tells the client to hide the meter entirely.
   if (!usage) {

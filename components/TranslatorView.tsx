@@ -118,7 +118,7 @@ export function TranslatorView() {
         .catch(() => {});
     load();
 
-    // Returning from a successful Stripe Checkout — celebrate and refresh the plan.
+    // Returning from a successful checkout — celebrate and refresh the plan.
     try {
       const params = new URLSearchParams(window.location.search);
       if (params.get("upgraded") === "1") {
