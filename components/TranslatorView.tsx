@@ -10,6 +10,7 @@ import { LearnsYouControls } from "@/components/LearnsYouControls";
 import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { AmbientAccentGlows } from "@/components/AmbientAccentGlows";
 import { GraffitiLogo } from "@/components/GraffitiLogo";
+import { AuthControl } from "@/components/AuthControl";
 import { Toast } from "@/components/Toast";
 import { NativeTransliterationCard } from "@/components/NativeTransliterationCard";
 import { TranslationResultCard } from "@/components/TranslationResultCard";
@@ -611,8 +612,11 @@ export function TranslatorView() {
         className="mx-auto flex min-w-0 w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-4 pt-3"
         onClick={() => setPopupWord(null)}
       >
-        <header className="mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-3 py-2 backdrop-blur-xl">
+        <header className="relative mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-3 py-2 backdrop-blur-xl">
           <GraffitiLogo accent={theme.accent} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+            <AuthControl accent={theme.accent} />
+          </div>
         </header>
 
         <div

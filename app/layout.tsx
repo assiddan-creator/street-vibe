@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import localFont from "next/font/local";
 import { Inter, Manrope, Space_Grotesk } from "next/font/google";
 import { AnalyticsBoot } from "@/components/AnalyticsBoot";
@@ -105,10 +106,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${manrope.variable} ${inter.variable} min-h-[100dvh] font-sans antialiased`}
       >
-        <CityThemeProvider>
-          <AnalyticsBoot />
-          {children}
-        </CityThemeProvider>
+        {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+          <ClerkProvider>
+            <CityThemeProvider>
+              <AnalyticsBoot />
+              {children}
+            </CityThemeProvider>
+          </ClerkProvider>
+        ) : (
+          <CityThemeProvider>
+            <AnalyticsBoot />
+            {children}
+          </CityThemeProvider>
+        )}
       </body>
     </html>
   );
