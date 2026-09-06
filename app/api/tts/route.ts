@@ -56,7 +56,7 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const blocked = guardApiRequest(req, "tts", {
+  const blocked = await guardApiRequest(req, "tts", {
     limit: 12,
     maxBodyBytes: 8_000,
     dailyLimit: 150,

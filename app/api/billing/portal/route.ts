@@ -12,7 +12,7 @@ export async function OPTIONS(req: NextRequest) {
 
 /** Hand back Lemon Squeezy's hosted customer portal (`/billing`, email magic link). */
 export async function POST(req: NextRequest) {
-  const blocked = guardApiRequest(req, "billing-portal", { limit: 10, maxBodyBytes: 2_000 });
+  const blocked = await guardApiRequest(req, "billing-portal", { limit: 10, maxBodyBytes: 2_000 });
   if (blocked) return blocked;
   const corsHeaders = buildCorsHeaders(req);
 

@@ -684,7 +684,7 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const blocked = guardApiRequest(req, "translate", {
+  const blocked = await guardApiRequest(req, "translate", {
     limit: 30,
     maxBodyBytes: 32_000,
     dailyLimit: 400,
@@ -726,7 +726,7 @@ export async function POST(req: NextRequest) {
   // Lazy read-aloud step: the client asks for the phonetic line *after* it already
   // has the translation, so the main response is no longer blocked on a second model call.
   if (body.mode === "transliterate") {
-    const translitBlocked = guardApiRequest(req, "translate-translit", {
+    const translitBlocked = await guardApiRequest(req, "translate-translit", {
       limit: 60,
       maxBodyBytes: 16_000,
     });
