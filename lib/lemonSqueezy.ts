@@ -1,69 +1,47 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
-const API = "https://api.lemonsqueezy.com/v1";
-
-/** True when the store, variant and API key are all set. */
+/**
+ * Lemon Squeezy via its no-code "buy link" — no API key needed for checkout.
+ * Get the link from a product's Share button, e.g.
+ *   https://yourstore.lemonsqueezy.com/buy/1a2b3c4d-...
+ * Set it as LEMONSQUEEZY_CHECKOUT_URL. LEMONSQUEEZY_WEBHOOK_SECRET is the
+ * signing secret you choose when adding the webhook.
+ */
 export function isLemonConfigured(): boolean {
   return !!(
-    process.env.LEMONSQUEEZY_API_KEY &&
-    process.env.LEMONSQUEEZY_STORE_ID &&
-    process.env.LEMONSQUEEZY_VARIANT_PRO
+    process.env.LEMONSQUEEZY_CHECKOUT_URL && process.env.LEMONSQUEEZY_WEBHOOK_SECRET
   );
 }
 
-async function lemonFetch(path: string, init?: RequestInit): Promise<any> {
-  const res = await fetch(`${API}${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/vnd.api+json",
-      "Content-Type": "application/vnd.api+json",
-      Authorization: `Bearer ${process.env.LEMONSQUEEZY_API_KEY}`,
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Lemon Squeezy ${path} ${res.status}: ${body.slice(0, 300)}`);
-  }
-  return res.json();
-}
-
-/** Hosted checkout for the Pro subscription; `userId` rides along as custom data. */
-export async function createProCheckoutUrl(opts: {
+/** Buy-link checkout URL with the Clerk user id + email + redirect prefilled. */
+export function buildProCheckoutUrl(opts: {
   userId: string;
   email?: string | null;
   redirectUrl: string;
-}): Promise<string | null> {
-  const storeId = String(process.env.LEMONSQUEEZY_STORE_ID);
-  const variantId = String(process.env.LEMONSQUEEZY_VARIANT_PRO);
-  const body = {
-    data: {
-      type: "checkouts",
-      attributes: {
-        checkout_data: {
-          ...(opts.email ? { email: opts.email } : {}),
-          custom: { user_id: opts.userId },
-        },
-        product_options: {
-          redirect_url: opts.redirectUrl,
-          enabled_variants: [Number(variantId)],
-        },
-        checkout_options: { embed: false, dark: true },
-      },
-      relationships: {
-        store: { data: { type: "stores", id: storeId } },
-        variant: { data: { type: "variants", id: variantId } },
-      },
-    },
-  };
-  const json = await lemonFetch("/checkouts", { method: "POST", body: JSON.stringify(body) });
-  return (json?.data?.attributes?.url as string | undefined) ?? null;
+}): string | null {
+  const base = process.env.LEMONSQUEEZY_CHECKOUT_URL;
+  if (!base) return null;
+  const url = new URL(base);
+  url.searchParams.set("checkout[custom][user_id]", opts.userId);
+  if (opts.email) url.searchParams.set("checkout[email]", opts.email);
+  url.searchParams.set("checkout[success_url]", opts.redirectUrl);
+  url.searchParams.set("embed", "0");
+  return url.toString();
 }
 
-/** Fresh signed URL for Lemon Squeezy's hosted customer portal. */
-export async function getCustomerPortalUrl(customerId: string): Promise<string | null> {
-  const json = await lemonFetch(`/customers/${customerId}`, { method: "GET" });
-  return (json?.data?.attributes?.urls?.customer_portal as string | undefined) ?? null;
+/**
+ * Hosted customer portal for the store (`/billing`). Explicit override via
+ * LEMONSQUEEZY_PORTAL_URL, else derived from the checkout link's origin.
+ */
+export function customerPortalUrl(): string | null {
+  if (process.env.LEMONSQUEEZY_PORTAL_URL) return process.env.LEMONSQUEEZY_PORTAL_URL;
+  const base = process.env.LEMONSQUEEZY_CHECKOUT_URL;
+  if (!base) return null;
+  try {
+    return `${new URL(base).origin}/billing`;
+  } catch {
+    return null;
+  }
 }
 
 /** Verify the `X-Signature` HMAC that Lemon Squeezy sends with every webhook. */
