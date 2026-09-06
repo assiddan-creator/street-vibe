@@ -31,6 +31,7 @@ import {
   SPANISH_MADRID_DIALECT_ID,
   normalizeSpanishMadridForSpeech,
 } from "@/lib/spanishMadridSpeechNormalize";
+import { synthesizeElevenLabs, ELEVENLABS_MODEL_ID } from "@/lib/elevenLabsTts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -192,6 +193,39 @@ export async function POST(req: NextRequest) {
         { error: "Google TTS request failed", details: msg },
         { status: 500, headers: corsHeaders }
       );
+    }
+  }
+
+  // Most natural voice: try ElevenLabs first when configured; on any failure
+  // fall through to the MiniMax (Replicate) path below.
+  if (resolvedEngine !== "google" && process.env.ELEVENLABS_API_KEY) {
+    const elGender = parseTtsGender(body.ttsGender);
+    let elText = text.trim();
+    if (!devRawTts && dialectKeyMm === ARABIC_EGYPTIAN_DIALECT_ID) {
+      elText = normalizeArabicPremiumForSpeech(elText, dialectKeyMm);
+    } else if (!devRawTts && dialectKeyMm === SPANISH_MADRID_DIALECT_ID) {
+      elText = normalizeSpanishMadridForSpeech(elText, dialectKeyMm);
+    }
+    try {
+      const { audioBase64 } = await synthesizeElevenLabs({
+        apiKey: process.env.ELEVENLABS_API_KEY,
+        text: elText,
+        gender: elGender,
+        vibe: vibeContext,
+      });
+      console.info("[tts][elevenlabs] ok", {
+        model: ELEVENLABS_MODEL_ID,
+        gender: elGender,
+        len: elText.length,
+      });
+      return NextResponse.json(
+        { audioBase64, engine: "elevenlabs" },
+        { status: 200, headers: corsHeaders }
+      );
+    } catch (e: unknown) {
+      console.warn("[tts][elevenlabs] failed; falling back to MiniMax", {
+        message: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 
