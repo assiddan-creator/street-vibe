@@ -201,6 +201,7 @@ export default function Landing() {
             <p className="mt-1 text-[28px] font-extrabold text-white">
               $3.99<span className="text-[14px] font-medium text-white/40"> / month</span>
             </p>
+            <p className="text-[12px] text-white/40">or $23.99 / year</p>
             <ul className="mt-4 flex flex-col gap-2 text-[14px] text-white/70">
               <li>Unlimited rewrites and voice</li>
               <li>Unlimited &ldquo;does this sound local?&rdquo; checks</li>

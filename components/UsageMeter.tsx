@@ -15,19 +15,26 @@ export type PublicUsage = {
 
 const clerkEnabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const priceLabel = process.env.NEXT_PUBLIC_PRO_PRICE_LABEL || "";
+const annualPriceLabel = process.env.NEXT_PUBLIC_PRO_PRICE_LABEL_ANNUAL || "";
 
-async function startCheckout(): Promise<string | null> {
-  try {
-    const res = await fetch("/api/billing/checkout", { method: "POST" });
-    const data = (await res.json()) as { url?: string; error?: string };
-    if (res.ok && data.url) {
-      window.location.href = data.url;
-      return null;
+function startCheckout(interval: "month" | "year" = "month"): () => Promise<string | null> {
+  return async () => {
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interval }),
+      });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+        return null;
+      }
+      return data.error || "Couldn't start checkout.";
+    } catch {
+      return "Couldn't start checkout.";
     }
-    return data.error || "Couldn't start checkout.";
-  } catch {
-    return "Couldn't start checkout.";
-  }
+  };
 }
 
 async function openPortal(): Promise<string | null> {
@@ -55,10 +62,12 @@ export function UsageMeter({
   usage,
   accent,
   upgradeAvailable = false,
+  annualAvailable = false,
 }: {
   usage: PublicUsage | null;
   accent: string;
   upgradeAvailable?: boolean;
+  annualAvailable?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -112,7 +121,7 @@ export function UsageMeter({
             {" · "}
             <button
               type="button"
-              onClick={run(startCheckout)}
+              onClick={run(startCheckout("month"))}
               disabled={busy}
               className="font-semibold underline underline-offset-2 transition-colors hover:text-white/80 disabled:opacity-50"
               style={{ color: accent }}
@@ -135,15 +144,28 @@ export function UsageMeter({
       </span>
 
       {canCheckout ? (
-        <button
-          type="button"
-          onClick={run(startCheckout)}
-          disabled={busy}
-          className="rounded-full px-3 py-1 text-[12px] font-bold disabled:opacity-60"
-          style={{ backgroundColor: accent, color: "#0b0b0c" }}
-        >
-          {busy ? "One sec…" : `Upgrade to Pro${priceLabel ? ` — ${priceLabel}` : ""}`}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={run(startCheckout("month"))}
+            disabled={busy}
+            className="rounded-full px-3 py-1 text-[12px] font-bold disabled:opacity-60"
+            style={{ backgroundColor: accent, color: "#0b0b0c" }}
+          >
+            {busy ? "One sec…" : `Upgrade to Pro${priceLabel ? ` — ${priceLabel}` : ""}`}
+          </button>
+          {annualAvailable ? (
+            <button
+              type="button"
+              onClick={run(startCheckout("year"))}
+              disabled={busy}
+              className="text-[11px] underline underline-offset-2 transition-colors hover:text-white/80 disabled:opacity-50"
+              style={{ color: accent }}
+            >
+              {annualPriceLabel ? `or ${annualPriceLabel}` : "or pay yearly"}
+            </button>
+          ) : null}
+        </>
       ) : usage.plan === "anon" && clerkEnabled ? (
         <SignInButton mode="modal">
           <button
