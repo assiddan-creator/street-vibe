@@ -644,6 +644,41 @@ async function callReplicateNativeTransliteration(
   }
 }
 
+export type NaturalnessResult = {
+  score: number;
+  verdict: string;
+  fixed: string;
+  tells: string[];
+};
+
+/** Pull the JSON object out of a naturalness-check model reply, tolerating fences and stray prose. */
+function parseNaturalnessJson(raw: string): NaturalnessResult | null {
+  if (!raw) return null;
+  let s = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const start = s.indexOf("{");
+  const end = s.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  s = s.slice(start, end + 1);
+  try {
+    const o = JSON.parse(s) as Record<string, unknown>;
+    const fixed = typeof o.fixed === "string" ? o.fixed.trim() : "";
+    if (!fixed) return null;
+    let score = Math.round(Number(o.score));
+    if (!Number.isFinite(score)) score = 50;
+    score = Math.max(0, Math.min(100, score));
+    const verdict = typeof o.verdict === "string" ? o.verdict.trim().slice(0, 80) : "";
+    const tells = Array.isArray(o.tells)
+      ? o.tells
+          .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+          .map((t) => t.trim().slice(0, 140))
+          .slice(0, 4)
+      : [];
+    return { score, verdict, fixed, tells };
+  } catch {
+    return null;
+  }
+}
+
 export async function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers: buildCorsHeaders(req) });
 }
@@ -806,6 +841,58 @@ export async function POST(req: NextRequest) {
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e));
       console.error("[translate][reply] failed", { message: err.message });
+      return NextResponse.json(
+        { error: friendlyTranslateError(err.message), details: err.message },
+        { status: 502, headers: corsHeaders }
+      );
+    }
+  }
+
+  // Naturalness check: the user pastes something THEY wrote in the target
+  // language. Grade how native it sounds, rewrite it the local way, and name
+  // what gave them away. Metered as one translation (usage already consumed).
+  if (body.mode === "naturalness") {
+    const dialectId = String(currentLang);
+    const primaryLanguage = getDialectPrimaryLanguage(dialectId);
+    const vibe = typeof context === "string" && context.trim() ? context.trim() : "dm";
+    const noteLang = typeof uiLocale === "string" && uiLocale === "he" ? "Hebrew" : "English";
+    const checkPrompt =
+      `A non-native speaker wrote this message in ${primaryLanguage} (target voice: "${dialectId}") to send in a "${vibe}" chat:\n` +
+      `'''${rawInput}'''\n\n` +
+      `Judge how natural it sounds to a local, then rewrite it the way a local would actually send it.\n` +
+      `SCRIPT LOCK: ${SCRIPT_OUTPUT_UNIVERSAL_RULE}\n${getDialectScriptLock(dialectId)}\n` +
+      `Reply with ONLY a JSON object — no code fence, no text around it — with exactly these keys:\n` +
+      `{"score": <integer 0-100, how native it sounds>, ` +
+      `"verdict": "<3-6 words, e.g. 'sounds like a tourist' / 'almost native'>", ` +
+      `"fixed": "<the message rewritten to sound natural and local, same language and script, sendable as-is, no surrounding quotes>", ` +
+      `"tells": ["<short phrase naming one thing that gave them away>", "<another>", "<optional third>"]}\n` +
+      `If it already sounds native, keep "fixed" close to the original and return an empty "tells" array.\n` +
+      `Write "verdict" and each "tells" entry in ${noteLang}. "fixed" must be ${primaryLanguage} only, in the script from SCRIPT LOCK.`;
+    try {
+      const out = await generateTranslationText({
+        geminiKey,
+        replicateToken: apiKey,
+        prompt: checkPrompt,
+        creative: false,
+        maxOutputTokens: 700,
+      });
+      const parsed = parseNaturalnessJson(out.text);
+      if (!parsed) {
+        console.warn("[translate][naturalness] unparseable model reply", {
+          preview: out.text.slice(0, 160),
+        });
+        return NextResponse.json(
+          { error: friendlyTranslateError("no text") },
+          { status: 502, headers: corsHeaders }
+        );
+      }
+      return NextResponse.json(
+        { naturalness: parsed, engine: out.engine, usage: usagePublic },
+        { status: 200, headers: corsHeaders }
+      );
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      console.error("[translate][naturalness] failed", { message: err.message });
       return NextResponse.json(
         { error: friendlyTranslateError(err.message), details: err.message },
         { status: 502, headers: corsHeaders }
