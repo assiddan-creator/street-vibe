@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { guardApiRequest } from "@/lib/apiRequestGuard";
+import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
-
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders });
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: buildCorsHeaders(req) });
 }
 
 export async function POST(req: NextRequest) {
-  const blocked = guardApiRequest(req, "tts-poll", { limit: 240, maxBodyBytes: 4_000 });
+  const blocked = guardApiRequest(req, "tts-poll", {
+    limit: 240,
+    maxBodyBytes: 4_000,
+    dailyLimit: 4_000,
+  });
   if (blocked) return blocked;
+  const corsHeaders = buildCorsHeaders(req);
 
   const apiKey = process.env.REPLICATE_API_TOKEN;
   if (!apiKey) {

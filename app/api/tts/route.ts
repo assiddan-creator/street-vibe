@@ -32,15 +32,13 @@ import {
   normalizeSpanishMadridForSpeech,
 } from "@/lib/spanishMadridSpeechNormalize";
 import { synthesizeElevenLabs, ELEVENLABS_MODEL_ID } from "@/lib/elevenLabsTts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
 
 /** Google path synthesizes inline and can exceed the platform's 10s default. */
 export const maxDuration = 60;
+
+/** Hard cap on characters sent to a paid voice engine (a translated line is tiny). */
+const MAX_TTS_CHARS = 800;
 
 /** Replicate MiniMax model — speech-2.8-turbo */
 const REPLICATE_MINIMAX_VERSION = "minimax/speech-2.8-turbo";
@@ -52,13 +50,18 @@ function parseTtsGender(v: unknown): "male" | "female" {
   return v === "female" ? "female" : "male";
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders });
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: buildCorsHeaders(req) });
 }
 
 export async function POST(req: NextRequest) {
-  const blocked = guardApiRequest(req, "tts", { limit: 20, maxBodyBytes: 32_000 });
+  const blocked = guardApiRequest(req, "tts", {
+    limit: 12,
+    maxBodyBytes: 8_000,
+    dailyLimit: 150,
+  });
   if (blocked) return blocked;
+  const corsHeaders = buildCorsHeaders(req);
 
   let body: Record<string, unknown>;
   try {
@@ -67,7 +70,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders });
   }
 
-  const { text, dialect } = body || {};
+  const rawText = (body || {}).text;
+  const text = typeof rawText === "string" ? rawText.slice(0, MAX_TTS_CHARS) : rawText;
+  const { dialect } = body || {};
 
   if (!text || typeof text !== "string") {
     return NextResponse.json({ error: "Missing text" }, { status: 400, headers: corsHeaders });
