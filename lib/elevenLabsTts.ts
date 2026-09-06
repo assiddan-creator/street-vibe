@@ -5,12 +5,17 @@
  * back to the MiniMax (Replicate) path on any error.
  */
 
-/** eleven_multilingual_v2 = lifelike + stable + Hebrew/Arabic/etc. Override for eleven_v3 (more expressive, slower) or eleven_turbo_v2_5 (faster). */
-export const ELEVENLABS_MODEL_ID = process.env.ELEVENLABS_MODEL_ID || "eleven_multilingual_v2";
+/**
+ * eleven_v3_conversational: v3's expressiveness with sub-second latency, 74
+ * languages — best all-round for short chat lines. Verified ~0.9s / 49 chars.
+ * Override with eleven_multilingual_v2 (steadier on very short text) or
+ * eleven_flash_v2_5 (half price).
+ */
+export const ELEVENLABS_MODEL_ID = process.env.ELEVENLABS_MODEL_ID || "eleven_v3_conversational";
 
-/** Stock ElevenLabs voice ids (always available on a default account). Override per project. */
-const VOICE_MALE = process.env.ELEVENLABS_VOICE_MALE || "pNInz6obpgDQGcFmaJgB"; // Adam
-const VOICE_FEMALE = process.env.ELEVENLABS_VOICE_FEMALE || "21m00Tcm4TlvDq8ikWAM"; // Rachel
+/** Premade voices — young, casual, conversational; always on any account. */
+const VOICE_MALE = process.env.ELEVENLABS_VOICE_MALE || "bIHbv24MWmeRgasZH58o"; // Will — relaxed optimist
+const VOICE_FEMALE = process.env.ELEVENLABS_VOICE_FEMALE || "cgSgspJ2msm6clMCkdW9"; // Jessica — playful, bright, warm
 
 type VoiceSettings = {
   stability: number;
