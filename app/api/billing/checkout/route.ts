@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { guardApiRequest } from "@/lib/apiRequestGuard";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
-import { createProCheckoutUrl, isLemonConfigured } from "@/lib/lemonSqueezy";
+import { buildProCheckoutUrl, isLemonConfigured } from "@/lib/lemonSqueezy";
 import { getRequestUserId } from "@/lib/usage";
 import { getUserById } from "@/lib/userStore";
 
@@ -21,7 +21,7 @@ export async function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers: buildCorsHeaders(req) });
 }
 
-/** Start a Lemon Squeezy hosted checkout for the signed-in user's Pro subscription. */
+/** Hand back a Lemon Squeezy buy-link checkout for the signed-in user's Pro plan. */
 export async function POST(req: NextRequest) {
   const blocked = guardApiRequest(req, "billing-checkout", { limit: 10, maxBodyBytes: 2_000 });
   if (blocked) return blocked;
@@ -48,34 +48,24 @@ export async function POST(req: NextRequest) {
     /* email is optional — LS collects it at checkout */
   }
 
-  try {
-    const existing = await getUserById(userId);
-    if (existing?.plan === "pro") {
-      return NextResponse.json(
-        { error: "You're already on Pro." },
-        { status: 409, headers: corsHeaders }
-      );
-    }
-
-    const url = await createProCheckoutUrl({
-      userId,
-      email,
-      redirectUrl: `${siteUrl(req)}/?upgraded=1`,
-    });
-    if (!url) {
-      return NextResponse.json(
-        { error: "Couldn't start checkout." },
-        { status: 502, headers: corsHeaders }
-      );
-    }
-    return NextResponse.json({ url }, { status: 200, headers: corsHeaders });
-  } catch (e) {
-    console.error("[billing][checkout] failed", {
-      message: e instanceof Error ? e.message : String(e),
-    });
+  const existing = await getUserById(userId);
+  if (existing?.plan === "pro") {
     return NextResponse.json(
-      { error: "Couldn't start checkout. Try again." },
+      { error: "You're already on Pro." },
+      { status: 409, headers: corsHeaders }
+    );
+  }
+
+  const url = buildProCheckoutUrl({
+    userId,
+    email,
+    redirectUrl: `${siteUrl(req)}/?upgraded=1`,
+  });
+  if (!url) {
+    return NextResponse.json(
+      { error: "Couldn't start checkout." },
       { status: 502, headers: corsHeaders }
     );
   }
+  return NextResponse.json({ url }, { status: 200, headers: corsHeaders });
 }
