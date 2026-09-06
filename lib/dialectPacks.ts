@@ -130,7 +130,7 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
   },
   "Tokyo Gyaru": {
     dialectId: "Tokyo Gyaru",
-    displayLabel: "Tokyo Gyaru",
+    displayLabel: "Tokyo",
     phraseRhythm: { pattern: "playful, clipped, stylish", cadence: "staccato" },
     preferredSentenceLength: "short",
     slangDensityBias: "medium",
@@ -142,10 +142,11 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
     scriptPreference: "Japanese scripts only for main text; avoid romaji body copy.",
     promptHints: {
       translate: [
-        "Short trendy bursts; mix kana/kanji like real youth chat.",
+        "Contemporary Tokyo young-adult casual (LINE / X): natural and current — not dated 2000s gyaru-go, not anime-narrator voice.",
+        "Short trendy bursts; mix kana/kanji like real youth chat; casual elongations (〜, ぉ) where a real texter would.",
         "Avoid stiff keigo unless the input demands politeness.",
       ],
-      toneNotes: ["Stylish and playful — not anime narrator voice."],
+      toneNotes: ["Stylish and playful — like a stylish friend texting, not a performance."],
     },
     ttsHints: [
       "Bright, clipped phrase endings; avoid monotone.",
@@ -249,6 +250,8 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
       translate: [
         "Melodic, conversational flow; expressive but not theatrical unless context demands.",
         "Keep carioca street authenticity over neutral PT-BR news tone.",
+        "Clothes/outfit = 'look', 'visu', 'produção', or 'roupa' — never 'kit'.",
+        "'gostoso/gostosa' is for food or someone's looks, not an event or a hangout — for 'had a good time' use 'foi mó bom', 'curti demais', 'foi massa'.",
       ],
       toneNotes: ["Sounds like voice notes between friends — fluid, human."],
     },

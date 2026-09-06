@@ -199,7 +199,7 @@ export const OUTPUT_PREMIUM_OPTIONS: { value: string; label: string }[] = [
   { value: "Jamaican Patois", label: "🇯🇲 Jamaican Patois" },
   { value: "London Roadman", label: "🇬🇧 London Roadman" },
   { value: "New York Brooklyn", label: "🗽 New York Brooklyn" },
-  { value: "Tokyo Gyaru", label: "🇯🇵 Tokyo Gyaru" },
+  { value: "Tokyo Gyaru", label: "🇯🇵 Tokyo" },
   { value: "Paris Banlieue", label: "🇫🇷 Paris Banlieue" },
   { value: "Russian Street", label: "🇷🇺 Russian Street" },
   { value: "Mexico City Barrio", label: "🇲🇽 Mexico City Barrio" },

@@ -151,7 +151,7 @@ function buildPrompt({
   intentCategory?: RoutingIntentCategory;
 }) {
   const INTENSITY_INSTRUCTIONS: Record<number, string> = {
-    1: "Use mostly standard language with just a tiny hint of local flavor. Max 1-2 very mild slang words. Keep it readable.",
+    1: "Sound like a local casually wrote it: native word order, idiom, and phrasing for this place — but keep slang minimal or absent (0-2 very mild markers at most). The goal is \"doesn't read like a foreigner/tourist\", not \"heavy accent\". Fully readable.",
     2: "Authentic casual street talk. Natural mix of standard language and popular local slang.",
     3: "Heavy thick street slang. Deep local terminology, authentic street grammar, full immersion.",
   };
@@ -350,6 +350,7 @@ LONDON ROADMAN — lived-in MLE, not a drill:
 - Write like a normal casual message: subject + verb + link words, not headline telegraph. Connect ideas with "and / so / then" where a real speaker would — not "came did a check found" keyword stacks.
 - Local identity = natural UK phrasing and rhythm, not visible dialect signaling. One or two light touches (bruv, mandem, feds) can land; avoid piling "nicked / bagged / drew" etc. to prove the voice.
 - Work / police / crime storytelling: do not force extra "street" garnish — plain update + light MLE reads more human than slang-for-cops.
+- UK not US: prefer "we need to" / "we haffi" over "we gotta"; casual "something" is "suttin" / "sutn", never "summat" (that's Northern England, not London); don't reach for American "mad" as an intensifier unless it's clearly Londoner-natural.
 - FLIRT context: if the source is not romantic or flirty, keep the same matter-of-fact tone as DM — do not inject soft/flirty energy, pet names, or pickup vibes.
 - Prefer stable spellings over gimmicky ones; HEAVY = more color in phrasing, not more tokens per line.
 - Short source → short reply; no filler ticks to sound "more road."
@@ -365,6 +366,7 @@ ISRAELI STREET — Hebrew WhatsApp (not a slang showcase):
 - Direct, readable Hebrew in full thoughts — natural rhythm over staccato keyword drops. Match the source: mundane news → mundane delivery, not theatrical hype.
 - Do not repeat vocatives/fillers (וואי / אחי / נו) every clause; one softener if any. Storytelling: narrate the chain clearly (מי באו → מה מצאו → מה קרה) without piling slang for show.
 - HEAVY: still Hebrew-native and street — density follows the message; avoid "street performance" when the line is everyday reporting.
+- Avoid influencer-flavoured standalone hype for an experience ("היה לי אש", "שריפה", "וואלה חוויה"); enthusiasm comes from the phrasing ("היה ממש כיף", "נהניתי בטירוף", "תענוג"), not one trend word.
 - FLIRT: warmer register, still complete sentences; charm from tone, not from stacked slang.
 - Never trail off mid-word or mid-sentence before |||; finish the thought.
 `
