@@ -6,7 +6,6 @@
 export type ShareCardInput = {
   original: string;
   translated: string;
-  dialectLabel: string;
   city: string;
   flag: string;
   accent: string;
@@ -160,7 +159,7 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
   const fy = cy + chh - 56;
   ctx.font = "500 26px 'Manrope', system-ui, sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.fillText(`${input.flag} ${input.city} · ${input.dialectLabel}`, innerX, fy);
+  ctx.fillText(`${input.flag} ${input.city}`.trim(), innerX, fy);
   ctx.textAlign = "right";
   ctx.fillText("street-vibe.vercel.app", innerX + innerW, fy);
   ctx.textAlign = "left";
