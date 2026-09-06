@@ -11,6 +11,7 @@ import { VoiceGenderSegment } from "@/components/VoiceGenderSegment";
 import { AmbientAccentGlows } from "@/components/AmbientAccentGlows";
 import { GraffitiLogo } from "@/components/GraffitiLogo";
 import { AuthControl } from "@/components/AuthControl";
+import { UsageMeter, type PublicUsage } from "@/components/UsageMeter";
 import { Toast } from "@/components/Toast";
 import { NativeTransliterationCard } from "@/components/NativeTransliterationCard";
 import { TranslationResultCard } from "@/components/TranslationResultCard";
@@ -96,9 +97,24 @@ export function TranslatorView() {
   const [appMode, setAppMode] = useState<"translate" | "reply" | "compare">("translate");
   const [replies, setReplies] = useState<string[]>([]);
   const [compareResults, setCompareResults] = useState<{ dialect: string; text: string }[]>([]);
+  const [usage, setUsage] = useState<PublicUsage | null>(null);
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
+  }, []);
+
+  // Daily-quota state for the meter. Silently no-ops when metering is disabled.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/usage")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { metered?: boolean; translate?: PublicUsage } | null) => {
+        if (alive && d?.metered && d.translate) setUsage(d.translate);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -257,7 +273,9 @@ export function TranslatorView() {
         translatedText?: string;
         nativeTransliteration?: string;
         error?: string;
+        usage?: PublicUsage;
       };
+      if (data.usage) setUsage(data.usage);
       if (!res.ok) {
         const err = new Error(data.error || "Translation failed") as Error & { httpStatus?: number };
         err.httpStatus = res.status;
@@ -649,6 +667,8 @@ export function TranslatorView() {
             );
           })}
         </div>
+
+        <UsageMeter usage={usage} accent={theme.accent} />
 
         <div className={TOP_STACK_CLASS}>
         <div className="flex flex-col gap-1.5">

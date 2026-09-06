@@ -33,6 +33,7 @@ import {
 } from "@/lib/spanishMadridSpeechNormalize";
 import { synthesizeElevenLabs, ELEVENLABS_MODEL_ID } from "@/lib/elevenLabsTts";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
+import { checkAndConsumeUsage, publicUsage } from "@/lib/usage";
 
 /** Google path synthesizes inline and can exceed the platform's 10s default. */
 export const maxDuration = 60;
@@ -77,6 +78,23 @@ export async function POST(req: NextRequest) {
   if (!text || typeof text !== "string") {
     return NextResponse.json({ error: "Missing text" }, { status: 400, headers: corsHeaders });
   }
+
+  // Per-user (or per-IP) daily voice quota. No-op until Supabase is configured.
+  const usage = await checkAndConsumeUsage(req, "tts");
+  if (!usage.ok) {
+    return NextResponse.json(
+      {
+        error:
+          usage.plan === "anon"
+            ? "That's today's free voice plays used up — sign in for more."
+            : "You've hit today's Read-aloud limit. Upgrade to Pro for unlimited.",
+        usage: publicUsage(usage),
+        limitReached: true,
+      },
+      { status: 429, headers: corsHeaders }
+    );
+  }
+  const usagePublic = publicUsage(usage);
 
   const tuning =
     body.tuning && typeof body.tuning === "object"
@@ -189,7 +207,7 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json(
-        { audioBase64: data.audioContent, engine: "google" },
+        { audioBase64: data.audioContent, engine: "google", usage: usagePublic },
         { status: 200, headers: corsHeaders }
       );
     } catch (e: unknown) {
@@ -224,7 +242,7 @@ export async function POST(req: NextRequest) {
         len: elText.length,
       });
       return NextResponse.json(
-        { audioBase64, engine: "elevenlabs" },
+        { audioBase64, engine: "elevenlabs", usage: usagePublic },
         { status: 200, headers: corsHeaders }
       );
     } catch (e: unknown) {
@@ -354,6 +372,7 @@ export async function POST(req: NextRequest) {
         status: prediction.status,
         output: prediction.output || null,
         engine: "minimax",
+        usage: usagePublic,
       },
       { status: 200, headers: corsHeaders }
     );
