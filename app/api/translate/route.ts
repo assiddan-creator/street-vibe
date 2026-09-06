@@ -51,6 +51,7 @@ import { generateReplicateText, REPLICATE_TEXT_MODEL } from "@/lib/replicateText
 import { generateGeminiText, GEMINI_TEXT_MODEL } from "@/lib/geminiText";
 import { guardApiRequest } from "@/lib/apiRequestGuard";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
+import { checkAndConsumeUsage, publicUsage } from "@/lib/usage";
 
 const MAX_TRANSLATE_INPUT_CHARS = 4000;
 
@@ -744,6 +745,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Per-user (or per-IP, anonymous) daily quota. Fails open when Supabase is
+  // unconfigured, so this is a no-op until the metering env vars are set.
+  const usage = await checkAndConsumeUsage(req, "translate");
+  if (!usage.ok) {
+    return NextResponse.json(
+      {
+        error:
+          usage.plan === "anon"
+            ? "That's today's free translations used up — sign in to keep going."
+            : "You've hit today's translation limit. Upgrade to Pro for unlimited.",
+        usage: publicUsage(usage),
+        limitReached: true,
+      },
+      { status: 429, headers: corsHeaders }
+    );
+  }
+  const usagePublic = publicUsage(usage);
+
   // Reply helper: given a message the user received, return 3 short comebacks
   // in the chosen dialect voice + vibe.
   if (body.mode === "reply") {
@@ -781,7 +800,7 @@ export async function POST(req: NextRequest) {
         );
       }
       return NextResponse.json(
-        { replies, engine: out.engine },
+        { replies, engine: out.engine, usage: usagePublic },
         { status: 200, headers: corsHeaders }
       );
     } catch (e: unknown) {
@@ -929,6 +948,7 @@ export async function POST(req: NextRequest) {
         sourceText: rawInput,
         translatedText: translatedMain,
         engine: first.engine,
+        usage: usagePublic,
       },
       { status: 200, headers: corsHeaders }
     );
