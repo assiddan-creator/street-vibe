@@ -98,6 +98,7 @@ export function TranslatorView() {
   const [replies, setReplies] = useState<string[]>([]);
   const [compareResults, setCompareResults] = useState<{ dialect: string; text: string }[]>([]);
   const [usage, setUsage] = useState<PublicUsage | null>(null);
+  const [upgradeAvailable, setUpgradeAvailable] = useState(false);
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
@@ -106,12 +107,30 @@ export function TranslatorView() {
   // Daily-quota state for the meter. Silently no-ops when metering is disabled.
   useEffect(() => {
     let alive = true;
-    fetch("/api/usage")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { metered?: boolean; translate?: PublicUsage } | null) => {
-        if (alive && d?.metered && d.translate) setUsage(d.translate);
-      })
-      .catch(() => {});
+    const load = () =>
+      fetch("/api/usage")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: { metered?: boolean; upgradeAvailable?: boolean; translate?: PublicUsage } | null) => {
+          if (!alive || !d) return;
+          setUpgradeAvailable(!!d.upgradeAvailable);
+          if (d.metered && d.translate) setUsage(d.translate);
+        })
+        .catch(() => {});
+    load();
+
+    // Returning from a successful Stripe Checkout — celebrate and refresh the plan.
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("upgraded") === "1") {
+        setToast("You're on Pro now — unlimited 🎉");
+        params.delete("upgraded");
+        const qs = params.toString();
+        window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+        setTimeout(load, 1500);
+      }
+    } catch {
+      /* ignore */
+    }
     return () => {
       alive = false;
     };
@@ -668,7 +687,7 @@ export function TranslatorView() {
           })}
         </div>
 
-        <UsageMeter usage={usage} accent={theme.accent} />
+        <UsageMeter usage={usage} accent={theme.accent} upgradeAvailable={upgradeAvailable} />
 
         <div className={TOP_STACK_CLASS}>
         <div className="flex flex-col gap-1.5">
