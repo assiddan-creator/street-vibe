@@ -149,7 +149,7 @@ export function UsageMeter({
             type="button"
             onClick={run(startCheckout("month"))}
             disabled={busy}
-            className="rounded-full px-3 py-1 text-[12px] font-bold disabled:opacity-60"
+            className="rounded-full px-4 py-2 text-[12px] font-bold transition-transform active:scale-[0.97] disabled:opacity-60"
             style={{ backgroundColor: accent, color: "#0b0b0c" }}
           >
             {busy ? "One sec…" : `Upgrade to Pro${priceLabel ? ` — ${priceLabel}` : ""}`}
@@ -170,7 +170,7 @@ export function UsageMeter({
         <SignInButton mode="modal">
           <button
             type="button"
-            className="rounded-full px-3 py-1 text-[12px] font-bold"
+            className="rounded-full px-4 py-2 text-[12px] font-bold transition-transform active:scale-[0.97]"
             style={{ backgroundColor: accent, color: "#0b0b0c" }}
           >
             Sign in for more

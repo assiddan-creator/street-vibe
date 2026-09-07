@@ -709,7 +709,7 @@ export function TranslatorView() {
                 key={m}
                 type="button"
                 onClick={() => switchAppMode(m)}
-                className={`flex-1 rounded-full px-2 py-1.5 text-[12px] font-semibold transition-all duration-300 ${
+                className={`flex-1 rounded-full px-2 py-2 text-[12px] font-semibold transition-all duration-300 ${
                   on ? "" : "text-white/55 hover:text-white/80"
                 }`}
                 style={
@@ -1317,7 +1317,7 @@ export function TranslatorView() {
                               if (src && !loading) void getReplies(src, outputLang);
                             }}
                             disabled={loading}
-                            className="mt-1 self-center rounded-full px-3 py-1 text-[12px] font-medium text-white/55 transition-colors hover:text-white/90 disabled:opacity-40"
+                            className="mt-1 self-center rounded-full px-3 py-2 text-[12px] font-medium text-white/55 transition-colors hover:text-white/90 disabled:opacity-40"
                           >
                             ↻ more options
                           </button>
