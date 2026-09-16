@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "env": {
+    "ELEVENLABS_VOICE_KINGSTON_MALE": "eRcsJdPMOM0mtGC03ul7"
+  }
+}
