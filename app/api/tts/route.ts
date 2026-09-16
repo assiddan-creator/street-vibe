@@ -230,15 +230,25 @@ export async function POST(req: NextRequest) {
       elText = normalizeSpanishMadridForSpeech(elText, dialectKeyMm);
     }
     try {
-      const { audioBase64 } = await synthesizeElevenLabs({
+      const {
+        audioBase64,
+        voiceId: elVoiceId,
+        languageCode: elLanguageCode,
+        usedDialectOverride,
+      } = await synthesizeElevenLabs({
         apiKey: process.env.ELEVENLABS_API_KEY,
         text: elText,
         gender: elGender,
+        dialect: dialectKeyMm || undefined,
         vibe: vibeContext,
       });
       console.info("[tts][elevenlabs] ok", {
         model: ELEVENLABS_MODEL_ID,
+        dialect: dialectKeyMm || null,
         gender: elGender,
+        voiceId: elVoiceId,
+        languageCode: elLanguageCode ?? null,
+        usedDialectOverride,
         len: elText.length,
       });
       return NextResponse.json(
