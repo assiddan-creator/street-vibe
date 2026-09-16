@@ -32,6 +32,7 @@ import {
   normalizeSpanishMadridForSpeech,
 } from "@/lib/spanishMadridSpeechNormalize";
 import { synthesizeElevenLabs, ELEVENLABS_MODEL_ID } from "@/lib/elevenLabsTts";
+import { addSpeechPunctuation } from "@/lib/speechPunctuation";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
 import { checkAndConsumeUsage, publicUsage } from "@/lib/usage";
 
@@ -224,6 +225,11 @@ export async function POST(req: NextRequest) {
   if (resolvedEngine !== "google" && process.env.ELEVENLABS_API_KEY) {
     const elGender = parseTtsGender(body.ttsGender);
     let elText = text.trim();
+    // Speech-only commas after slang openers / before vocatives ("Deadass, can't…").
+    // The on-screen translation keeps its text-message style; only the voice sees this.
+    if (!devRawTts) {
+      elText = addSpeechPunctuation(elText, dialectKeyMm || undefined);
+    }
     if (!devRawTts && dialectKeyMm === ARABIC_EGYPTIAN_DIALECT_ID) {
       elText = normalizeArabicPremiumForSpeech(elText, dialectKeyMm);
     } else if (!devRawTts && dialectKeyMm === SPANISH_MADRID_DIALECT_ID) {
