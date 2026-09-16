@@ -235,6 +235,8 @@ export async function POST(req: NextRequest) {
         voiceId: elVoiceId,
         languageCode: elLanguageCode,
         usedDialectOverride,
+        source: elVoiceSource,
+        voiceName: elVoiceName,
       } = await synthesizeElevenLabs({
         apiKey: process.env.ELEVENLABS_API_KEY,
         text: elText,
@@ -247,6 +249,8 @@ export async function POST(req: NextRequest) {
         dialect: dialectKeyMm || null,
         gender: elGender,
         voiceId: elVoiceId,
+        voiceName: elVoiceName ?? null,
+        voiceSource: elVoiceSource,
         languageCode: elLanguageCode ?? null,
         usedDialectOverride,
         len: elText.length,

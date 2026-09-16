@@ -5,18 +5,23 @@
  * back to MiniMax (Replicate) on any error.
  */
 
+import {
+  resolveElevenLabsVoiceSelection,
+  type VoiceGender,
+  type VoiceResolution,
+} from "@/lib/elevenLabsVoices";
+
 /**
- * Default stays on the current conversational model so this branch isolates
- * voice/accent changes. It can still be overridden in Vercel for A/B testing.
+ * Default stays on the current conversational model.
+ *
+ * Kept deliberately: the official ElevenLabs documentation does not establish
+ * that `eleven_v3` has better regional accent, pronunciation or slang fidelity
+ * than `eleven_v3_conversational` — both cover 70+ languages and expressive
+ * speech, and the conversational variant is tuned for realtime latency. The env
+ * override exists so `eleven_v3` can be A/B tested later without a code change.
  */
 export const ELEVENLABS_MODEL_ID =
   process.env.ELEVENLABS_MODEL_ID || "eleven_v3_conversational";
-
-/** Global fallback voices. */
-const VOICE_MALE =
-  process.env.ELEVENLABS_VOICE_MALE || "bIHbv24MWmeRgasZH58o"; // Will
-const VOICE_FEMALE =
-  process.env.ELEVENLABS_VOICE_FEMALE || "cgSgspJ2msm6clMCkdW9"; // Jessica
 
 type VoiceSettings = {
   stability: number;
@@ -24,68 +29,6 @@ type VoiceSettings = {
   style: number;
   use_speaker_boost: boolean;
 };
-
-type DialectVoiceConfig = {
-  male?: string;
-  female?: string;
-  languageCode?: string;
-};
-
-/**
- * Regional voice overrides for the first A/B pass.
- *
- * Voice Library IDs are intentionally supplied through environment variables
- * rather than hard-coded because community/professional voices can change or
- * disappear. If an override is missing, Street Vibe safely keeps using the
- * existing global Will/Jessica fallback.
- */
-const DIALECT_VOICE_CONFIG: Record<string, DialectVoiceConfig> = {
-  "London Roadman": {
-    male: process.env.ELEVENLABS_VOICE_LONDON_MALE,
-    female: process.env.ELEVENLABS_VOICE_LONDON_FEMALE,
-    languageCode: "en",
-  },
-  "Jamaican Patois": {
-    male: process.env.ELEVENLABS_VOICE_KINGSTON_MALE,
-    female: process.env.ELEVENLABS_VOICE_KINGSTON_FEMALE,
-    languageCode: "en",
-  },
-  "New York Brooklyn": {
-    male: process.env.ELEVENLABS_VOICE_BROOKLYN_MALE,
-    female: process.env.ELEVENLABS_VOICE_BROOKLYN_FEMALE,
-    languageCode: "en",
-  },
-};
-
-/** Language hint for every current output option, independent of voice override. */
-const DIALECT_LANGUAGE_CODE: Record<string, string> = {
-  "London Roadman": "en",
-  "Jamaican Patois": "en",
-  "New York Brooklyn": "en",
-  "Tokyo Gyaru": "ja",
-  "Paris Banlieue": "fr",
-  "Russian Street": "ru",
-  "Mexico City Barrio": "es",
-  "Rio Favela": "pt",
-  "Israeli Street": "he",
-  "Arabic Egyptian": "ar",
-  "Spanish Madrid": "es",
-  "English (Standard)": "en",
-  Spanish: "es",
-  French: "fr",
-  German: "de",
-  Italian: "it",
-  Russian: "ru",
-  Portuguese: "pt",
-  Japanese: "ja",
-  Arabic: "ar",
-  "Hebrew (Standard)": "he",
-};
-
-function cleanVoiceId(value: string | undefined): string | undefined {
-  const trimmed = value?.trim();
-  return trimmed || undefined;
-}
 
 /** Looser stability = more expressive delivery; tuned per message vibe. */
 function voiceSettingsForVibe(vibe: string | undefined): VoiceSettings {
@@ -105,38 +48,15 @@ function voiceSettingsForVibe(vibe: string | undefined): VoiceSettings {
   }
 }
 
-export function resolveElevenLabsVoiceSelection(
-  gender: "male" | "female",
-  dialect?: string
-): {
-  voiceId: string;
-  languageCode?: string;
-  usedDialectOverride: boolean;
-} {
-  const config = dialect ? DIALECT_VOICE_CONFIG[dialect] : undefined;
-  const dialectVoice = cleanVoiceId(config?.[gender]);
-  const fallback = gender === "female" ? VOICE_FEMALE : VOICE_MALE;
-
-  return {
-    voiceId: dialectVoice || fallback,
-    languageCode:
-      config?.languageCode || (dialect ? DIALECT_LANGUAGE_CODE[dialect] : undefined),
-    usedDialectOverride: Boolean(dialectVoice),
-  };
-}
-
-/** Backward-compatible helper used by older call sites/tests. */
-export function resolveElevenLabsVoiceId(
-  gender: "male" | "female",
-  dialect?: string
-): string {
-  return resolveElevenLabsVoiceSelection(gender, dialect).voiceId;
-}
+export {
+  resolveElevenLabsVoiceSelection,
+  resolveElevenLabsVoiceId,
+} from "@/lib/elevenLabsVoices";
 
 export async function synthesizeElevenLabs(opts: {
   apiKey: string;
   text: string;
-  gender: "male" | "female";
+  gender: VoiceGender;
   dialect?: string;
   vibe?: string;
   timeoutMs?: number;
@@ -144,11 +64,15 @@ export async function synthesizeElevenLabs(opts: {
   audioBase64: string;
   voiceId: string;
   languageCode?: string;
+  /** True when a regional voice was used rather than the global fallback. */
   usedDialectOverride: boolean;
+  source: VoiceResolution["source"];
+  voiceName?: string;
 }> {
   const { apiKey, text, gender, dialect, vibe, timeoutMs = 45_000 } = opts;
-  const { voiceId, languageCode, usedDialectOverride } =
+  const { voiceId, languageCode, source, voiceName } =
     resolveElevenLabsVoiceSelection(gender, dialect);
+  const usedDialectOverride = source !== "global-fallback";
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -191,6 +115,14 @@ export async function synthesizeElevenLabs(opts: {
     } catch {
       /* keep HTTP status */
     }
+    // 402 on a catalogue voice means the account is on a plan that cannot use
+    // Voice Library voices. Name that explicitly so it is not mistaken for a
+    // bad Voice ID; the caller still falls back to MiniMax either way.
+    if (res.status === 402 && source !== "global-fallback") {
+      throw new Error(
+        `ElevenLabs error: ${detail} (regional voice "${voiceId}" needs a paid ElevenLabs plan; unset ELEVENLABS_REGIONAL_VOICES to use the global voices)`
+      );
+    }
     throw new Error(`ElevenLabs error: ${detail}`);
   }
 
@@ -203,5 +135,7 @@ export async function synthesizeElevenLabs(opts: {
     voiceId,
     languageCode,
     usedDialectOverride,
+    source,
+    voiceName,
   };
 }
