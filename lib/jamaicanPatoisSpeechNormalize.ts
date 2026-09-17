@@ -61,8 +61,18 @@ function normalizeSpelling(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Step 2 — opening address. "Yow bredda", "Bredda", "Bro" etc. at the start
-// of a clause read as one vocative unit, not a run-on into what follows.
+// Step 2 — opening address.
+//
+// "Yow bredda" is two short beats, not one vocative unit: the interjection
+// stands alone ("Yow,") and the address noun closes that phrase as its own
+// short clause ("bredda."), confirmed by a manual listening test as the
+// stronger conversational chunking over a single trailing comma.
+//
+//   "Yow bredda wah gwaan…"  ->  "Yow, bredda. Wah gwaan…"
+//
+// An address noun with NO interjection ("Bredda mi nuh see…") keeps the
+// original single-comma behaviour — the same rule doesn't clearly apply
+// there, so it stays conservative.
 // ---------------------------------------------------------------------------
 const OPENER_INTERJECTIONS = ["yow", "bwoy", "eh"];
 const OPENER_ADDRESSES = ["bredda", "bredrin", "bro", "fam", "blud", "sis", "yute", "dawg"];
@@ -70,13 +80,23 @@ const OPENER_ADDRESSES = ["bredda", "bredrin", "bro", "fam", "blud", "sis", "yut
 function addOpenerComma(text: string): string {
   const interj = OPENER_INTERJECTIONS.join("|");
   const addr = OPENER_ADDRESSES.join("|");
-  // Interjection + address ("Yow bredda") or address alone ("Bredda"), only
-  // at a clause start, only when not already followed by punctuation.
   const re = new RegExp(
-    `(${CLAUSE_START})((?:(?:${interj})\\s+)?(?:${addr}))\\b(?!${ALREADY_PUNCTUATED})(?=\\s+${WORD})`,
+    `(${CLAUSE_START})(?:(${interj})\\s+)?(${addr})\\b(?!${ALREADY_PUNCTUATED})(?:\\s+(${WORD}))?`,
     "giu"
   );
-  return text.replace(re, (_m, boundary: string, opener: string) => `${boundary}${opener},`);
+  return text.replace(
+    re,
+    (_m, boundary: string, interjection: string | undefined, address: string, nextChar?: string) => {
+      if (interjection) {
+        // Two beats: "Yow, bredda." — the address noun closes its own clause,
+        // so whatever follows starts a fresh, capitalized sentence.
+        const rest = nextChar ? ` ${nextChar.toUpperCase()}` : "";
+        return `${boundary}${interjection}, ${address}.${rest}`;
+      }
+      // Address alone: unchanged — one comma, the clause continues as before.
+      return `${boundary}${address},${nextChar ? ` ${nextChar}` : ""}`;
+    }
+  );
 }
 
 // ---------------------------------------------------------------------------

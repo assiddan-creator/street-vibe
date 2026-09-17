@@ -27,10 +27,16 @@ describe("Kingston Male preset resolution", () => {
     assert.equal(getVoicePreset(KINGSTON, "male")?.voiceId, "JNakJx0PcoBLBnZ9Rvm2");
   });
 
-  test("model is eleven_multilingual_v2 — never the global eleven_v3_conversational", () => {
+  test("model is eleven_v3_conversational, per the manual v2/v3 listening test", () => {
+    // Updated after a manual comparison found v3 conversational clearly more
+    // natural than the originally-approved multilingual v2 for this cloned
+    // voice. This happens to match the global default model too, but for an
+    // independent, explicit reason — it's still this preset's own setting,
+    // not a fallthrough (see "preset is final" below: it stays fixed
+    // regardless of what the global default is ever changed to).
     const preset = getVoicePreset(KINGSTON, "male")!;
-    assert.equal(preset.modelId, "eleven_multilingual_v2");
-    assert.notEqual(preset.modelId, "eleven_v3_conversational");
+    assert.equal(preset.modelId, "eleven_v3_conversational");
+    assert.notEqual(preset.modelId, "eleven_multilingual_v2");
   });
 
   test("voice settings match the approved values exactly", () => {
@@ -55,7 +61,7 @@ describe("preset is final — vibe never overwrites it", () => {
       const r = resolveElevenLabsVoiceSelection("male", KINGSTON, vibe);
       assert.equal(r.presetId, "kingston-male-assi-rasta");
       assert.equal(r.voiceId, "JNakJx0PcoBLBnZ9Rvm2");
-      assert.equal(r.modelId, "eleven_multilingual_v2");
+      assert.equal(r.modelId, "eleven_v3_conversational");
       assert.deepEqual(r.settings, {
         stability: 0.5,
         similarity_boost: 0.75,

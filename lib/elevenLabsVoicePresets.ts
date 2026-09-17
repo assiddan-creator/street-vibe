@@ -66,7 +66,11 @@ export const ELEVENLABS_VOICE_PRESETS: Record<
       dialect: "Jamaican Patois",
       gender: "male",
       voiceId: "JNakJx0PcoBLBnZ9Rvm2",
-      modelId: "eleven_multilingual_v2",
+      // Manual listening test (v2 vs v3 vs v3-conversational) found v3
+      // conversational clearly more natural for this cloned voice than the
+      // originally-approved multilingual v2. Voice ID and every other
+      // setting are unchanged from approval.
+      modelId: "eleven_v3_conversational",
       settings: {
         stability: 0.5,
         similarity_boost: 0.75,

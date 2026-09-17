@@ -17,7 +17,22 @@ describe("the real reported example", () => {
   test("Yow bredda wan gwaan yu waan step out tonight -> natural chunking", () => {
     const input = "Yow bredda wan gwaan yu waan step out tonight";
     const got = normalizeJamaicanPatoisForSpeech(input, JAMAICAN_PATOIS_DIALECT_ID);
-    assert.equal(got, "Yow bredda, wah gwaan? Yuh waan step out tonight?");
+    // Confirmed by manual listening test: the interjection and the address
+    // noun are two separate beats ("Yow," then "bredda."), not one clause.
+    assert.equal(got, "Yow, bredda. Wah gwaan? Yuh waan step out tonight?");
+  });
+
+  test("interjection + address always splits into two beats, not just this exact line", () => {
+    const got = normalizeJamaicanPatoisForSpeech("Eh bredda wah gwaan", JAMAICAN_PATOIS_DIALECT_ID);
+    assert.equal(got, "Eh, bredda. Wah gwaan?");
+  });
+
+  test("an address noun with NO interjection keeps the original single-comma behaviour", () => {
+    // The two-beat rule is specifically for "interjection + address"; it
+    // doesn't clearly apply when there's no interjection, so this stays as
+    // it was before the listening-test change.
+    const got = normalizeJamaicanPatoisForSpeech("Bredda wah gwaan", JAMAICAN_PATOIS_DIALECT_ID);
+    assert.equal(got, "Bredda, wah gwaan?");
   });
 });
 
@@ -39,10 +54,11 @@ describe("a longer Kingston sentence", () => {
 
 describe("already-punctuated input is left alone", () => {
   const cases = [
-    "Yow bredda, wah gwaan? Yuh waan step out tonight?",
+    "Yow, bredda. Wah gwaan? Yuh waan step out tonight?",
     "Bredda, mi nuh see yuh long time, man. Mek wi link today an catch up.",
     "Wah gwaan?",
     "Bro, yuh good?",
+    "Eh, bredda. Wah gwaan?",
   ];
   for (const input of cases) {
     test(`unchanged: ${JSON.stringify(input)}`, () => {
