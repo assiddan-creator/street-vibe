@@ -18,8 +18,34 @@ export const DAILY_LIMITS: Record<Plan, Record<UsageKind, number>> = {
   pro: { translate: UNLIMITED, tts: UNLIMITED },
 };
 
-export function dailyLimitFor(plan: Plan, kind: UsageKind): number {
-  return DAILY_LIMITS[plan][kind];
+/**
+ * Preview-only escape hatch so a listening/QA test isn't blocked by the
+ * anon/free daily voice quota. Applies ONLY to `tts`, ONLY for `anon`/`free`
+ * (pro stays unlimited), and ONLY when the value is a valid positive integer —
+ * anything unset, non-numeric, zero, negative, or fractional is ignored and
+ * the plan defaults in `DAILY_LIMITS` apply exactly as before.
+ *
+ * Set via `USAGE_TTS_DAILY_LIMIT_OVERRIDE`, scoped in Vercel to a single
+ * Preview branch — never Production, never all-Preview.
+ */
+export function ttsDailyLimitOverride(
+  env: Record<string, string | undefined> = process.env
+): number | null {
+  const raw = env.USAGE_TTS_DAILY_LIMIT_OVERRIDE?.trim();
+  if (!raw) return null;
+  if (!/^\d+$/.test(raw)) return null; // rejects negatives, decimals, "NaN", etc.
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+export function dailyLimitFor(
+  plan: Plan,
+  kind: UsageKind,
+  env: Record<string, string | undefined> = process.env
+): number {
+  const base = DAILY_LIMITS[plan][kind];
+  if (kind !== "tts" || plan === "pro") return base;
+  return ttsDailyLimitOverride(env) ?? base;
 }
 
 /** Stable per-visitor key that never stores a raw IP. */
@@ -100,12 +126,20 @@ export async function checkAndConsumeUsage(
   if (!db) return failOpen(kind, userId ? "free" : "anon");
 
   try {
+    // The Postgres function `consume_usage` is the actual source of truth for
+    // `allowed`/`limit` — this Node process never decides the outcome itself.
+    // The override param is included ONLY when a valid one is configured, so
+    // every other caller (Production, every other Preview branch) sends the
+    // exact same RPC call as before this feature existed, unaffected by
+    // whether the database function has been updated to accept it yet.
+    const ttsOverride = kind === "tts" ? ttsDailyLimitOverride() : null;
     const { data, error } = await db
       .rpc("consume_usage", {
         p_user_id: userId,
         p_ip_hash: userId ? "" : clientIpHash(req),
         p_kind: kind,
         p_day: utcDay(),
+        ...(ttsOverride !== null ? { p_tts_limit_override: ttsOverride } : {}),
       })
       .single();
 

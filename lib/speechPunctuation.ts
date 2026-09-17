@@ -91,9 +91,16 @@ const BY_LANGUAGE: Record<string, MarkerSet> = {
   ru: RUSSIAN,
 };
 
-/** Street Vibe dialect value → language. Japanese is intentionally absent. */
+/**
+ * Street Vibe dialect value → language. Japanese is intentionally absent.
+ *
+ * "Jamaican Patois" is deliberately NOT listed here: Kingston has its own
+ * dedicated speech normalizer (`lib/jamaicanPatoisSpeechNormalize.ts`) that
+ * understands its phrase structure (opening address, question stems) rather
+ * than this file's generic single-word marker matching. Every other "en"
+ * dialect (London, Brooklyn) is untouched by that change.
+ */
 const DIALECT_LANGUAGE: Record<string, string> = {
-  "Jamaican Patois": "en",
   "London Roadman": "en",
   "New York Brooklyn": "en",
   "Paris Banlieue": "fr",
