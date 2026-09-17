@@ -31,7 +31,8 @@ import {
   SPANISH_MADRID_DIALECT_ID,
   normalizeSpanishMadridForSpeech,
 } from "@/lib/spanishMadridSpeechNormalize";
-import { synthesizeElevenLabs, ELEVENLABS_MODEL_ID } from "@/lib/elevenLabsTts";
+import { synthesizeElevenLabs } from "@/lib/elevenLabsTts";
+import { getVoicePreset } from "@/lib/elevenLabsVoicePresets";
 import { addSpeechPunctuation } from "@/lib/speechPunctuation";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
 import { checkAndConsumeUsage, publicUsage } from "@/lib/usage";
@@ -235,15 +236,21 @@ export async function POST(req: NextRequest) {
     } else if (!devRawTts && dialectKeyMm === SPANISH_MADRID_DIALECT_ID) {
       elText = normalizeSpanishMadridForSpeech(elText, dialectKeyMm);
     }
+    const elPreset = getVoicePreset(dialectKeyMm || undefined, elGender);
     try {
-      const { audioBase64 } = await synthesizeElevenLabs({
+      const { audioBase64, voiceId, modelId, presetId } = await synthesizeElevenLabs({
         apiKey: process.env.ELEVENLABS_API_KEY,
         text: elText,
         gender: elGender,
+        dialect: dialectKeyMm || undefined,
         vibe: vibeContext,
       });
       console.info("[tts][elevenlabs] ok", {
-        model: ELEVENLABS_MODEL_ID,
+        preset: presetId ?? null,
+        provider: "elevenlabs",
+        model: modelId,
+        voiceId,
+        dialect: dialectKeyMm || null,
         gender: elGender,
         len: elText.length,
       });
@@ -252,8 +259,13 @@ export async function POST(req: NextRequest) {
         { status: 200, headers: corsHeaders }
       );
     } catch (e: unknown) {
+      // Never log the request body/text or the API key — message only.
+      const reason = e instanceof Error ? e.message : String(e);
       console.warn("[tts][elevenlabs] failed; falling back to MiniMax", {
-        message: e instanceof Error ? e.message : String(e),
+        preset: elPreset?.id ?? null,
+        provider: "elevenlabs",
+        fallback: "minimax",
+        reason,
       });
     }
   }
