@@ -31,6 +31,10 @@ import {
   SPANISH_MADRID_DIALECT_ID,
   normalizeSpanishMadridForSpeech,
 } from "@/lib/spanishMadridSpeechNormalize";
+import {
+  JAMAICAN_PATOIS_DIALECT_ID,
+  normalizeJamaicanPatoisForSpeech,
+} from "@/lib/jamaicanPatoisSpeechNormalize";
 import { synthesizeElevenLabs } from "@/lib/elevenLabsTts";
 import { getVoicePreset } from "@/lib/elevenLabsVoicePresets";
 import { addSpeechPunctuation } from "@/lib/speechPunctuation";
@@ -231,7 +235,9 @@ export async function POST(req: NextRequest) {
     if (!devRawTts) {
       elText = addSpeechPunctuation(elText, dialectKeyMm || undefined);
     }
-    if (!devRawTts && dialectKeyMm === ARABIC_EGYPTIAN_DIALECT_ID) {
+    if (!devRawTts && dialectKeyMm === JAMAICAN_PATOIS_DIALECT_ID) {
+      elText = normalizeJamaicanPatoisForSpeech(elText, dialectKeyMm);
+    } else if (!devRawTts && dialectKeyMm === ARABIC_EGYPTIAN_DIALECT_ID) {
       elText = normalizeArabicPremiumForSpeech(elText, dialectKeyMm);
     } else if (!devRawTts && dialectKeyMm === SPANISH_MADRID_DIALECT_ID) {
       elText = normalizeSpanishMadridForSpeech(elText, dialectKeyMm);
