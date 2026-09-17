@@ -48,6 +48,42 @@ export function dailyLimitFor(
   return ttsDailyLimitOverride(env) ?? base;
 }
 
+/**
+ * Temporary development bypass for the app's private-testing phase.
+ *
+ * When `USAGE_LIMITS_DISABLED` is a truthy value, the DAILY translate/tts
+ * plan quota never blocks a request — see `applyLimitsDisabled` below. This
+ * is deliberately a pure JS-layer override:
+ *  - it does NOT touch `supabase/schema.sql` or `consume_usage` at all, so
+ *    there's no risk of a second SQL function overload;
+ *  - existing usage tracking (the Supabase insert/increment) still runs
+ *    exactly as before, so counts are preserved for when this is turned off;
+ *  - `DAILY_LIMITS`, `Plan`, and every plan-resolution code path are
+ *    untouched, so reactivating normal limits later is just unsetting one
+ *    env var;
+ *  - the per-minute/per-day abuse guard in `lib/apiRequestGuard.ts` is a
+ *    completely separate mechanism and is never affected by this flag.
+ *
+ * Accepts the same truthy vocabulary as the codebase's other boolean env
+ * flags (e.g. `ELEVENLABS_REGIONAL_VOICES`): "true", "1", "yes", "on"
+ * (case-insensitive). Unset or anything else keeps normal limits.
+ */
+export function usageLimitsDisabled(
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  const raw = env.USAGE_LIMITS_DISABLED?.trim().toLowerCase();
+  return raw === "true" || raw === "1" || raw === "yes" || raw === "on";
+}
+
+/** Reports as unlimited/allowed when the dev bypass is on; otherwise unchanged. */
+export function applyLimitsDisabled(
+  state: UsageState,
+  env: Record<string, string | undefined> = process.env
+): UsageState {
+  if (!usageLimitsDisabled(env)) return state;
+  return { ...state, limit: UNLIMITED, remaining: UNLIMITED, ok: true };
+}
+
 /** Stable per-visitor key that never stores a raw IP. */
 export function clientIpHash(req: NextRequest): string {
   const ip =
@@ -102,7 +138,7 @@ export function publicUsage(u: UsageState) {
 
 function failOpen(kind: UsageKind, plan: Plan): UsageState {
   const limit = dailyLimitFor(plan, kind);
-  return { plan, kind, used: 0, limit, remaining: limit, ok: true, metered: false };
+  return applyLimitsDisabled({ plan, kind, used: 0, limit, remaining: limit, ok: true, metered: false });
 }
 
 /**
@@ -151,7 +187,7 @@ export async function checkAndConsumeUsage(
       return failOpen(kind, userId ? "free" : "anon");
     }
 
-    return {
+    return applyLimitsDisabled({
       plan: row.plan,
       kind,
       used: row.used,
@@ -159,7 +195,7 @@ export async function checkAndConsumeUsage(
       remaining: row.limit - row.used,
       ok: row.allowed,
       metered: true,
-    };
+    });
   } catch (e) {
     console.warn("[usage] consume_usage threw; failing open", {
       message: e instanceof Error ? e.message : String(e),
@@ -191,7 +227,15 @@ export async function peekUsage(
 
     const build = (kind: UsageKind, used: number): UsageState => {
       const limit = dailyLimitFor(row.plan, kind);
-      return { plan: row.plan, kind, used, limit, remaining: limit - used, ok: used < limit, metered: true };
+      return applyLimitsDisabled({
+        plan: row.plan,
+        kind,
+        used,
+        limit,
+        remaining: limit - used,
+        ok: used < limit,
+        metered: true,
+      });
     };
     return {
       translate: publicUsage(build("translate", row.translate_used)),
