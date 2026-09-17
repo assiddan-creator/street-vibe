@@ -42,7 +42,14 @@ create or replace function public.consume_usage(
   p_user_id text,
   p_ip_hash text,
   p_kind    text,
-  p_day     date
+  p_day     date,
+  -- Preview-only escape hatch (see USAGE_TTS_DAILY_LIMIT_OVERRIDE in
+  -- lib/usage.ts). Applies ONLY to anon/free `tts`, never `translate`, never
+  -- `pro`. Defaulting to null means every existing caller that doesn't pass
+  -- this argument (Production, every other Preview branch) is completely
+  -- unaffected — this is additive, not a change to the old signature's
+  -- behavior.
+  p_tts_limit_override integer default null
 )
 returns table (plan text, used integer, "limit" integer, allowed boolean)
 language plpgsql
@@ -70,9 +77,11 @@ begin
   v_limit := case
     when v_plan = 'pro'  then 1000000
     when v_plan = 'free' and p_kind = 'translate' then 10
-    when v_plan = 'free' and p_kind = 'tts'       then 5
+    when v_plan = 'free' and p_kind = 'tts'       then
+      case when p_tts_limit_override > 0 then p_tts_limit_override else 5 end
     when v_plan = 'anon' and p_kind = 'translate' then 4
-    when v_plan = 'anon' and p_kind = 'tts'       then 2
+    when v_plan = 'anon' and p_kind = 'tts'       then
+      case when p_tts_limit_override > 0 then p_tts_limit_override else 2 end
     else 4
   end;
 
