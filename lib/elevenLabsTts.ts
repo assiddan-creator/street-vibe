@@ -70,9 +70,9 @@ export function resolveElevenLabsVoiceSelection(
     return {
       voiceId: preset.voiceId,
       modelId: preset.modelId,
-      // applyVibe: false (the only mode implemented so far) means these
-      // settings are final; vibe never touches them.
-      settings: preset.settings,
+      // applyVibe: false means these settings are final; vibe never touches
+      // them. applyVibe: true swaps only the voice, keeping vibe delivery.
+      settings: preset.applyVibe ? voiceSettingsForVibe(vibe) : preset.settings,
       languageCode: preset.languageCode,
       seed: preset.recommendedSeed,
       presetId: preset.id,
