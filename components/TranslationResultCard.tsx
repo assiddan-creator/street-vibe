@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { TranslationBlockSkeleton } from "@/components/ui/Skeleton";
 import { GLASS_OUTPUT_CARD } from "@/lib/themeUiClasses";
 
@@ -22,8 +22,6 @@ type TranslationResultCardProps = {
   onWordClick?: (token: string, e: MouseEvent<HTMLElement>) => void;
   /** Extra content after translation block (e.g. TTS on speak page) */
   afterTranslation?: ReactNode;
-  /** Fired after a successful translate finishes and the result was auto-copied to the clipboard */
-  onAutoCopied?: () => void;
 };
 
 export function TranslationResultCard({
@@ -36,23 +34,9 @@ export function TranslationResultCard({
   hebrewContext,
   onWordClick,
   afterTranslation,
-  onAutoCopied,
 }: TranslationResultCardProps) {
-  const sawLoadingRef = useRef(false);
-
-  useEffect(() => {
-    if (loading) {
-      sawLoadingRef.current = true;
-      return;
-    }
-    if (!sawLoadingRef.current) return;
-    sawLoadingRef.current = false;
-    const text = translatedText.trim();
-    if (!text || error) return;
-    void navigator.clipboard.writeText(text).then(() => {
-      onAutoCopied?.();
-    });
-  }, [loading, translatedText, error, onAutoCopied]);
+  // No auto-copy: silently overwriting the user's clipboard on every result
+  // can destroy something they meant to keep. Copy is an explicit action.
 
   // Type the result in on arrival — the model call itself isn't streamed, but a
   // short reveal reads as "it's writing" instead of a hard pop-in.
