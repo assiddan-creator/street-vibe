@@ -2,6 +2,7 @@
 
 import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
 import { FlipButtonSkeleton, PopupWordSkeleton, TtsPlaySkeleton } from "@/components/ui/Skeleton";
 import { HistoryVaultSheet } from "@/components/HistoryVaultSheet";
@@ -87,6 +88,8 @@ export function TranslatorView() {
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  /** Generated audio per (city, voice, vibe, line) — replays never re-bill the voice engine. */
+  const ttsAudioCacheRef = useRef(new Map<string, string>());
   const ttsPlayAttemptForCurrentTranslationRef = useRef(0);
   /** Bumped per translation so a slow read-aloud fetch can't land on a newer result. */
   const translitReqIdRef = useRef(0);
@@ -567,9 +570,19 @@ export function TranslatorView() {
     setTtsError(null);
   };
 
+  const stopPlayback = () => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setTtsPlaying(false);
+  };
+
   const handlePlayTranslation = async () => {
     const text = translatedText.trim();
     if (!text) return;
+    if (ttsPlaying) {
+      stopPlayback();
+      return;
+    }
     ttsPlayAttemptForCurrentTranslationRef.current += 1;
     if (ttsPlayAttemptForCurrentTranslationRef.current > 1) {
       trackAnalyticsEvent({
@@ -579,22 +592,35 @@ export function TranslatorView() {
         requestedEngine: ttsEngine,
       });
     }
-    setTtsLoading(true);
     setTtsError(null);
+    // Replaying the same line reuses the audio we already generated — no second
+    // paid voice call, no second wait.
+    const cacheKey = `${outputLang}|${ttsGender}|${context}|${text}`;
+    let url = ttsAudioCacheRef.current.get(cacheKey) ?? null;
     try {
-      if (ttsEngine === "native") setTtsPlaying(true);
-      const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
-      const url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context, implicitExtras);
-      if (url === null) {
-        setTtsPlaying(false);
-        return;
+      if (!url) {
+        setTtsLoading(true);
+        if (ttsEngine === "native") setTtsPlaying(true);
+        const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
+        url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context, implicitExtras);
+        if (url === null) {
+          setTtsPlaying(false);
+          return;
+        }
+        ttsAudioCacheRef.current.set(cacheKey, url);
       }
       const audio = new Audio(url);
       audioRef.current = audio;
-      setTtsPlaying(true);
       audio.onended = () => setTtsPlaying(false);
-      void audio.play();
+      audio.onerror = () => {
+        setTtsPlaying(false);
+        setTtsError("Couldn't play the audio — tap to try again");
+      };
+      setTtsPlaying(true);
+      await audio.play();
     } catch (e) {
+      // play() rejects when the browser blocks or can't decode the audio.
+      if (url) ttsAudioCacheRef.current.delete(cacheKey);
       setTtsError(e instanceof Error ? e.message : "Playback failed");
       setTtsPlaying(false);
     } finally {
@@ -606,7 +632,9 @@ export function TranslatorView() {
     e.stopPropagation();
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     const x = rect.left;
-    const y = rect.bottom + window.scrollY + 6;
+    // The popup is position:fixed, so viewport coordinates — adding scrollY
+    // would push it off the word once the page has scrolled.
+    const y = rect.bottom + 6;
     const clean = word.replace(/[^a-zA-ZÀ-ÿА-яёÀ-ÿ\u3040-\u30FF\uAC00-\uD7AF]/g, "").trim();
     if (!clean) return;
     const local = lookupSlang(clean, outputLang);
@@ -838,14 +866,14 @@ export function TranslatorView() {
               }}
               className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[13px] text-white/85 outline-none ring-0"
             >
-              <optgroup label="Street slang — AI voice" className="bg-zinc-900 text-white">
+              <optgroup label="City slang" className="bg-zinc-900 text-white">
                 {OUTPUT_PREMIUM_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                     {o.label}
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="All languages — Replicate voice" className="bg-zinc-900 text-white">
+              <optgroup label="Standard languages" className="bg-zinc-900 text-white">
                 {OUTPUT_STANDARD_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                     {o.label}
@@ -873,14 +901,14 @@ export function TranslatorView() {
                 }}
                 className={`${GLASS_SELECT} px-3 py-2.5 text-center text-[13px] font-medium leading-snug text-white/90`}
               >
-                <optgroup label="Street slang — AI voice" className="bg-zinc-900 text-white">
+                <optgroup label="City slang" className="bg-zinc-900 text-white">
                   {OUTPUT_PREMIUM_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                       {o.label}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="All languages — Replicate voice" className="bg-zinc-900 text-white">
+                <optgroup label="Standard languages" className="bg-zinc-900 text-white">
                   {OUTPUT_STANDARD_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
                       {o.label}
@@ -966,7 +994,7 @@ export function TranslatorView() {
             type="button"
             onClick={toggleMic}
             aria-label={isListening ? "Stop listening" : "Tap to speak"}
-            className={`flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out active:scale-95 ${
+            className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out active:scale-95 ${
               isListening ? "mic-pulse border-transparent" : isIdle ? "animate-pulse-slow" : ""
             }`}
             style={
@@ -981,7 +1009,15 @@ export function TranslatorView() {
             }
           >
             {micBall ? (
-              <img src={micBall} alt="mic" className="h-full w-full rounded-full object-cover" draggable={false} />
+              // Source art is ~630 KB; next/image serves a resized copy for a 96px button.
+              <Image
+                src={micBall}
+                alt=""
+                fill
+                sizes="96px"
+                className="rounded-full object-cover"
+                draggable={false}
+              />
             ) : (
               <svg
                 className={`h-10 w-10 ${isListening ? "text-black/90" : "text-white"}`}
@@ -1163,10 +1199,12 @@ export function TranslatorView() {
               }}
             >
               {cityTheme.bg?.wide ? (
-                <img
+                <Image
                   src={cityTheme.bg.wide}
                   alt=""
-                  className="absolute inset-0 h-full w-full object-cover opacity-75"
+                  fill
+                  sizes="(max-width: 768px) 60vw, 480px"
+                  className="object-cover opacity-75"
                   draggable={false}
                 />
               ) : null}
@@ -1345,27 +1383,31 @@ export function TranslatorView() {
                     ) : checkResult ? (
                       <>
                         {(() => {
-                          const c =
+                          // A precise number ("87") implies an authority the model doesn't
+                          // have. Show a coarse, honest band plus the model's own verdict.
+                          const band =
                             checkResult.score >= 80
-                              ? "#4ade80"
+                              ? { label: "Sounds local", c: "#4ade80" }
                               : checkResult.score >= 55
-                                ? "#fbbf24"
-                                : "#f87171";
+                                ? { label: "Almost there", c: "#fbbf24" }
+                                : { label: "Sounds like a visitor", c: "#f87171" };
                           return (
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-col gap-1.5">
                               <span
-                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[15px] font-bold"
+                                className="w-fit rounded-full px-3 py-1 text-[12px] font-bold uppercase tracking-wide"
                                 style={{
-                                  color: c,
-                                  border: `2px solid ${c}55`,
-                                  backgroundColor: `${c}18`,
+                                  color: band.c,
+                                  border: `1px solid ${band.c}55`,
+                                  backgroundColor: `${band.c}18`,
                                 }}
                               >
-                                {checkResult.score}
+                                {band.label}
                               </span>
-                              <span className="text-[14px] font-semibold text-white/85">
-                                {checkResult.verdict || "how local it sounds"}
-                              </span>
+                              {checkResult.verdict ? (
+                                <span className="text-[14px] font-semibold text-white/85" dir="auto">
+                                  {checkResult.verdict}
+                                </span>
+                              ) : null}
                             </div>
                           );
                         })()}
@@ -1438,7 +1480,6 @@ export function TranslatorView() {
                 error={error}
                 hebrewContext={hebrewContext}
                 onWordClick={(token, e) => void handleWordClick(token, e)}
-                onAutoCopied={notifyCopiedToast}
                 afterTranslation={
                   translatedText.trim() ? (
                     <div className="mt-3 flex flex-col gap-1">
@@ -1446,7 +1487,8 @@ export function TranslatorView() {
                         <button
                           type="button"
                           onClick={() => void handlePlayTranslation()}
-                          disabled={ttsLoading || ttsPlaying}
+                          disabled={ttsLoading}
+                          aria-label={ttsPlaying ? "Stop" : "Read aloud"}
                           className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3 text-sm font-bold text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.99] disabled:opacity-45"
                           style={{
                             borderColor: `${theme.accent}35`,
@@ -1458,7 +1500,7 @@ export function TranslatorView() {
                           {ttsLoading ? (
                             <TtsPlaySkeleton />
                           ) : ttsPlaying ? (
-                            "🔊 Playing..."
+                            "■ Stop"
                           ) : (
                             "▶ Read aloud"
                           )}
@@ -1499,11 +1541,6 @@ export function TranslatorView() {
               {nativeTransliteration?.trim() ? (
                 <NativeTransliterationCard text={nativeTransliteration} sourceLanguage={selectedInputLang} />
               ) : null}
-              <div className="mt-2 border-t border-white/5 pt-3">
-                <p className="text-center text-[11px] uppercase tracking-widest text-white/40">
-                  Voice by Replicate
-                </p>
-              </div>
               </>
               )}
             </div>
