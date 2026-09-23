@@ -22,7 +22,8 @@ import {
   GLASS_SELECT,
   GLASS_SELECT_COMPACT,
 } from "@/lib/themeUiClasses";
-import { SLANG_INTENSITY_SEGMENTS, VIBE_SEGMENTS } from "@/lib/slangSegmentControls";
+import { SLANG_INTENSITY_SEGMENTS, VIBE_SEGMENTS, isAudienceValue } from "@/lib/slangSegmentControls";
+import { loadLastAudience, loadLastCity, saveLastAudience, saveLastCity } from "@/lib/lastChoices";
 import { exampleInputsFor } from "@/lib/exampleInputs";
 import { shareOrDownloadCard } from "@/lib/shareImage";
 import {
@@ -109,6 +110,13 @@ export function TranslatorView() {
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
+    // Returning users land on the city and recipient they used last time.
+    const lastCity = loadLastCity();
+    if (lastCity && [...OUTPUT_PREMIUM_OPTIONS, ...OUTPUT_STANDARD_OPTIONS].some((o) => o.value === lastCity)) {
+      setOutputLang(lastCity);
+    }
+    const lastAudience = loadLastAudience();
+    if (isAudienceValue(lastAudience)) setContext(lastAudience);
   }, []);
 
   // Daily-quota state for the meter. Silently no-ops when metering is disabled.
@@ -855,6 +863,7 @@ export function TranslatorView() {
               onChange={(e) => {
                 const v = e.target.value;
                 setOutputLang(v);
+                saveLastCity(v);
                 trackAnalyticsEvent({
                   name: ANALYTICS_EVENT_NAMES.TARGET_DIALECT_SELECTED,
                   targetDialect: v,
@@ -890,6 +899,7 @@ export function TranslatorView() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setOutputLang(v);
+                  saveLastCity(v);
                   trackAnalyticsEvent({
                     name: ANALYTICS_EVENT_NAMES.TARGET_DIALECT_SELECTED,
                     targetDialect: v,
@@ -1118,13 +1128,13 @@ export function TranslatorView() {
 
           <div className="flex flex-col gap-2">
             <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
-              <MaterialSymbol name="masks" className="text-[13px]" />
-              Vibe
+              <MaterialSymbol name="person" className="text-[13px]" />
+              Who&apos;s it for?
             </p>
             <div
               className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl transition-opacity"
               role="group"
-              aria-label="Message vibe"
+              aria-label="Who is the message for"
             >
               {VIBE_SEGMENTS.map(({ value, text, icon }) => {
                 const on = context === value;
@@ -1134,6 +1144,7 @@ export function TranslatorView() {
                     type="button"
                     onClick={() => {
                       setContext(value);
+                      saveLastAudience(value);
                       trackAnalyticsEvent({
                         name: ANALYTICS_EVENT_NAMES.VIBE_SELECTED,
                         vibe: value,

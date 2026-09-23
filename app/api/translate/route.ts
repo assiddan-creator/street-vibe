@@ -165,6 +165,9 @@ function buildPrompt({
       "This is a one-on-one flirty message — warmer, a bit softer, genuinely interested (curiosity, a real compliment). When it fits the input, one specific detail beats a generic opener. Charming and human, not aggressive, not a pickup-line slogan.",
     angry: "This is an angry message — direct, aggressive, no filter, street attitude.",
     stoned: "This is a relaxed chill message — slow energy, hazy, mellow, like texting after smoking.",
+    group:
+      "This is a message to a group chat of friends — casual, easy to read at a glance, addressed to several people at once (no one-on-one intimacy, no pet names), light and upbeat.",
+    new: "This is a message to someone the user has only just met or barely knows (a new acquaintance, neighbour, colleague, or someone they just started chatting with) — relaxed and friendly but respectful: sound local and natural, keep slang light, no insults, no crude words, no over-familiar nicknames.",
     default: "This is a casual message between friends.",
   };
 
