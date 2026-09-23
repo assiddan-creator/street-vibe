@@ -87,18 +87,27 @@ describe("everything else keeps exact existing production behaviour", () => {
     assert.equal(r.modelId, "eleven_v3_conversational");
   });
 
-  test("London Roadman male/female unaffected — no preset for either", () => {
-    assert.equal(getVoicePreset("London Roadman", "male"), undefined);
-    assert.equal(getVoicePreset("London Roadman", "female"), undefined);
-    const male = resolveElevenLabsVoiceSelection("male", "London Roadman", "dm");
-    assert.equal(male.presetId, undefined);
-    assert.equal(male.voiceId, "bIHbv24MWmeRgasZH58o"); // Will
-    assert.equal(male.modelId, "eleven_v3_conversational");
+  test("cities without an approved voice keep Will/Jessica", () => {
+    for (const dialect of ["Rio Favela", "Arabic Egyptian", "Israeli Street", "English (Standard)"]) {
+      assert.equal(getVoicePreset(dialect, "male"), undefined, dialect);
+      const male = resolveElevenLabsVoiceSelection("male", dialect, "dm");
+      assert.equal(male.presetId, undefined);
+      assert.equal(male.voiceId, "bIHbv24MWmeRgasZH58o"); // Will
+      assert.equal(male.modelId, "eleven_v3_conversational");
+    }
   });
 
-  test("every other dialect has zero presets", () => {
-    const dialectsWithPresets = Object.keys(ELEVENLABS_VOICE_PRESETS);
-    assert.deepEqual(dialectsWithPresets, [KINGSTON]);
+  test("only the approved dialects have presets", () => {
+    assert.deepEqual(Object.keys(ELEVENLABS_VOICE_PRESETS).sort(), [
+      KINGSTON,
+      "London Roadman",
+      "Mexico City Barrio",
+      "New York Brooklyn",
+      "Paris Banlieue",
+      "Russian Street",
+      "Spanish Madrid",
+      "Tokyo Gyaru",
+    ].sort());
   });
 
   test("undefined dialect falls back to global Will/Jessica for both genders", () => {
@@ -122,10 +131,44 @@ describe("everything else keeps exact existing production behaviour", () => {
   });
 
   test("vibe still changes settings for the non-preset (global) path", () => {
-    const dm = resolveElevenLabsVoiceSelection("male", "London Roadman", "dm");
-    const angry = resolveElevenLabsVoiceSelection("male", "London Roadman", "angry");
+    const dm = resolveElevenLabsVoiceSelection("male", "Rio Favela", "dm");
+    const angry = resolveElevenLabsVoiceSelection("male", "Rio Favela", "angry");
     assert.notDeepEqual(dm.settings, angry.settings);
     assert.equal(angry.settings.stability, 0.3);
     assert.equal(angry.settings.style, 0.45);
+  });
+});
+
+describe("city library voices (2026-09-24 audition)", () => {
+  const PICKS: [string, string, string][] = [
+    ["London Roadman", "vr54y8Xovf4AEnfNrGqH", "en"],
+    ["New York Brooklyn", "9pKX7TwfPxl7p2PNZQ1B", "en"],
+    ["Paris Banlieue", "mvhJVdVoTWVUtL4keT7W", "fr"],
+    ["Spanish Madrid", "jadd0g0NRgNgE8nt4ofn", "es"],
+    ["Mexico City Barrio", "pC0w7bOSDTlgiOCrNBX3", "es"],
+    ["Russian Street", "lsAmGFzUYusakA482527", "ru"],
+    ["Tokyo Gyaru", "Mv8AjrYZCBkdsmDHNwcB", "ja"],
+  ];
+
+  for (const [dialect, voiceId, lang] of PICKS) {
+    test(`${dialect} male uses the picked voice with language ${lang}`, () => {
+      const r = resolveElevenLabsVoiceSelection("male", dialect, "dm");
+      assert.equal(r.voiceId, voiceId);
+      assert.equal(r.languageCode, lang);
+      assert.equal(r.modelId, "eleven_v3_conversational");
+      assert.ok(r.presetId);
+      assert.equal(r.seed, undefined);
+    });
+
+    test(`${dialect} female still uses Jessica`, () => {
+      assert.equal(resolveElevenLabsVoiceSelection("female", dialect, "dm").voiceId, "cgSgspJ2msm6clMCkdW9");
+    });
+  }
+
+  test("library voices keep vibe-driven delivery", () => {
+    const dm = resolveElevenLabsVoiceSelection("male", "London Roadman", "dm");
+    const angry = resolveElevenLabsVoiceSelection("male", "London Roadman", "angry");
+    assert.equal(dm.settings.stability, 0.42);
+    assert.equal(angry.settings.stability, 0.3);
   });
 });

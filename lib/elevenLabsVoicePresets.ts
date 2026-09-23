@@ -51,6 +51,32 @@ export type ElevenLabsVoicePreset = {
 };
 
 /**
+ * Library voice with a native local accent, picked by ear in the 2026-09-24
+ * city audition (same app line per city, compared against Will). These keep
+ * the normal vibe-driven settings — `settings` below is the `dm` baseline the
+ * audition was recorded with, used only for reference.
+ */
+function cityLibraryVoice(
+  city: string,
+  dialect: string,
+  label: string,
+  voiceId: string,
+  languageCode: string
+): ElevenLabsVoicePreset {
+  return {
+    id: `${city.toLowerCase()}-male-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`,
+    name: `Street Vibe / ${city} / Male / ${label}`,
+    dialect,
+    gender: "male",
+    voiceId,
+    modelId: "eleven_v3_conversational",
+    languageCode,
+    settings: { stability: 0.42, similarity_boost: 0.8, style: 0.28, speed: 1, use_speaker_boost: true },
+    applyVibe: true,
+  };
+}
+
+/**
  * Keyed by dialect, then gender. A dialect with no entry for a gender (or no
  * entry at all) falls through to the global Will/Jessica fallback — see
  * `resolveElevenLabsVoiceSelection` in `lib/elevenLabsTts.ts`.
@@ -83,6 +109,14 @@ export const ELEVENLABS_VOICE_PRESETS: Record<
     },
     // No female preset yet — Jamaican Patois + female keeps using Jessica.
   },
+  "London Roadman": { male: cityLibraryVoice("London", "London Roadman", "Petros", "vr54y8Xovf4AEnfNrGqH", "en") },
+  "New York Brooklyn": { male: cityLibraryVoice("Brooklyn", "New York Brooklyn", "DJ Marathon", "9pKX7TwfPxl7p2PNZQ1B", "en") },
+  "Paris Banlieue": { male: cityLibraryVoice("Paris", "Paris Banlieue", "Simon", "mvhJVdVoTWVUtL4keT7W", "fr") },
+  "Spanish Madrid": { male: cityLibraryVoice("Madrid", "Spanish Madrid", "Bernat", "jadd0g0NRgNgE8nt4ofn", "es") },
+  "Mexico City Barrio": { male: cityLibraryVoice("CDMX", "Mexico City Barrio", "Enrique", "pC0w7bOSDTlgiOCrNBX3", "es") },
+  "Russian Street": { male: cityLibraryVoice("Moscow", "Russian Street", "Andrey", "lsAmGFzUYusakA482527", "ru") },
+  "Tokyo Gyaru": { male: cityLibraryVoice("Tokyo", "Tokyo Gyaru", "Ishibashi", "Mv8AjrYZCBkdsmDHNwcB", "ja") },
+  // Rio, Cairo and Tel Aviv: no library voice beat Will in the audition.
 };
 
 export function getVoicePreset(
