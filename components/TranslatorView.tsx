@@ -57,7 +57,7 @@ import {
 } from "@/lib/historyVault";
 import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
-import { TOP_HELPER_LABEL_CLASS, TOP_STACK_CLASS } from "@/lib/topSectionUi";
+import { TOP_HELPER_LABEL_CLASS } from "@/lib/topSectionUi";
 import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
@@ -683,6 +683,17 @@ export function TranslatorView() {
   const isActive = inputText.trim().length > 0 || originalText.trim().length > 0;
   const isIdle = !isActive;
   const hebrewContext = shouldOfferHebrewTransliteration(selectedInputLang, uiLocale);
+  const hasAnyResult = Boolean(
+    translatedText || replies.length || compareResults.length || checkResult || loading || error
+  );
+  // One-line recap of the collapsed settings, so "More options" never hides state.
+  const optionsSummary = [
+    INPUT_LANGUAGES.find((l) => l.value === inputLanguage)?.label.split(" / ").pop() ?? inputLanguage,
+    `${ttsGender === "female" ? "Female" : "Male"} voice`,
+    showPremiumIntensityControls ? SLANG_INTENSITY_SEGMENTS.find((s) => s.level === slangLevel)?.text : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="relative w-full">
@@ -723,10 +734,19 @@ export function TranslatorView() {
       )}
 
       <div
-        className="mx-auto flex min-w-0 w-full max-w-[min(100%,390px)] flex-col px-2.5 pb-4 pt-3"
+        className="mx-auto flex min-w-0 w-full max-w-[min(100%,440px)] flex-col px-2.5 pb-4 pt-3 lg:max-w-[1040px] lg:px-6"
         onClick={() => setPopupWord(null)}
       >
         <header className="relative mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-3 py-2 backdrop-blur-xl">
+          <button
+            type="button"
+            onClick={openHistory}
+            aria-label="My phrases"
+            title="My phrases"
+            className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <MaterialSymbol name="history" className="text-[20px]" />
+          </button>
           <GraffitiLogo accent={theme.accent} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
           <div className="absolute right-2 top-1/2 -translate-y-1/2">
             <AuthControl accent={theme.accent} />
@@ -777,77 +797,9 @@ export function TranslatorView() {
           annualAvailable={annualAvailable}
         />
 
-        <div className={TOP_STACK_CLASS}>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="input-lang" className={TOP_HELPER_LABEL_CLASS}>
-            I speak
-          </label>
-          {isIdle ? (
-            <div
-              className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
-              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.accent, "10")}` }}
-            >
-            <select
-              id="input-lang"
-              value={inputLanguage}
-              onChange={(e) => {
-                const v = e.target.value;
-                setInputLanguage(v);
-                trackAnalyticsEvent({
-                  name: ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED,
-                  sourceLanguage: v,
-                  mode: ANALYTICS_MODE.TEXT,
-                });
-                if (getLearnsYouEnabled()) {
-                  recordInteractionSignal({
-                    type: "input_language_select",
-                    inputLanguage: v,
-                    timestampMs: Date.now(),
-                  });
-                }
-              }}
-              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[13px] text-white/85 outline-none ring-0"
-            >
-              {INPUT_LANGUAGES.map((opt) => (
-                <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            </div>
-          ) : (
-            <div style={{ "--accent": theme.accent } as CSSProperties}>
-              <select
-                id="input-lang"
-                value={inputLanguage}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setInputLanguage(v);
-                  trackAnalyticsEvent({
-                    name: ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED,
-                    sourceLanguage: v,
-                    mode: ANALYTICS_MODE.TEXT,
-                  });
-                  if (getLearnsYouEnabled()) {
-                    recordInteractionSignal({
-                      type: "input_language_select",
-                      inputLanguage: v,
-                      timestampMs: Date.now(),
-                    });
-                  }
-                }}
-                className={`${GLASS_SELECT_COMPACT} px-2.5 py-1.5 text-center text-[12px] font-medium leading-tight text-white/90`}
-              >
-                {INPUT_LANGUAGES.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-
+        <div className="lg:grid lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:items-start lg:gap-10">
+        {/* Compose column: city, message, recipient, one clear action. */}
+        <div className="flex min-w-0 flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="output-lang" className={TOP_HELPER_LABEL_CLASS}>
             Translate to
@@ -930,31 +882,6 @@ export function TranslatorView() {
           )}
         </div>
 
-        <div className="flex w-full justify-center">
-          <VoiceGenderSegment
-            accent={theme.accent}
-            idle={isIdle}
-            value={ttsGender}
-            onChange={(value) => {
-              setTtsGender(value);
-              setStoredTtsGender(value);
-              trackAnalyticsEvent({
-              name: ANALYTICS_EVENT_NAMES.VOICE_GENDER_SELECTED,
-              ttsGender: value,
-              mode: ANALYTICS_MODE.TEXT,
-            });
-              if (getLearnsYouEnabled()) {
-                recordInteractionSignal({
-                  type: "tts_gender_select",
-                  gender: value,
-                  timestampMs: Date.now(),
-                });
-              }
-            }}
-          />
-        </div>
-        </div>
-
         <div className="w-full" style={{ "--accent": theme.accent } as CSSProperties}>
           <textarea
             ref={inputRef}
@@ -998,133 +925,6 @@ export function TranslatorView() {
             </div>
           ) : null}
         </div>
-
-        <div className={`flex flex-col items-center transition-all duration-500 ${isActive ? "mb-4 mt-0" : "mb-5 mt-5"}`}>
-          <button
-            type="button"
-            onClick={toggleMic}
-            aria-label={isListening ? "Stop listening" : "Tap to speak"}
-            className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out active:scale-95 ${
-              isListening ? "mic-pulse border-transparent" : isIdle ? "animate-pulse-slow" : ""
-            }`}
-            style={
-              isListening
-                ? {
-                    background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
-                    boxShadow: `0 12px 56px ${theme.accent}77, 0 0 100px ${theme.accent}55, 0 8px 28px rgba(0,0,0,0.45)`,
-                  }
-                : {
-                    boxShadow: `0 0 0 1px ${theme.accent}28, 0 0 120px -8px ${theme.accent}99, 0 24px 64px ${theme.accent}44, 0 12px 40px rgba(0,0,0,0.55)`,
-                  }
-            }
-          >
-            {micBall ? (
-              // Source art is ~630 KB; next/image serves a resized copy for a 96px button.
-              <Image
-                src={micBall}
-                alt=""
-                fill
-                sizes="96px"
-                className="rounded-full object-cover"
-                draggable={false}
-              />
-            ) : (
-              <svg
-                className={`h-10 w-10 ${isListening ? "text-black/90" : "text-white"}`}
-                fill="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden
-              >
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14C5.52 16.16 8.53 19 12 19s6.48-2.84 6.93-6.86c.09-.6-.39-1.14-1-1.14z" />
-              </svg>
-            )}
-          </button>
-          {isListening ? (
-            <span
-              className="mt-2 text-center text-[13px] transition-all duration-300"
-              style={{ color: theme.accent }}
-            >
-              listening...
-            </span>
-          ) : isActive ? (
-            <span className="mt-2 text-center text-[13px] text-white/55 transition-all duration-300">
-              tap to speak again
-            </span>
-          ) : (
-            <>
-              <span
-                className="mt-3 text-center text-base uppercase tracking-widest"
-                style={{ color: theme.accent, opacity: 0.85, letterSpacing: "0.15em" }}
-              >
-                or tap to speak
-              </span>
-              <p className="mt-1 text-center text-[11px] tracking-wider text-white/50">
-                speak or type in any language
-              </p>
-            </>
-          )}
-          {micError ? <p className="mt-1 text-center text-[12px] text-red-400">{micError}</p> : null}
-        </div>
-
-        <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
-          <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
-        </div>
-
-        <div className="flex min-w-0 w-full flex-col gap-6 transition-all duration-500">
-
-          {showPremiumIntensityControls ? (
-            <div className="flex flex-col gap-2">
-              <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
-                <MaterialSymbol name="bolt" className="text-[13px]" />
-                Intensity
-              </p>
-              <div
-                className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl"
-                role="group"
-                aria-label="Slang intensity"
-              >
-                {SLANG_INTENSITY_SEGMENTS.map(({ level, text, icon }) => {
-                  const on = slangLevel === level;
-                  return (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => {
-                        setSlangLevel(level);
-                        trackAnalyticsEvent({
-                          name: ANALYTICS_EVENT_NAMES.SLANG_LEVEL_SELECTED,
-                          slangLevel: level,
-                          mode: ANALYTICS_MODE.TEXT,
-                        });
-                        if (getLearnsYouEnabled()) {
-                          recordInteractionSignal({
-                            type: "slang_level_select",
-                            level,
-                            timestampMs: Date.now(),
-                          });
-                        }
-                      }}
-                      className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition-all duration-300 ${
-                        on ? "" : "bg-transparent text-white/60 hover:text-white/80"
-                      }`}
-                      style={
-                        on
-                          ? {
-                              color: theme.accent,
-                              backgroundColor: `${theme.accent}24`,
-                              boxShadow: `0 0 24px -8px ${theme.accent}aa, inset 0 1px 0 ${theme.accent}44`,
-                            }
-                          : undefined
-                      }
-                    >
-                      <MaterialSymbol name={icon} className="text-[15px]" />
-                      {text}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
 
           <div className="flex flex-col gap-2">
             <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
@@ -1182,19 +982,33 @@ export function TranslatorView() {
           <div className="flex w-full items-center gap-2.5">
             <button
               type="button"
-              onClick={() => void handleCopy()}
-              aria-label="Copy"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white/75 shadow-none backdrop-blur-xl transition-all duration-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white active:scale-[0.97]"
-              style={{ borderColor: `${theme.accent}35` }}
+              onClick={toggleMic}
+              aria-label={isListening ? "Stop listening" : "Tap to speak"}
+              title={isListening ? "Stop listening" : "Tap to speak"}
+              className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out active:scale-95 ${
+                isListening ? "mic-pulse border-transparent" : ""
+              }`}
+              style={
+                isListening
+                  ? {
+                      background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
+                      boxShadow: `0 8px 32px ${theme.accent}77, 0 0 48px ${theme.accent}55`,
+                    }
+                  : {
+                      boxShadow: `0 0 0 1px ${theme.accent}33, 0 0 36px -8px ${theme.accent}99, 0 8px 24px rgba(0,0,0,0.5)`,
+                    }
+              }
             >
-              <svg className="h-[20px] w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                />
-              </svg>
+              {micBall && !isListening ? (
+                <>
+                  <Image src={micBall} alt="" fill sizes="56px" className="rounded-full object-cover" draggable={false} />
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/35">
+                    <MaterialSymbol name="mic" className="text-[22px] text-white drop-shadow" />
+                  </span>
+                </>
+              ) : (
+                <MaterialSymbol name={isListening ? "stop" : "mic"} className={`text-[26px] ${isListening ? "text-black/90" : "text-white"}`} />
+              )}
             </button>
 
             <button
@@ -1255,7 +1069,185 @@ export function TranslatorView() {
               </svg>
             </button>
           </div>
+          {isListening ? (
+            <p className="-mt-2 text-center text-[13px]" style={{ color: theme.accent }}>
+              listening… tap the mic to stop
+            </p>
+          ) : null}
+          {micError ? <p className="-mt-2 text-center text-[12px] text-red-400">{micError}</p> : null}
 
+          <details className="group rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2 backdrop-blur-xl">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-1 text-[12px] font-medium text-white/60 [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center gap-1.5 uppercase tracking-widest">
+                <MaterialSymbol name="tune" className="text-[14px]" />
+                More options
+              </span>
+              <span className="truncate text-[11px] normal-case tracking-normal text-white/45">
+                {optionsSummary}
+              </span>
+            </summary>
+            <div className="mt-3 flex flex-col gap-4 pb-1">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="input-lang" className={TOP_HELPER_LABEL_CLASS}>
+            I speak
+          </label>
+          {isIdle ? (
+            <div
+              className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
+              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.accent, "10")}` }}
+            >
+            <select
+              id="input-lang"
+              value={inputLanguage}
+              onChange={(e) => {
+                const v = e.target.value;
+                setInputLanguage(v);
+                trackAnalyticsEvent({
+                  name: ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED,
+                  sourceLanguage: v,
+                  mode: ANALYTICS_MODE.TEXT,
+                });
+                if (getLearnsYouEnabled()) {
+                  recordInteractionSignal({
+                    type: "input_language_select",
+                    inputLanguage: v,
+                    timestampMs: Date.now(),
+                  });
+                }
+              }}
+              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[13px] text-white/85 outline-none ring-0"
+            >
+              {INPUT_LANGUAGES.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            </div>
+          ) : (
+            <div style={{ "--accent": theme.accent } as CSSProperties}>
+              <select
+                id="input-lang"
+                value={inputLanguage}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setInputLanguage(v);
+                  trackAnalyticsEvent({
+                    name: ANALYTICS_EVENT_NAMES.SOURCE_LANGUAGE_SELECTED,
+                    sourceLanguage: v,
+                    mode: ANALYTICS_MODE.TEXT,
+                  });
+                  if (getLearnsYouEnabled()) {
+                    recordInteractionSignal({
+                      type: "input_language_select",
+                      inputLanguage: v,
+                      timestampMs: Date.now(),
+                    });
+                  }
+                }}
+                className={`${GLASS_SELECT_COMPACT} px-2.5 py-1.5 text-center text-[12px] font-medium leading-tight text-white/90`}
+              >
+                {INPUT_LANGUAGES.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        <div className="flex w-full justify-center">
+          <VoiceGenderSegment
+            accent={theme.accent}
+            idle={isIdle}
+            value={ttsGender}
+            onChange={(value) => {
+              setTtsGender(value);
+              setStoredTtsGender(value);
+              trackAnalyticsEvent({
+              name: ANALYTICS_EVENT_NAMES.VOICE_GENDER_SELECTED,
+              ttsGender: value,
+              mode: ANALYTICS_MODE.TEXT,
+            });
+              if (getLearnsYouEnabled()) {
+                recordInteractionSignal({
+                  type: "tts_gender_select",
+                  gender: value,
+                  timestampMs: Date.now(),
+                });
+              }
+            }}
+          />
+        </div>
+          {showPremiumIntensityControls ? (
+            <div className="flex flex-col gap-2">
+              <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
+                <MaterialSymbol name="bolt" className="text-[13px]" />
+                Intensity
+              </p>
+              <div
+                className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl"
+                role="group"
+                aria-label="Slang intensity"
+              >
+                {SLANG_INTENSITY_SEGMENTS.map(({ level, text, icon }) => {
+                  const on = slangLevel === level;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => {
+                        setSlangLevel(level);
+                        trackAnalyticsEvent({
+                          name: ANALYTICS_EVENT_NAMES.SLANG_LEVEL_SELECTED,
+                          slangLevel: level,
+                          mode: ANALYTICS_MODE.TEXT,
+                        });
+                        if (getLearnsYouEnabled()) {
+                          recordInteractionSignal({
+                            type: "slang_level_select",
+                            level,
+                            timestampMs: Date.now(),
+                          });
+                        }
+                      }}
+                      className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition-all duration-300 ${
+                        on ? "" : "bg-transparent text-white/60 hover:text-white/80"
+                      }`}
+                      style={
+                        on
+                          ? {
+                              color: theme.accent,
+                              backgroundColor: `${theme.accent}24`,
+                              boxShadow: `0 0 24px -8px ${theme.accent}aa, inset 0 1px 0 ${theme.accent}44`,
+                            }
+                          : undefined
+                      }
+                    >
+                      <MaterialSymbol name={icon} className="text-[15px]" />
+                      {text}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
+          <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
+        </div>
+            </div>
+          </details>
+        </div>
+
+        {/* Result column — beside the composer on desktop, below it on phones. */}
+        <div className="mt-6 min-w-0 lg:sticky lg:top-6 lg:mt-0">
+          {!hasAnyResult ? (
+            <div className="hidden min-h-[240px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 p-8 text-center lg:flex">
+              <MaterialSymbol name="chat_bubble" className="text-[28px] text-white/25" />
+              <p className="text-[14px] text-white/50">Your local version lands here.</p>
+              <p className="text-[12px] text-white/35">Type a message on the left, pick who it&apos;s for, and hit {appMode === "translate" ? "Flip it" : "the button"}.</p>
+            </div>
+          ) : null}
           <section
             className={`min-w-0 w-full shrink-0 overflow-visible transition-all duration-500 ${
               translatedText || replies.length || compareResults.length || checkResult || loading || error
@@ -1518,6 +1510,16 @@ export function TranslatorView() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => void handleCopy()}
+                          aria-label="Copy"
+                          title="Copy"
+                          className="flex w-14 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.97]"
+                          style={{ borderColor: `${theme.accent}35`, color: theme.accent }}
+                        >
+                          <MaterialSymbol name="content_copy" className="text-[20px]" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => void handleShare()}
                           disabled={sharing}
                           aria-label="Share as image"
@@ -1556,6 +1558,7 @@ export function TranslatorView() {
               )}
             </div>
           </section>
+        </div>
         </div>
       </div>
       </div>
