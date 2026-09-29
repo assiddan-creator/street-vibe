@@ -45,6 +45,12 @@ export async function POST(req: NextRequest) {
     );
 
     const data = await pollRes.json();
+    if (!pollRes.ok) {
+      return NextResponse.json(
+        { error: "Unable to check voice generation. Please try again.", engine: "minimax" },
+        { status: 502, headers: corsHeaders }
+      );
+    }
     return NextResponse.json(
       {
         status: data.status,

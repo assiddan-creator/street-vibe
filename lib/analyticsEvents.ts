@@ -18,6 +18,7 @@ export const ANALYTICS_TTS_EVENT_MODE = { mode: ANALYTICS_MODE.SPEAK } as const;
 // --- Source of truth: TTS engine labels (mirror client engine selector; not server routing logic) ---
 
 export const ANALYTICS_ENGINE = {
+  ELEVENLABS: "elevenlabs",
   MINIMAX: "minimax",
   GOOGLE: "google",
   NATIVE: "native",
@@ -481,6 +482,7 @@ function topNFromMap(m: Map<string, number>, n: number): { key: string; count: n
 
 function isAnalyticsEngine(x: string): x is AnalyticsTtsEngine {
   return (
+    x === ANALYTICS_ENGINE.ELEVENLABS ||
     x === ANALYTICS_ENGINE.MINIMAX ||
     x === ANALYTICS_ENGINE.GOOGLE ||
     x === ANALYTICS_ENGINE.NATIVE ||

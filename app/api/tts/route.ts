@@ -225,8 +225,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Most natural voice: try ElevenLabs first when configured; on any failure
-  // fall through to the MiniMax (Replicate) path below.
+  // Keep the configured voice. A failure must not silently change providers.
   if (resolvedEngine !== "google" && process.env.ELEVENLABS_API_KEY) {
     const elGender = parseTtsGender(body.ttsGender);
     let elText = text.trim();
@@ -267,12 +266,15 @@ export async function POST(req: NextRequest) {
     } catch (e: unknown) {
       // Never log the request body/text or the API key — message only.
       const reason = e instanceof Error ? e.message : String(e);
-      console.warn("[tts][elevenlabs] failed; falling back to MiniMax", {
+      console.warn("[tts][elevenlabs] failed", {
         preset: elPreset?.id ?? null,
         provider: "elevenlabs",
-        fallback: "minimax",
         reason,
       });
+      return NextResponse.json(
+        { error: "The selected voice is temporarily unavailable. Please try again.", engine: "elevenlabs" },
+        { status: 502, headers: corsHeaders }
+      );
     }
   }
 
