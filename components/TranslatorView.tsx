@@ -60,6 +60,7 @@ import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS } from "@/lib/topSectionUi";
 import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
 import { canOfferBasicVoice, ttsFailureMessage } from "@/lib/ttsErrors";
+import { createComparisonController, requestCompareCity, type CompareRow } from "@/lib/compareTranslations";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
 export function TranslatorView() {
@@ -105,13 +106,22 @@ export function TranslatorView() {
   const [sharing, setSharing] = useState(false);
   const [appMode, setAppMode] = useState<"translate" | "reply" | "compare" | "check">("translate");
   const [replies, setReplies] = useState<string[]>([]);
-  const [compareResults, setCompareResults] = useState<{ dialect: string; text: string }[]>([]);
+  const [compareResults, setCompareResults] = useState<CompareRow[]>([]);
   const [checkResult, setCheckResult] = useState<
     { score: number; verdict: string; fixed: string; tells: string[] } | null
   >(null);
   const [usage, setUsage] = useState<PublicUsage | null>(null);
   const [upgradeAvailable, setUpgradeAvailable] = useState(false);
   const [annualAvailable, setAnnualAvailable] = useState(false);
+  const comparisonRef = useRef<ReturnType<typeof createComparisonController> | null>(null);
+  if (!comparisonRef.current) {
+    comparisonRef.current = createComparisonController(requestCompareCity, (rows) => {
+      setCompareResults(rows);
+      setLoading(rows.some(row => row.status === "pending"));
+    }, setUsage);
+  }
+  useEffect(() => () => comparisonRef.current?.dispose(), []);
+
 
   useEffect(() => {
     setTtsGender(getStoredTtsGender());
@@ -233,6 +243,8 @@ export function TranslatorView() {
 
   const restoreFromHistory = useCallback(
     (entry: HistoryVaultEntry) => {
+      comparisonRef.current?.clear();
+      setAppMode("translate");
       setHistoryOpen(false);
       audioRef.current?.pause();
       audioRef.current = null;
@@ -459,43 +471,11 @@ export function TranslatorView() {
   const getCompare = async (source: string, primary: string) => {
     const trimmed = source.trim();
     if (!trimmed) return;
-    // Primary dialect + two contrasting ones, de-duped, first 3.
-    const trio = [...new Set([primary, "London Roadman", "Jamaican Patois", "Israeli Street"])].slice(0, 3);
-    setLoading(true);
     setError(null);
     setOriginalText(trimmed);
-    setCompareResults([]);
-    try {
-      const results = await Promise.all(
-        trio.map(async (dialect) => {
-          const res = await fetch("/api/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text: trimmed,
-              currentLang: dialect,
-              translationMode: "slang",
-              slangLevel,
-              isPremiumSelected: usesPremiumStreetIntensityControls(dialect),
-              context,
-              previousMessage: null,
-              sourceLanguage: selectedInputLang,
-              uiLocale,
-            }),
-          });
-          const data = (await res.json()) as { translatedText?: string; fullText?: string; error?: string };
-          if (!res.ok) throw new Error(data.error || "Translation failed");
-          const { translated } = splitTranslationAndDictionary(String(data.fullText ?? "").trim());
-          return { dialect, text: String(data.translatedText ?? translated).trim() };
-        })
-      );
-      setCompareResults(results.filter((r) => r.text));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Compare failed");
-      setCompareResults([]);
-    } finally {
-      setLoading(false);
-    }
+    await comparisonRef.current?.start({
+      text: trimmed, slangLevel, context, sourceLanguage: selectedInputLang, uiLocale,
+    }, primary);
   };
 
   const getNaturalnessCheck = async (draft: string, dialect: string) => {
@@ -543,6 +523,7 @@ export function TranslatorView() {
 
   const switchAppMode = (next: "translate" | "reply" | "compare" | "check") => {
     if (next === appMode) return;
+    comparisonRef.current?.clear();
     setAppMode(next);
     setReplies([]);
     setCompareResults([]);
@@ -594,6 +575,7 @@ export function TranslatorView() {
   };
 
   const handleClear = () => {
+    comparisonRef.current?.clear();
     setInputText("");
     setOriginalText("");
     setTranslatedText("");
@@ -1115,6 +1097,12 @@ export function TranslatorView() {
               </svg>
             </button>
           </div>
+          {appMode === "compare" ? (
+            <p className="text-center text-xs text-white/60">
+              Comparing 3 cities uses 3 translations when daily limits apply.
+              Each city retry uses 1 more; failed generation attempts may still count.
+            </p>
+          ) : null}
           {isListening ? (
             <p className="-mt-2 text-center text-[13px]" style={{ color: theme.accent }}>
               listening… tap the mic to stop
@@ -1314,34 +1302,43 @@ export function TranslatorView() {
                     {originalText.trim() || "—"}
                   </p>
                   <div className="mt-1 flex flex-col gap-2 border-t border-white/5 pt-3">
-                    {loading && compareResults.length === 0 ? (
-                      <p className="text-[14px] text-white/50">running it through 3 cities…</p>
-                    ) : error ? (
-                      <p className="text-[14px] text-red-400/95">{error}</p>
-                    ) : (
-                      compareResults.map((r) => (
-                        <button
-                          key={r.dialect}
-                          type="button"
-                          onClick={() => void copyReply(r.text)}
-                          className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.07]"
-                          style={{ borderColor: `${resolveTheme(r.dialect).accent}22` }}
-                        >
-                          <span
-                            className="text-[10px] font-semibold uppercase tracking-[0.18em]"
-                            style={{ color: resolveTheme(r.dialect).accent }}
-                          >
-                            {resolveTheme(r.dialect).flag} {resolveTheme(r.dialect).city}
-                          </span>
-                          <span
-                            className="whitespace-pre-wrap break-words text-[16px] leading-snug text-white/90"
+                    {compareResults.map((r) => (
+                      <div
+                        key={r.dialect}
+                        className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5"
+                        style={{ borderColor: `${resolveTheme(r.dialect).accent}22` }}
+                        aria-busy={r.status === "pending"}
+                      >
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: resolveTheme(r.dialect).accent }}>
+                          {resolveTheme(r.dialect).flag} {resolveTheme(r.dialect).city}
+                        </p>
+                        {r.status === "pending" ? (
+                          <p role="status" className="text-sm text-white/50">Translating…</p>
+                        ) : r.status === "error" ? (
+                          <>
+                            <p role="alert" className="text-sm text-red-400">{r.error}</p>
+                            <button
+                              type="button"
+                              onClick={() => void comparisonRef.current?.retry(r.dialect)}
+                              aria-label={`Retry ${resolveTheme(r.dialect).city}`}
+                              className="self-start rounded-full border border-white/20 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                            >
+                              Retry this city · 1 translation
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void copyReply(r.text)}
+                            aria-label={`Copy ${resolveTheme(r.dialect).city} translation`}
+                            className="whitespace-pre-wrap break-words text-left text-[16px] leading-snug text-white/90 hover:text-white"
                             dir="auto"
                           >
                             {r.text}
-                          </span>
-                        </button>
-                      ))
-                    )}
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : appMode === "reply" ? (
