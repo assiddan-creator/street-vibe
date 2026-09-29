@@ -58,6 +58,7 @@ import {
 import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS } from "@/lib/topSectionUi";
+import { AudioShareButton } from "@/components/AudioShareButton";
 import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
 import { canOfferBasicVoice, ttsFailureMessage } from "@/lib/ttsErrors";
 import { createComparisonController, requestCompareCity, type CompareRow } from "@/lib/compareTranslations";
@@ -90,6 +91,7 @@ export function TranslatorView() {
   const [ttsGender, setTtsGender] = useState<TtsVoiceGender>("male");
   const [ttsEngine] = useState<TtsClientEngine>("minimax");
   const [ttsLoading, setTtsLoading] = useState(false);
+  const [audioPreparing, setAudioPreparing] = useState(false);
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
   const [offerBasicVoice, setOfferBasicVoice] = useState(false);
@@ -600,7 +602,7 @@ export function TranslatorView() {
 
   const handlePlayTranslation = async (useBasicVoice = false) => {
     const text = translatedText.trim();
-    if (!text || !resultContext || ttsLoading) return;
+    if (!text || !resultContext || ttsLoading || audioPreparing) return;
     const { dialect, vibe } = resultContext;
     if (ttsPlaying) {
       stopPlayback();
@@ -1536,7 +1538,7 @@ export function TranslatorView() {
                         <button
                           type="button"
                           onClick={() => void handlePlayTranslation()}
-                          disabled={ttsLoading}
+                          disabled={ttsLoading || audioPreparing}
                           aria-label={ttsPlaying ? "Stop" : ttsError ? "Retry voice" : "Read aloud"}
                           className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3 text-sm font-bold text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.99] disabled:opacity-45"
                           style={{
@@ -1581,6 +1583,23 @@ export function TranslatorView() {
                           )}
                         </button>
                       </div>
+                      {resultContext ? <AudioShareButton
+                        key={JSON.stringify([translatedText, resultContext, ttsGender, ttsEngine])}
+                        city={resultTheme.city}
+                        disabled={ttsLoading || sharing}
+                        onPreparing={setAudioPreparing}
+                        prepare={async () => {
+                          const { dialect, vibe } = resultContext;
+                          const text = translatedText.trim();
+                          const cacheKey = `${ttsEngine}|${dialect}|${ttsGender}|${vibe}|${text}`;
+                          const cached = ttsAudioCacheRef.current.get(cacheKey);
+                          if (cached) return cached;
+                          const extras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
+                          const url = await fetchTtsAudioUrl(text, dialect, ttsEngine, vibe, extras);
+                          if (url) ttsAudioCacheRef.current.set(cacheKey, url);
+                          return url;
+                        }}
+                      /> : null}
                       {ttsError ? (
                         <div role="alert" className="flex flex-col items-center gap-2">
                           <p className="text-center text-[12px] text-red-400">{ttsError}</p>
@@ -1588,7 +1607,7 @@ export function TranslatorView() {
                             <button
                               type="button"
                               onClick={() => void handlePlayTranslation(true)}
-                              disabled={ttsLoading || ttsPlaying}
+                              disabled={ttsLoading || ttsPlaying || audioPreparing}
                               className="rounded-full border border-white/20 px-3 py-2 text-xs text-white/80 disabled:opacity-45"
                             >
                               Play basic browser voice (accent may differ)
