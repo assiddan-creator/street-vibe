@@ -67,6 +67,8 @@ export function TranslatorView() {
   const [inputText, setInputText] = useState("");
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
+  // Result actions use the settings that produced this text, not the next request's selectors.
+  const [resultContext, setResultContext] = useState<{ dialect: string; vibe: string } | null>(null);
   const [dictionaryPills, setDictionaryPills] = useState<string[]>([]);
   const [nativeTransliteration, setNativeTransliteration] = useState<string | null>(null);
   const [uiLocale, setUiLocale] = useState("en");
@@ -222,6 +224,7 @@ export function TranslatorView() {
   const exampleInputs = useMemo(() => exampleInputsFor(inputLanguage), [inputLanguage]);
 
   const theme = resolveTheme(outputLang);
+  const resultTheme = resultContext ? resolveTheme(resultContext.dialect) : theme;
   const showPremiumIntensityControls = usesPremiumStreetIntensityControls(outputLang);
   const { setDialect } = useCityTheme();
 
@@ -237,6 +240,7 @@ export function TranslatorView() {
       setInputText(entry.sourceText);
       setOriginalText(entry.sourceText);
       setTranslatedText(entry.translatedSlang);
+      setResultContext({ dialect: entry.dialect, vibe: entry.vibe });
       setContext(entry.vibe);
       setSlangLevel(entry.slangLevel);
       setNativeTransliteration(entry.nativeTransliteration);
@@ -263,6 +267,7 @@ export function TranslatorView() {
     setError(null);
     setOriginalText(trimmed);
     setTranslatedText("");
+    setResultContext(null);
     setDictionaryPills([]);
     setNativeTransliteration(null);
     const translitReqId = ++translitReqIdRef.current;
@@ -346,6 +351,7 @@ export function TranslatorView() {
       const translatedFinal = String(data.translatedText ?? translated).trim();
 
       setTranslatedText(translatedFinal);
+      setResultContext({ dialect, vibe: context });
       setDictionaryPills(pills);
       setNativeTransliteration(data.nativeTransliteration?.trim() || null);
 
@@ -392,6 +398,7 @@ export function TranslatorView() {
       });
       setError(e instanceof Error ? e.message : "Translation failed");
       setTranslatedText("");
+      setResultContext(null);
       setDictionaryPills([]);
       setNativeTransliteration(null);
     } finally {
@@ -521,6 +528,7 @@ export function TranslatorView() {
     setCompareResults([]);
     setCheckResult(null);
     setTranslatedText("");
+    setResultContext(null);
     setDictionaryPills([]);
     setNativeTransliteration(null);
     setError(null);
@@ -536,15 +544,15 @@ export function TranslatorView() {
   };
 
   const handleShare = async () => {
-    if (sharing || !translatedText.trim()) return;
+    if (sharing || !translatedText.trim() || !resultContext) return;
     setSharing(true);
     try {
       const result = await shareOrDownloadCard({
         original: (originalText || inputDisplayValue).trim(),
         translated: translatedText.trim(),
-        city: theme.city,
-        flag: theme.flag,
-        accent: theme.accent,
+        city: resultTheme.city,
+        flag: resultTheme.flag,
+        accent: resultTheme.accent,
       });
       if (result === "downloaded") setToast("Image saved — ready to post");
     } catch {
@@ -569,6 +577,7 @@ export function TranslatorView() {
     setInputText("");
     setOriginalText("");
     setTranslatedText("");
+    setResultContext(null);
     setDictionaryPills([]);
     setNativeTransliteration(null);
     setError(null);
@@ -586,7 +595,8 @@ export function TranslatorView() {
 
   const handlePlayTranslation = async () => {
     const text = translatedText.trim();
-    if (!text) return;
+    if (!text || !resultContext) return;
+    const { dialect, vibe } = resultContext;
     if (ttsPlaying) {
       stopPlayback();
       return;
@@ -596,21 +606,21 @@ export function TranslatorView() {
       trackAnalyticsEvent({
         name: ANALYTICS_EVENT_NAMES.TTS_REPLAYED,
         mode: ANALYTICS_MODE.TEXT,
-        dialect: outputLang,
+        dialect,
         requestedEngine: ttsEngine,
       });
     }
     setTtsError(null);
     // Replaying the same line reuses the audio we already generated — no second
     // paid voice call, no second wait.
-    const cacheKey = `${outputLang}|${ttsGender}|${context}|${text}`;
+    const cacheKey = `${dialect}|${ttsGender}|${vibe}|${text}`;
     let url = ttsAudioCacheRef.current.get(cacheKey) ?? null;
     try {
       if (!url) {
         setTtsLoading(true);
         if (ttsEngine === "native") setTtsPlaying(true);
         const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
-        url = await fetchTtsAudioUrl(text, outputLang, ttsEngine, context, implicitExtras);
+        url = await fetchTtsAudioUrl(text, dialect, ttsEngine, vibe, implicitExtras);
         if (url === null) {
           setTtsPlaying(false);
           return;
@@ -638,6 +648,8 @@ export function TranslatorView() {
 
   const handleWordClick = async (word: string, e: MouseEvent<HTMLElement>) => {
     e.stopPropagation();
+    if (!resultContext) return;
+    const { dialect } = resultContext;
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     const x = rect.left;
     // The popup is position:fixed, so viewport coordinates — adding scrollY
@@ -645,7 +657,7 @@ export function TranslatorView() {
     const y = rect.bottom + 6;
     const clean = word.replace(/[^a-zA-ZÀ-ÿА-яёÀ-ÿ\u3040-\u30FF\uAC00-\uD7AF]/g, "").trim();
     if (!clean) return;
-    const local = lookupSlang(clean, outputLang);
+    const local = lookupSlang(clean, dialect);
     if (local) {
       setPopupWord({ word: clean, meaning: local.meaning, example: local.example, x, y });
       return;
@@ -657,7 +669,7 @@ export function TranslatorView() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: `In the context of ${outputLang} slang, the sentence is: "${translatedText}". What does the word "${clean}" mean in THIS specific context? Reply in this exact format: MEANING: <one line meaning in context> | EXAMPLE: <one example sentence>`,
+          text: `In the context of ${dialect} slang, the sentence is: "${translatedText}". What does the word "${clean}" mean in THIS specific context? Reply in this exact format: MEANING: <one line meaning in context> | EXAMPLE: <one example sentence>`,
           currentLang: "English",
           translationMode: "standard",
           slangLevel: 1,
@@ -1475,7 +1487,7 @@ export function TranslatorView() {
               ) : (
               <>
               <TranslationResultCard
-                accent={theme.accent}
+                accent={resultTheme.accent}
                 originalText={originalText}
                 translatedText={translatedText}
                 dictionaryPills={dictionaryPills}
@@ -1486,6 +1498,9 @@ export function TranslatorView() {
                 afterTranslation={
                   translatedText.trim() ? (
                     <div className="mt-3 flex flex-col gap-1">
+                      <p className="text-xs text-white/60" dir="auto">
+                        {resultTheme.flag} {resultTheme.city}
+                      </p>
                       <div className="flex gap-2">
                         <button
                           type="button"
