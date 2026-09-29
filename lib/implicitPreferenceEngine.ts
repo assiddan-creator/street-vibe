@@ -304,7 +304,7 @@ function topTone(buckets: PreferenceScoreBucket[]): TonePreference {
   return "neutral";
 }
 
-function topPhrase(_buckets: PreferenceScoreBucket[]): PhraseStylePreference {
+function topPhrase(): PhraseStylePreference {
   return "balanced";
 }
 
@@ -315,7 +315,7 @@ export function getSuggestedProfileOverridesFromImplicitPreferences(
   const level = topSlangLevelFromBuckets(profile.slangIntensity);
   const preferredSlangIntensity = slangLevelToIntensity(level);
   const preferredTone = topTone(profile.toneTendencies);
-  const preferredPhraseStyle = topPhrase(profile.phraseStyleTendencies);
+  const preferredPhraseStyle = topPhrase();
 
   const favoriteVibes = profile.preferredVibes
     .filter((b) => b.score > 0)

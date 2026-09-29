@@ -26,7 +26,6 @@ const labelByValue = (): Map<string, string> => {
  */
 export function getRuleBakeoffDialectSelectOptions(): RuleBakeoffDialectOption[] {
   const labels = labelByValue();
-  const premiumValues = new Set(OUTPUT_PREMIUM_OPTIONS.map((o) => o.value));
   const priorityInProduct = EVAL_PRIORITY_DIALECTS.filter((d) => labels.has(d));
   const prioritySet = new Set<string>(priorityInProduct);
 

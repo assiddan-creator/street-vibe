@@ -79,7 +79,7 @@ function occasionalGate(text: string, vibe: StreetVibeId): boolean {
   return h % 100 < caps[vibe];
 }
 
-function pickTag(preferredTags: string[], text: string, vibe: StreetVibeId): string {
+function pickTag(preferredTags: string[], text: string): string {
   if (preferredTags.length === 0) return "(breath)";
   let h = 0;
   for (let i = 0; i < text.length; i++) h = (h + text.charCodeAt(i)) % 997;
@@ -179,8 +179,7 @@ export function injectMinimaxInterjection(
   const policy = getInterjectionPolicy(options?.vibe, options?.dialectId);
   if (!policy.allowed || policy.preferredTags.length === 0) return t;
 
-  const vibe = toStreetVibeId(options?.vibe);
-  const tag = pickTag(policy.preferredTags, t, vibe);
+  const tag = pickTag(policy.preferredTags, t);
 
   const sentences = t.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
   if (sentences.length >= 2) {
