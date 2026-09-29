@@ -1,8 +1,8 @@
 /**
  * ElevenLabs Text-to-Speech — the most natural / human-sounding engine.
  * Synchronous: POST returns the MP3 bytes directly (no polling like Replicate).
- * The /api/tts route tries this first when ELEVENLABS_API_KEY is set and falls
- * back to the MiniMax (Replicate) path on any error.
+ * The /api/tts route uses this when ELEVENLABS_API_KEY is set and surfaces
+ * failures so the user can retry or explicitly choose a basic browser voice.
  */
 
 import { getVoicePreset, type ElevenLabsVoiceSettings, type VoiceGender } from "@/lib/elevenLabsVoicePresets";

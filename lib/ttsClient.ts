@@ -1,5 +1,7 @@
+import { TtsRequestError } from "@/lib/ttsErrors";
 import {
   ANALYTICS_ENGINE,
+  type AnalyticsTtsEngine,
   ANALYTICS_EVENT_NAMES,
   ANALYTICS_TTS_EVENT_MODE,
   analyticsDurationFieldsFromStart,
@@ -99,7 +101,8 @@ export async function fetchTtsAudioUrl(
   dialect: string,
   engine: TtsClientEngine = "minimax",
   context?: string,
-  implicitExtras?: ImplicitTranslateExtras
+  implicitExtras?: ImplicitTranslateExtras,
+  options?: { explicitBasicVoice?: boolean }
 ): Promise<string | null> {
   const learnsYou = getLearnsYouEnabled();
   const implicitExtrasForLog = implicitExtras ?? getImplicitSoftExtrasForRequests(learnsYou, false, undefined);
@@ -146,7 +149,7 @@ export async function fetchTtsAudioUrl(
         ...ANALYTICS_TTS_EVENT_MODE,
         effectiveEngine: ANALYTICS_ENGINE.NATIVE,
         dialect,
-        usedFallbackNative: false,
+        usedFallbackNative: options?.explicitBasicVoice === true,
         ...analyticsDurationFieldsFromStart(ttsPerfStart),
       });
     } catch (e) {
@@ -166,7 +169,7 @@ export async function fetchTtsAudioUrl(
   const tuning = CONTEXT_TUNING[context ?? "default"] ?? CONTEXT_TUNING.default;
   const vibeKey = context ?? "default";
 
-  const effectiveEngine = getEffectiveTtsEngine(engine, dialect);
+  let effectiveEngine: AnalyticsTtsEngine = getEffectiveTtsEngine(engine, dialect);
 
   const ttsPerfStart = performance.now();
   trackAnalyticsEvent({
@@ -198,7 +201,7 @@ export async function fetchTtsAudioUrl(
   const engineLabel =
     effectiveEngine === "google"
       ? "Google Cloud Text-to-Speech (via POST /api/tts)"
-      : "MiniMax / Replicate speech-2.8-turbo (via POST /api/tts)";
+      : "Configured voice provider (resolved by POST /api/tts)";
 
   if (effectiveEngine === "google") {
     const voice = resolveGoogleVoiceForDialect(dialect);
@@ -279,11 +282,13 @@ export async function fetchTtsAudioUrl(
       engine?: string;
       predictionId?: string;
       error?: string;
+      limitReached?: boolean;
     };
+    if (["elevenlabs", "minimax", "google"].includes(startData.engine ?? "")) {
+      effectiveEngine = startData.engine as AnalyticsTtsEngine;
+    }
     if (!startRes.ok) {
-      const err = new Error(startData.error || "TTS request failed") as Error & { httpStatus?: number };
-      err.httpStatus = startRes.status;
-      throw err;
+      throw new TtsRequestError(startData.error || "TTS request failed", startRes.status, startData.limitReached === true);
     }
     if (startData.audioBase64) {
       console.info("[TTS]", "TTS request completed (inline audio)", {
@@ -314,6 +319,11 @@ export async function fetchTtsAudioUrl(
         output?: string | string[] | null;
         error?: string | null;
       };
+
+      if (!pollRes.ok) {
+        throw new TtsRequestError(data.error || "Voice status request failed", pollRes.status);
+      }
+      if (data.status === "canceled") throw new Error("Voice generation was canceled");
 
       if (data.status === "succeeded") {
         const out = data.output;
@@ -356,43 +366,15 @@ export async function fetchTtsAudioUrl(
     }
     throw new Error("TTS timed out");
   } catch (e) {
-    const replicatePathUsed =
-      engine === "minimax" && getEffectiveTtsEngine("minimax", dialect) === "minimax";
-    if (replicatePathUsed) {
-      console.warn("[TTS]", "Replicate/MiniMax failed; falling back to native browser TTS", {
-        requestedEngine: engine,
-        effectiveEngine,
-        dialect,
-        error: e instanceof Error ? e.message : String(e),
-      });
-    } else {
-      console.warn("[TTS]", "API engine failed; falling back to Native browser TTS", {
-        requestedEngine: engine,
-        effectiveEngine,
-        error: e instanceof Error ? e.message : String(e),
-      });
-    }
-    try {
-      await speakNativeTts(text, dialect);
-      trackAnalyticsEvent({
-        name: ANALYTICS_EVENT_NAMES.TTS_SUCCEEDED,
-        ...ANALYTICS_TTS_EVENT_MODE,
-        effectiveEngine: ANALYTICS_ENGINE.NATIVE,
-        dialect,
-        usedFallbackNative: true,
-        ...analyticsDurationFieldsFromStart(ttsPerfStart),
-      });
-      return null;
-    } catch (e2) {
-      trackAnalyticsEvent({
-        name: ANALYTICS_EVENT_NAMES.TTS_FAILED,
-        ...ANALYTICS_TTS_EVENT_MODE,
-        effectiveEngine,
-        dialect,
-        failureCategory: categorizeTtsAnalyticsFailure(e, e2),
-        ...analyticsDurationFieldsFromStart(ttsPerfStart),
-      });
-      throw e2;
-    }
+    trackAnalyticsEvent({
+      name: ANALYTICS_EVENT_NAMES.TTS_FAILED,
+      ...ANALYTICS_TTS_EVENT_MODE,
+      effectiveEngine,
+      dialect,
+      failureCategory: categorizeTtsAnalyticsFailure(e),
+      ...analyticsDurationFieldsFromStart(ttsPerfStart),
+    });
+    // Only an explicit native request may speak through the browser.
+    throw e;
   }
 }

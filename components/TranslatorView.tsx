@@ -59,6 +59,7 @@ import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS } from "@/lib/topSectionUi";
 import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
+import { canOfferBasicVoice, ttsFailureMessage } from "@/lib/ttsErrors";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
 export function TranslatorView() {
@@ -90,6 +91,8 @@ export function TranslatorView() {
   const [ttsLoading, setTtsLoading] = useState(false);
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
+  const [offerBasicVoice, setOfferBasicVoice] = useState(false);
+  const ttsRequestIdRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   /** Generated audio per (city, voice, vibe, line) — replays never re-bill the voice engine. */
   const ttsAudioCacheRef = useRef(new Map<string, string>());
@@ -258,6 +261,23 @@ export function TranslatorView() {
   useEffect(() => {
     ttsPlayAttemptForCurrentTranslationRef.current = 0;
   }, [translatedText]);
+
+  useEffect(() => {
+    // A late voice response must not play after a different result/voice is selected.
+    ttsRequestIdRef.current += 1;
+    audioRef.current?.pause();
+    audioRef.current = null;
+    window.speechSynthesis?.cancel();
+    setTtsPlaying(false);
+    setTtsLoading(false);
+    setTtsError(null);
+    setOfferBasicVoice(false);
+    return () => {
+      ttsRequestIdRef.current += 1;
+      audioRef.current?.pause();
+      window.speechSynthesis?.cancel();
+    };
+  }, [translatedText, resultContext, ttsGender]);
 
   const translateText = async (text: string, dialect: string) => {
     const trimmed = text.trim();
@@ -588,39 +608,47 @@ export function TranslatorView() {
   };
 
   const stopPlayback = () => {
+    ttsRequestIdRef.current += 1;
     audioRef.current?.pause();
     audioRef.current = null;
+    window.speechSynthesis?.cancel();
     setTtsPlaying(false);
+    setTtsLoading(false);
   };
 
-  const handlePlayTranslation = async () => {
+  const handlePlayTranslation = async (useBasicVoice = false) => {
     const text = translatedText.trim();
-    if (!text || !resultContext) return;
+    if (!text || !resultContext || ttsLoading) return;
     const { dialect, vibe } = resultContext;
     if (ttsPlaying) {
       stopPlayback();
       return;
     }
+    const requestId = ++ttsRequestIdRef.current;
+    const selectedEngine = useBasicVoice ? "native" : ttsEngine;
     ttsPlayAttemptForCurrentTranslationRef.current += 1;
     if (ttsPlayAttemptForCurrentTranslationRef.current > 1) {
       trackAnalyticsEvent({
         name: ANALYTICS_EVENT_NAMES.TTS_REPLAYED,
         mode: ANALYTICS_MODE.TEXT,
         dialect,
-        requestedEngine: ttsEngine,
+        requestedEngine: selectedEngine,
       });
     }
     setTtsError(null);
-    // Replaying the same line reuses the audio we already generated — no second
-    // paid voice call, no second wait.
-    const cacheKey = `${dialect}|${ttsGender}|${vibe}|${text}`;
-    let url = ttsAudioCacheRef.current.get(cacheKey) ?? null;
+    setOfferBasicVoice(false);
+    // Cache only generated audio; choosing a basic voice never makes a paid call.
+    const cacheKey = `${selectedEngine}|${dialect}|${ttsGender}|${vibe}|${text}`;
+    let url = useBasicVoice ? null : ttsAudioCacheRef.current.get(cacheKey) ?? null;
     try {
       if (!url) {
-        setTtsLoading(true);
-        if (ttsEngine === "native") setTtsPlaying(true);
+        setTtsLoading(selectedEngine !== "native");
+        setTtsPlaying(selectedEngine === "native");
         const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
-        url = await fetchTtsAudioUrl(text, dialect, ttsEngine, vibe, implicitExtras);
+        url = await fetchTtsAudioUrl(text, dialect, selectedEngine, vibe, implicitExtras, {
+          explicitBasicVoice: useBasicVoice,
+        });
+        if (requestId !== ttsRequestIdRef.current) return;
         if (url === null) {
           setTtsPlaying(false);
           return;
@@ -629,20 +657,26 @@ export function TranslatorView() {
       }
       const audio = new Audio(url);
       audioRef.current = audio;
-      audio.onended = () => setTtsPlaying(false);
+      audio.onended = () => {
+        if (requestId === ttsRequestIdRef.current) setTtsPlaying(false);
+      };
       audio.onerror = () => {
+        if (requestId !== ttsRequestIdRef.current) return;
+        ttsAudioCacheRef.current.delete(cacheKey);
         setTtsPlaying(false);
-        setTtsError("Couldn't play the audio — tap to try again");
+        setTtsError("Couldn't play the audio. Try again or choose the basic browser voice.");
+        setOfferBasicVoice(true);
       };
       setTtsPlaying(true);
       await audio.play();
     } catch (e) {
-      // play() rejects when the browser blocks or can't decode the audio.
+      if (requestId !== ttsRequestIdRef.current) return;
       if (url) ttsAudioCacheRef.current.delete(cacheKey);
-      setTtsError(e instanceof Error ? e.message : "Playback failed");
+      setTtsError(useBasicVoice ? "The basic browser voice couldn't play. Try the selected voice again." : ttsFailureMessage(e));
+      setOfferBasicVoice(!useBasicVoice && canOfferBasicVoice(e));
       setTtsPlaying(false);
     } finally {
-      setTtsLoading(false);
+      if (requestId === ttsRequestIdRef.current) setTtsLoading(false);
     }
   };
 
@@ -1506,7 +1540,7 @@ export function TranslatorView() {
                           type="button"
                           onClick={() => void handlePlayTranslation()}
                           disabled={ttsLoading}
-                          aria-label={ttsPlaying ? "Stop" : "Read aloud"}
+                          aria-label={ttsPlaying ? "Stop" : ttsError ? "Retry voice" : "Read aloud"}
                           className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3 text-sm font-bold text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.99] disabled:opacity-45"
                           style={{
                             borderColor: `${theme.accent}35`,
@@ -1520,7 +1554,7 @@ export function TranslatorView() {
                           ) : ttsPlaying ? (
                             "■ Stop"
                           ) : (
-                            "▶ Read aloud"
+                            ttsError ? "↻ Retry voice" : "▶ Read aloud"
                           )}
                         </button>
                         <button
@@ -1550,7 +1584,21 @@ export function TranslatorView() {
                           )}
                         </button>
                       </div>
-                      {ttsError ? <p className="text-center text-[12px] text-red-400">{ttsError}</p> : null}
+                      {ttsError ? (
+                        <div role="alert" className="flex flex-col items-center gap-2">
+                          <p className="text-center text-[12px] text-red-400">{ttsError}</p>
+                          {offerBasicVoice ? (
+                            <button
+                              type="button"
+                              onClick={() => void handlePlayTranslation(true)}
+                              disabled={ttsLoading || ttsPlaying}
+                              className="rounded-full border border-white/20 px-3 py-2 text-xs text-white/80 disabled:opacity-45"
+                            >
+                              Play basic browser voice (accent may differ)
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => {
