@@ -7,7 +7,7 @@ import {
   splitTranslationAndDictionary,
 } from "@/lib/streetVibeTheme";
 import { isKnownPremiumDialect, usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
-import { CHAT_AUTHENTICITY_RULE, SPOKEN_STYLE_RULE, STANDARD_PUNCTUATION_RULE } from "@/lib/spokenStyleRules";
+import { CHAT_AUTHENTICITY_RULE, SLANG_LOCK_RULE, SPOKEN_STYLE_RULE, STANDARD_PUNCTUATION_RULE } from "@/lib/spokenStyleRules";
 import {
   containsLatinLeak,
   countLatinTokens,
@@ -518,6 +518,7 @@ RULE PROFILE above applies to tone/word choice only; it must not change this out
       `${arabicEgyptianVoiceBlock}` +
       `${russianRule}` +
       `${russianStreetStabilizationBlock}` +
+      `${SLANG_LOCK_RULE}\n\n` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +
       `${formattingRule}`,

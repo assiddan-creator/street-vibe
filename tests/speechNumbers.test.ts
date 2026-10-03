@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { speakNumbers } from "../lib/speechNumbers";
 import { prepareSpeechText as p } from "../lib/prepareSpeechText";
 import { applyPronunciationAliases, pronunciationLocatorsFor, PRONUNCIATION_ALIASES, PRONUNCIATION_DICTIONARY_LOCATORS } from "../lib/pronunciationDictionary";
-import { SPOKEN_STYLE_RULE, STANDARD_PUNCTUATION_RULE, CHAT_AUTHENTICITY_RULE } from "../lib/spokenStyleRules";
+import { SPOKEN_STYLE_RULE, STANDARD_PUNCTUATION_RULE, CHAT_AUTHENTICITY_RULE, SLANG_LOCK_RULE } from "../lib/spokenStyleRules";
 
 describe("numbers as said, per language (through prepareSpeechText)", () => {
   const CASES: [dialect: string, input: string, spoken: string][] = [
@@ -108,10 +108,19 @@ describe("translate prompt: spoken style rules", () => {
   });
 
   test("rules cover every requested point", () => {
-    for (const needle of ["gonna", "wah gwaan", "cê tá", "Bruv, that's mad", 'ONE "!" or "?"', '"..." or "—"', "No emoji", "hashtags", "ALL-CAPS", "¿ ¡", "niqqud"]) {
+    for (const needle of ["gonna", "wah gwaan", "cê tá", "bruv, that's mad", 'ONE "!" or "?"', '"..." or "—"', "No emoji", "hashtags", "ALL-CAPS", "niqqud", "start lowercase", "opens with \"¿\" or \"¡\"", "space before ! ? : ;"]) {
       assert.ok(SPOKEN_STYLE_RULE.includes(needle), needle);
     }
     for (const needle of ['ONE "!" or "?"', "No emoji", "niqqud"]) assert.ok(STANDARD_PUNCTUATION_RULE.includes(needle), needle);
+  });
+
+  test("rules are punctuation-only and forbid weakening the slang", () => {
+    assert.match(SPOKEN_STYLE_RULE, /ONLY punctuation, symbols and casing/);
+    assert.match(SPOKEN_STYLE_RULE, /Never replace a slang word with a more standard or neutral one/);
+    assert.match(SLANG_LOCK_RULE, /Don't copy the source's words literally/);
+    // The lock sits right before the rewrite instruction (recency).
+    assert.ok(route.indexOf("${SLANG_LOCK_RULE}") < route.indexOf("Rewrite the following text the way YOU would actually send it"));
+    assert.ok(route.indexOf("${SLANG_LOCK_RULE}") > route.indexOf("${russianStreetStabilizationBlock}"));
   });
 
   test("Spanish Madrid no longer allows emoji", () => {
