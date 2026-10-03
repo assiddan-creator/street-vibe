@@ -73,6 +73,8 @@ export function TranslatorView() {
   const [inputText, setInputText] = useState("");
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
+  /** Speech-only version of translatedText (pronunciation hints); never displayed, copied or shared. */
+  const [speechText, setSpeechText] = useState<string | null>(null);
   // Result actions use the settings that produced this text, not the next request's selectors.
   const [resultContext, setResultContext] = useState<{ dialect: string; vibe: string } | null>(null);
   const [dictionaryPills, setDictionaryPills] = useState<string[]>([]);
@@ -260,6 +262,7 @@ export function TranslatorView() {
       setInputText(entry.sourceText);
       setOriginalText(entry.sourceText);
       setTranslatedText(entry.translatedSlang);
+      setSpeechText(null);
       setResultContext({ dialect: entry.dialect, vibe: entry.vibe });
       setContext(entry.vibe);
       setSlangLevel(entry.slangLevel);
@@ -304,6 +307,7 @@ export function TranslatorView() {
     setError(null);
     setOriginalText(trimmed);
     setTranslatedText("");
+    setSpeechText(null);
     setResultContext(null);
     setDictionaryPills([]);
     setNativeTransliteration(null);
@@ -348,6 +352,7 @@ export function TranslatorView() {
       const data = (await res.json()) as {
         fullText?: string;
         translatedText?: string;
+        speechText?: string;
         nativeTransliteration?: string;
         error?: string;
         usage?: PublicUsage;
@@ -388,6 +393,7 @@ export function TranslatorView() {
       const translatedFinal = String(data.translatedText ?? translated).trim();
 
       setTranslatedText(translatedFinal);
+      setSpeechText(typeof data.speechText === "string" && data.speechText.trim() ? data.speechText.trim() : null);
       setResultContext({ dialect, vibe: context });
       setDictionaryPills(pills);
       setNativeTransliteration(data.nativeTransliteration?.trim() || null);
@@ -435,6 +441,7 @@ export function TranslatorView() {
       });
       setError(e instanceof Error ? e.message : "Translation failed");
       setTranslatedText("");
+    setSpeechText(null);
       setResultContext(null);
       setDictionaryPills([]);
       setNativeTransliteration(null);
@@ -537,6 +544,7 @@ export function TranslatorView() {
     setCompareResults([]);
     setCheckResult(null);
     setTranslatedText("");
+    setSpeechText(null);
     setResultContext(null);
     setDictionaryPills([]);
     setNativeTransliteration(null);
@@ -587,6 +595,7 @@ export function TranslatorView() {
     setInputText("");
     setOriginalText("");
     setTranslatedText("");
+    setSpeechText(null);
     setResultContext(null);
     setDictionaryPills([]);
     setNativeTransliteration(null);
@@ -628,7 +637,7 @@ export function TranslatorView() {
     setTtsError(null);
     setOfferBasicVoice(false);
     // Cache only generated audio; choosing a basic voice never makes a paid call.
-    const cacheKey = `${selectedEngine}|${dialect}|${ttsGender}|${vibe}|${text}`;
+    const cacheKey = `${selectedEngine}|${dialect}|${ttsGender}|${vibe}|${text}|${speechText ?? ""}`;
     let url = useBasicVoice ? null : ttsAudioCacheRef.current.get(cacheKey) ?? null;
     try {
       if (!url) {
@@ -637,6 +646,7 @@ export function TranslatorView() {
         const implicitExtras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
         url = await fetchTtsAudioUrl(text, dialect, selectedEngine, vibe, implicitExtras, {
           explicitBasicVoice: useBasicVoice,
+          speechText,
         });
         if (requestId !== ttsRequestIdRef.current) return;
         if (url === null) {
@@ -1613,11 +1623,11 @@ export function TranslatorView() {
                         prepare={async () => {
                           const { dialect, vibe } = resultContext;
                           const text = translatedText.trim();
-                          const cacheKey = `${ttsEngine}|${dialect}|${ttsGender}|${vibe}|${text}`;
+                          const cacheKey = `${ttsEngine}|${dialect}|${ttsGender}|${vibe}|${text}|${speechText ?? ""}`;
                           const cached = ttsAudioCacheRef.current.get(cacheKey);
                           if (cached) return cached;
                           const extras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
-                          const url = await fetchTtsAudioUrl(text, dialect, ttsEngine, vibe, extras);
+                          const url = await fetchTtsAudioUrl(text, dialect, ttsEngine, vibe, extras, { speechText });
                           if (url) ttsAudioCacheRef.current.set(cacheKey, url);
                           return url;
                         }}
