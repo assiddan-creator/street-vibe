@@ -76,36 +76,22 @@ describe("preset is final — vibe never overwrites it", () => {
   });
 });
 
-describe("everything else keeps exact existing production behaviour", () => {
-  test("Jamaican Patois + female has no preset (stays Jessica)", () => {
+describe("fallback (no preset) keeps Will/Jessica", () => {
+  test("Jamaican Patois + female has no preset (stays Jessica, v3 conversational, vibe settings)", () => {
     assert.equal(getVoicePreset(KINGSTON, "female"), undefined);
     const r = resolveElevenLabsVoiceSelection("female", KINGSTON, "dm");
     assert.equal(r.presetId, undefined);
     assert.equal(r.voiceId, "cgSgspJ2msm6clMCkdW9"); // Jessica
-    assert.equal(r.modelId, V3C); // Kingston, both genders, stays on v3 conversational
+    assert.equal(r.modelId, V3C);
+    assert.deepEqual(r.settings, { similarity_boost: 0.8, use_speaker_boost: true, speed: 1, stability: 0.42, style: 0.28 });
   });
 
-  test("cities without an approved voice keep Will/Jessica", () => {
-    for (const dialect of ["Rio Favela", "Arabic Egyptian", "Israeli Street", "English (Standard)"]) {
+  test("standard languages keep Will/Jessica", () => {
+    for (const dialect of ["English (Standard)", "Hebrew (Standard)", "German"]) {
       assert.equal(getVoicePreset(dialect, "male"), undefined, dialect);
-      const male = resolveElevenLabsVoiceSelection("male", dialect, "dm");
-      assert.equal(male.presetId, undefined);
-      assert.equal(male.voiceId, "bIHbv24MWmeRgasZH58o"); // Will
-      assert.equal(male.modelId, V4_TURBO);
+      assert.equal(resolveElevenLabsVoiceSelection("male", dialect, "dm").voiceId, "bIHbv24MWmeRgasZH58o"); // Will
+      assert.equal(resolveElevenLabsVoiceSelection("female", dialect, "dm").voiceId, "cgSgspJ2msm6clMCkdW9"); // Jessica
     }
-  });
-
-  test("only the approved dialects have presets", () => {
-    assert.deepEqual(Object.keys(ELEVENLABS_VOICE_PRESETS).sort(), [
-      KINGSTON,
-      "London Roadman",
-      "Mexico City Barrio",
-      "New York Brooklyn",
-      "Paris Banlieue",
-      "Russian Street",
-      "Spanish Madrid",
-      "Tokyo Gyaru",
-    ].sort());
   });
 
   test("undefined dialect falls back to global Will/Jessica for both genders", () => {
@@ -128,47 +114,61 @@ describe("everything else keeps exact existing production behaviour", () => {
     assert.equal(resolveElevenLabsVoiceId("female"), "cgSgspJ2msm6clMCkdW9");
   });
 
-  test("vibe still changes settings for the non-preset (global) path", () => {
-    const dm = resolveElevenLabsVoiceSelection("male", "Rio Favela", "dm");
-    const angry = resolveElevenLabsVoiceSelection("male", "Rio Favela", "angry");
-    assert.notDeepEqual(dm.settings, angry.settings);
-    assert.equal(angry.settings.stability, 0.3);
-    assert.equal(angry.settings.style, 0.45);
+  test("v4 fallback: vibe still moves stability, but only stability + similarity_boost are sent", () => {
+    const dm = resolveElevenLabsVoiceSelection("male", "English (Standard)", "dm");
+    const angry = resolveElevenLabsVoiceSelection("male", "English (Standard)", "angry");
+    assert.equal(dm.modelId, V4_TURBO);
+    assert.deepEqual(dm.settings, { stability: 0.42, similarity_boost: 0.8 });
+    assert.deepEqual(angry.settings, { stability: 0.3, similarity_boost: 0.8 });
   });
 });
 
-describe("city library voices (2026-09-24 audition)", () => {
-  const PICKS: [string, string, string][] = [
-    ["London Roadman", "vr54y8Xovf4AEnfNrGqH", "en"],
-    ["New York Brooklyn", "9pKX7TwfPxl7p2PNZQ1B", "en"],
-    ["Paris Banlieue", "mvhJVdVoTWVUtL4keT7W", "fr"],
-    ["Spanish Madrid", "jadd0g0NRgNgE8nt4ofn", "es"],
-    ["Mexico City Barrio", "pC0w7bOSDTlgiOCrNBX3", "es"],
-    ["Russian Street", "lsAmGFzUYusakA482527", "ru"],
-    ["Tokyo Gyaru", "Mv8AjrYZCBkdsmDHNwcB", "ja"],
+describe('collection "asssi" voices (2026-10)', () => {
+  const PICKS: [dialect: string, lang: string, male: string, female: string][] = [
+    ["London Roadman", "en", "2mltbVQP21Fq8XgIfRQJ", "3cuC1hNj9E2jcHlIvndN"], // Axell / Peach
+    ["New York Brooklyn", "en", "rPMkKgdwgIwqv4fXgR6N", "klHXweKCxxmBYweAPtk4"], // Tyler / Malia
+    ["Paris Banlieue", "fr", "M4DbUhGmKgKUc1GsJEHY", "nVPCtAFzgyMX3FZKNzH0"], // Jonathan / Anna
+    ["Spanish Madrid", "es", "U1qYNY0pKaPbq2VSGpif", "eZxqQzb5CuYo3Kl6EXfZ"], // Carlos / Sofia
+    ["Mexico City Barrio", "es", "htEyPDatXgnV0Xo4jMFF", "nTkjq09AuYgsNR8E4sDe"], // Dante Iván / Cristina Campos
+    ["Russian Street", "ru", "gXMhWmiqsFkrcssqVb5k", "t6lBrEl93uCiLR1Lgm8v"], // Valery / Alisa
+    ["Tokyo Gyaru", "ja", "LIisRj2veIKEBdr6KZ5y", "dhGvgIx0X6G3xzSWqOye"], // Hadou / Kana
+    ["Rio Favela", "pt", "r3KkFedJ4n8aabIZ0RFQ", "x8FWrDHAK5xiFTJLpnHq"], // Will (pt-BR) / Carla
+    ["Israeli Street", "he", "JIxTgeeS5w0UQyBxEnrl", "UZzDIQRRTW2Id7YBcbgC"], // Itai / Maya
+    ["Arabic Egyptian", "ar", "QvNF0qyyt1Tuy1YAmnzH", "xPcC3nehhziQaOrIeAwv"], // Mostafa / Ghozlan
   ];
 
-  for (const [dialect, voiceId, lang] of PICKS) {
-    test(`${dialect} male uses the picked voice with language ${lang}`, () => {
-      const r = resolveElevenLabsVoiceSelection("male", dialect, "dm");
-      assert.equal(r.voiceId, voiceId);
-      assert.equal(r.languageCode, lang);
-      assert.equal(r.modelId, dialect === "New York Brooklyn" ? V3C : V4_TURBO);
-      assert.ok(r.presetId);
-      assert.equal(r.seed, undefined);
-    });
-
-    test(`${dialect} female still uses Jessica`, () => {
-      assert.equal(resolveElevenLabsVoiceSelection("female", dialect, "dm").voiceId, "cgSgspJ2msm6clMCkdW9");
-    });
-  }
-
-  test("library voices keep vibe-driven delivery", () => {
-    const dm = resolveElevenLabsVoiceSelection("male", "London Roadman", "dm");
-    const angry = resolveElevenLabsVoiceSelection("male", "London Roadman", "angry");
-    assert.equal(dm.settings.stability, 0.42);
-    assert.equal(angry.settings.stability, 0.3);
+  test("presets exist for Kingston (male) plus a male + female for the 10 other cities", () => {
+    assert.deepEqual(Object.keys(ELEVENLABS_VOICE_PRESETS).sort(), [KINGSTON, ...PICKS.map((p) => p[0])].sort());
   });
+
+  test("not used: Nicolas Petit, Bon, Samara X", () => {
+    const ids = Object.values(ELEVENLABS_VOICE_PRESETS).flatMap((g) => Object.values(g).map((p) => p!.voiceId));
+    for (const unused of ["WUAdt1wuIPYQ1XruI5dW", "v4ReB1krtgqJDjMYLtCr", "19STyYD15bswVz51nqLf"]) {
+      assert.ok(!ids.includes(unused), unused);
+    }
+    assert.equal(new Set(ids).size, ids.length, "every voice is used once");
+  });
+
+  for (const [dialect, lang, male, female] of PICKS) {
+    for (const [gender, voiceId] of [["male", male], ["female", female]] as const) {
+      test(`${dialect} ${gender}: collection voice, language_code ${lang}`, () => {
+        const r = resolveElevenLabsVoiceSelection(gender, dialect, "angry");
+        assert.equal(r.voiceId, voiceId);
+        assert.equal(r.languageCode, lang);
+        assert.ok(r.presetId);
+        assert.equal(r.seed, undefined);
+        if (dialect === "New York Brooklyn") {
+          // v3 conversational: Brooklyn keeps its vibe-driven settings exactly as before.
+          assert.equal(r.modelId, V3C);
+          assert.deepEqual(r.settings, { similarity_boost: 0.8, use_speaker_boost: true, speed: 1, stability: 0.3, style: 0.45 });
+        } else {
+          // v4: fixed start settings, only the two supported fields, vibe ignored.
+          assert.equal(r.modelId, V4_TURBO);
+          assert.deepEqual(r.settings, { stability: 0.5, similarity_boost: 0.75 });
+        }
+      });
+    }
+  }
 });
 
 describe("per-city model: eleven_v4_turbo everywhere, Brooklyn and Kingston eleven_v3_conversational", () => {
@@ -202,16 +202,14 @@ describe("per-city model: eleven_v4_turbo everywhere, Brooklyn and Kingston elev
     }
   });
 
-  test("only the model changed: voices and settings are the same as before", () => {
-    assert.equal(resolveElevenLabsVoiceSelection("male", "New York Brooklyn", "dm").voiceId, "9pKX7TwfPxl7p2PNZQ1B");
-    assert.equal(resolveElevenLabsVoiceSelection("male", "Rio Favela", "dm").voiceId, "bIHbv24MWmeRgasZH58o");
-    assert.deepEqual(resolveElevenLabsVoiceSelection("male", "London Roadman", "dm").settings, {
-      similarity_boost: 0.8,
-      use_speaker_boost: true,
-      speed: 1,
-      stability: 0.42,
-      style: 0.28,
-    });
+  test("v4 requests never carry style, speed or use_speaker_boost", () => {
+    for (const dialect of ALL_CITIES) {
+      for (const gender of ["male", "female"] as const) {
+        const r = resolveElevenLabsVoiceSelection(gender, dialect, "hype");
+        if (r.modelId !== V4_TURBO) continue;
+        assert.deepEqual(Object.keys(r.settings).sort(), ["similarity_boost", "stability"], `${dialect} ${gender}`);
+      }
+    }
   });
 });
 

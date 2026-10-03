@@ -38,14 +38,36 @@ export function modelForDialect(dialect: string | undefined): string {
   return (dialect && ELEVENLABS_CITY_MODEL_EXCEPTIONS[dialect]) || ELEVENLABS_DEFAULT_CITY_MODEL_ID;
 }
 
+/**
+ * Voice settings. eleven_v4 / eleven_v4_turbo officially support only
+ * `stability` and `similarity_boost`; the other fields are v2/v3-only and are
+ * stripped before sending to a v4 model (see `voiceSettingsForModel` in
+ * lib/elevenLabsTts.ts).
+ */
 export type ElevenLabsVoiceSettings = {
   stability: number;
   similarity_boost: number;
-  style: number;
-  /** Documented ElevenLabs field, default 1. Only meaningful on v2+ models. */
-  speed: number;
-  use_speaker_boost: boolean;
+  style?: number;
+  /** Documented ElevenLabs field, default 1. Only meaningful on v2/v3 models. */
+  speed?: number;
+  use_speaker_boost?: boolean;
 };
+
+/** Starting settings for collection voices on a v4 model (owner research, 2026-10). */
+export const V4_START_SETTINGS: ElevenLabsVoiceSettings = { stability: 0.5, similarity_boost: 0.75 };
+
+/** v3 `dm` baseline: what vibe-driven voices sound like with the default audience. */
+const V3_DM_BASELINE: ElevenLabsVoiceSettings = {
+  stability: 0.42,
+  similarity_boost: 0.8,
+  style: 0.28,
+  speed: 1,
+  use_speaker_boost: true,
+};
+
+export function isV4Model(modelId: string): boolean {
+  return /^eleven_v4(_|$)/.test(modelId);
+}
 
 export type ElevenLabsVoicePreset = {
   /** Stable id for logs — never a secret, safe to print. */
@@ -73,28 +95,51 @@ export type ElevenLabsVoicePreset = {
 };
 
 /**
- * Library voice with a native local accent, picked by ear in the 2026-09-24
- * city audition (same app line per city, compared against Will). These keep
- * the normal vibe-driven settings — `settings` below is the `dm` baseline the
- * audition was recorded with, used only for reference.
+ * Voice from the owner's ElevenLabs collection "asssi" (one male + one female
+ * per premium city), mapped by its language/accent labels.
+ * - v4 cities: fixed V4_START_SETTINGS (stability/similarity only); vibe never changes them.
+ * - v3 conversational cities (Brooklyn): keep the existing vibe-driven delivery.
  */
-function cityLibraryVoice(
+function collectionVoice(
   city: string,
   dialect: string,
+  gender: VoiceGender,
   label: string,
   voiceId: string,
   languageCode: string
 ): ElevenLabsVoicePreset {
+  const modelId = modelForDialect(dialect);
+  const v4 = isV4Model(modelId);
+  const slug = (t: string) =>
+    t
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z]+/g, "-")
+      .replace(/^-|-$/g, "");
   return {
-    id: `${city.toLowerCase()}-male-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`,
-    name: `Street Vibe / ${city} / Male / ${label}`,
+    id: `${slug(city)}-${gender}-${slug(label)}`,
+    name: `Street Vibe / ${city} / ${gender === "male" ? "Male" : "Female"} / ${label}`,
     dialect,
-    gender: "male",
+    gender,
     voiceId,
-    modelId: modelForDialect(dialect),
+    modelId,
     languageCode,
-    settings: { stability: 0.42, similarity_boost: 0.8, style: 0.28, speed: 1, use_speaker_boost: true },
-    applyVibe: true,
+    settings: v4 ? V4_START_SETTINGS : V3_DM_BASELINE,
+    applyVibe: !v4,
+  };
+}
+
+function pair(
+  city: string,
+  dialect: string,
+  lang: string,
+  male: [label: string, voiceId: string],
+  female: [label: string, voiceId: string]
+): Partial<Record<VoiceGender, ElevenLabsVoicePreset>> {
+  return {
+    male: collectionVoice(city, dialect, "male", male[0], male[1], lang),
+    female: collectionVoice(city, dialect, "female", female[0], female[1], lang),
   };
 }
 
@@ -129,16 +174,21 @@ export const ELEVENLABS_VOICE_PRESETS: Record<
       applyVibe: false,
       recommendedSeed: 12345,
     },
-    // No female preset yet — Jamaican Patois + female keeps using Jessica.
+    // No Jamaican voice in the "asssi" collection: Kingston female keeps Jessica.
   },
-  "London Roadman": { male: cityLibraryVoice("London", "London Roadman", "Petros", "vr54y8Xovf4AEnfNrGqH", "en") },
-  "New York Brooklyn": { male: cityLibraryVoice("Brooklyn", "New York Brooklyn", "DJ Marathon", "9pKX7TwfPxl7p2PNZQ1B", "en") },
-  "Paris Banlieue": { male: cityLibraryVoice("Paris", "Paris Banlieue", "Simon", "mvhJVdVoTWVUtL4keT7W", "fr") },
-  "Spanish Madrid": { male: cityLibraryVoice("Madrid", "Spanish Madrid", "Bernat", "jadd0g0NRgNgE8nt4ofn", "es") },
-  "Mexico City Barrio": { male: cityLibraryVoice("CDMX", "Mexico City Barrio", "Enrique", "pC0w7bOSDTlgiOCrNBX3", "es") },
-  "Russian Street": { male: cityLibraryVoice("Moscow", "Russian Street", "Andrey", "lsAmGFzUYusakA482527", "ru") },
-  "Tokyo Gyaru": { male: cityLibraryVoice("Tokyo", "Tokyo Gyaru", "Ishibashi", "Mv8AjrYZCBkdsmDHNwcB", "ja") },
-  // Rio, Cairo and Tel Aviv: no library voice beat Will in the audition.
+  // Collection "asssi" (2026-10). Not used: Nicolas Petit (2nd French male), Bon (2nd
+  // Spanish male), Samara X (2nd British female); the owner picked Jonathan, Carlos, Peach.
+  "London Roadman": pair("London", "London Roadman", "en", ["Axell", "2mltbVQP21Fq8XgIfRQJ"], ["Peach", "3cuC1hNj9E2jcHlIvndN"]),
+  "New York Brooklyn": pair("Brooklyn", "New York Brooklyn", "en", ["Tyler", "rPMkKgdwgIwqv4fXgR6N"], ["Malia", "klHXweKCxxmBYweAPtk4"]),
+  "Paris Banlieue": pair("Paris", "Paris Banlieue", "fr", ["Jonathan", "M4DbUhGmKgKUc1GsJEHY"], ["Anna", "nVPCtAFzgyMX3FZKNzH0"]),
+  "Spanish Madrid": pair("Madrid", "Spanish Madrid", "es", ["Carlos", "U1qYNY0pKaPbq2VSGpif"], ["Sofia", "eZxqQzb5CuYo3Kl6EXfZ"]),
+  // Female: the collection's only Latin American female (verified locale es-AR, not es-MX).
+  "Mexico City Barrio": pair("CDMX", "Mexico City Barrio", "es", ["Dante Iván", "htEyPDatXgnV0Xo4jMFF"], ["Cristina Campos", "nTkjq09AuYgsNR8E4sDe"]),
+  "Russian Street": pair("Moscow", "Russian Street", "ru", ["Valery", "gXMhWmiqsFkrcssqVb5k"], ["Alisa", "t6lBrEl93uCiLR1Lgm8v"]),
+  "Tokyo Gyaru": pair("Tokyo", "Tokyo Gyaru", "ja", ["Hadou", "LIisRj2veIKEBdr6KZ5y"], ["Kana", "dhGvgIx0X6G3xzSWqOye"]),
+  "Rio Favela": pair("Rio", "Rio Favela", "pt", ["Will", "r3KkFedJ4n8aabIZ0RFQ"], ["Carla", "x8FWrDHAK5xiFTJLpnHq"]),
+  "Israeli Street": pair("Tel Aviv", "Israeli Street", "he", ["Itai", "JIxTgeeS5w0UQyBxEnrl"], ["Maya", "UZzDIQRRTW2Id7YBcbgC"]),
+  "Arabic Egyptian": pair("Cairo", "Arabic Egyptian", "ar", ["Mostafa", "QvNF0qyyt1Tuy1YAmnzH"], ["Ghozlan", "xPcC3nehhziQaOrIeAwv"]),
 };
 
 export function getVoicePreset(
