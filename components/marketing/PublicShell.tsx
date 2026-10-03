@@ -6,20 +6,22 @@ import type { ReactNode } from "react";
  * so it reads correctly over the app's themed provider. Server component — no
  * client state; the only interactive bits are plain links.
  */
-export function PublicShell({ children }: { children: ReactNode }) {
+export function PublicShell({ children, hideHeader = false }: { children: ReactNode; hideHeader?: boolean }) {
   return (
     <div className="min-h-[100dvh] bg-[#0b0d0f] text-white/90">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-        <Link href="/" className="font-heading text-[17px] font-extrabold tracking-tight text-white">
-          Street&nbsp;Vibe
-        </Link>
-        <Link
-          href="/app"
-          className="rounded-full bg-white/10 px-4 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/20"
-        >
-          Open the app
-        </Link>
-      </header>
+      {!hideHeader && (
+        <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+          <Link href="/" className="font-heading text-[17px] font-extrabold tracking-tight text-white">
+            Street&nbsp;Vibe
+          </Link>
+          <Link
+            href="/app"
+            className="rounded-full bg-white/10 px-4 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/20"
+          >
+            Open the app
+          </Link>
+        </header>
+      )}
       {children}
       <footer className="mx-auto max-w-5xl px-5 py-10 text-[13px] text-white/45">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-6">
