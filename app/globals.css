@@ -24,6 +24,16 @@ body {
   }
 }
 
+@layer base {
+  /* Consistent keyboard-only focus ring, keyed to the active city accent so it
+     tracks the per-dialect theme. Pointer clicks are unaffected. Elements that
+     already define their own focus treatment keep it. */
+  :focus-visible {
+    outline: 2px solid var(--accent, #4ade80);
+    outline-offset: 2px;
+  }
+}
+
 /* Material Symbols Outlined — ligature icons, color from currentColor */
 .material-symbols-outlined {
   font-family: "Material Symbols Outlined", sans-serif;
@@ -92,6 +102,9 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse-slow {
+    animation: none;
+  }
+  .mic-pulse {
     animation: none;
   }
   .onboarding-step-enter {
