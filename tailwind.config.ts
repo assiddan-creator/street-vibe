@@ -17,6 +17,11 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        /** Flag palette roles — see lib/themeConfig.ts. */
+        themePrimary: "rgb(var(--theme-primary-rgb) / <alpha-value>)",
+        themeSecondary: "rgb(var(--theme-secondary-rgb) / <alpha-value>)",
+        themeSecondaryText: "rgb(var(--theme-secondary-text-rgb) / <alpha-value>)",
+        themeTertiary: "rgb(var(--theme-tertiary-rgb) / <alpha-value>)",
         themeGlow: "var(--theme-glow)",
         themeButton: "rgb(var(--theme-button-rgb) / <alpha-value>)",
         themeButtonBorder: "rgb(var(--theme-button-border-rgb) / <alpha-value>)",

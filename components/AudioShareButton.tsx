@@ -1,15 +1,18 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { canShareAudio, downloadAudio, prepareAudioFile } from "@/lib/audioShare";
 import { TtsRequestError, ttsFailureMessage } from "@/lib/ttsErrors";
 
 /** Mounted per result/voice so a late preparation can never share a different result. */
-export function AudioShareButton({ prepare, city, disabled, onPreparing }: {
+export function AudioShareButton({ prepare, city, disabled, onPreparing, buttonStyle }: {
   prepare: () => Promise<string | null>;
   city: string;
   disabled: boolean;
   onPreparing: (value: boolean) => void;
+  /** Subtle flag-tinted style from the active palette (subtleButtonStyle). */
+  buttonStyle?: CSSProperties;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -52,7 +55,8 @@ export function AudioShareButton({ prepare, city, disabled, onPreparing }: {
 
   return <div className="mt-2 flex flex-col gap-2">
     <button type="button" onClick={() => void act()} disabled={disabled || busy}
-      className="rounded-2xl border border-white/15 bg-white/5 px-3 py-3 text-sm font-medium text-white disabled:opacity-45">
+      className="rounded-2xl border border-white/15 bg-white/5 px-3 py-3 text-sm font-medium text-white backdrop-blur-xl transition-all duration-300 hover:brightness-125 disabled:opacity-45"
+      style={buttonStyle}>
       {busy ? "Preparing / sharing audio…" : file ? canShareAudio(file) ? "Share audio" : "Download audio" : "Prepare audio to share"}
     </button>
     {file ? <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-white/70">

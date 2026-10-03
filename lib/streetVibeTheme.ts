@@ -1,10 +1,11 @@
 import { STREETVIBE_DIALECT_REGISTRY, type StreetVibeDialectId } from "@/lib/dialectRegistry";
+import { getCityThemeForDialect, type FlagPalette } from "@/lib/themeConfig";
 
+/** Display metadata per dialect. Colors live in lib/themeConfig.ts (flag palettes). */
 export type DialectTheme = {
   id: string;
   pillLabel: string;
   bg: string;
-  accent: string;
   flag: string;
   city: string;
 };
@@ -14,7 +15,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "London Roadman",
     pillLabel: "London",
     bg: "#0d0d1a",
-    accent: "#60a5fa",
     flag: "🇬🇧",
     city: "London",
   },
@@ -22,7 +22,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Jamaican Patois",
     pillLabel: "Kingston",
     bg: "#0a1a0a",
-    accent: "#4ade80",
     flag: "🇯🇲",
     city: "Kingston",
   },
@@ -30,7 +29,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "New York Brooklyn",
     pillLabel: "NYC",
     bg: "#1a0a0a",
-    accent: "#f87171",
     flag: "🇺🇸",
     city: "Brooklyn",
   },
@@ -38,7 +36,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Tokyo Gyaru",
     pillLabel: "Tokyo",
     bg: "#0a0f1a",
-    accent: "#f43f5e",
     flag: "🇯🇵",
     city: "Tokyo",
   },
@@ -46,7 +43,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Paris Banlieue",
     pillLabel: "Paris",
     bg: "#1a1400",
-    accent: "#60a5fa",
     flag: "🇫🇷",
     city: "Paris",
   },
@@ -54,7 +50,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Russian Street",
     pillLabel: "Moscow",
     bg: "#0f0f0f",
-    accent: "#93c5fd",
     flag: "🇷🇺",
     city: "Moscow",
   },
@@ -62,7 +57,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Mexico City Barrio",
     pillLabel: "CDMX",
     bg: "#1a0a0f",
-    accent: "#f472b6",
     flag: "🇲🇽",
     city: "CDMX",
   },
@@ -70,7 +64,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Rio Favela",
     pillLabel: "Rio",
     bg: "#001a0f",
-    accent: "#34d399",
     flag: "🇧🇷",
     city: "Rio",
   },
@@ -78,7 +71,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Israeli Street",
     pillLabel: "Tel Aviv",
     bg: "#0a1528",
-    accent: "#93c5fd",
     flag: "🇮🇱",
     city: "Tel Aviv",
   },
@@ -86,7 +78,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Arabic Egyptian",
     pillLabel: "Cairo",
     bg: "#1a1510",
-    accent: "#CE1126",
     flag: "🇪🇬",
     city: "Cairo",
   },
@@ -94,7 +85,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Spanish Madrid",
     pillLabel: "Madrid",
     bg: "#1a0f0a",
-    accent: "#C60B1E",
     flag: "🇪🇸",
     city: "Madrid",
   },
@@ -102,7 +92,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "English (Standard)",
     pillLabel: "English",
     bg: "#0d0d0d",
-    accent: "#B22234",
     flag: "🇺🇸",
     city: "USA",
   },
@@ -110,7 +99,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Spanish",
     pillLabel: "Spanish",
     bg: "#0d0d0d",
-    accent: "#c60b1e",
     flag: "🇪🇸",
     city: "Spain",
   },
@@ -118,7 +106,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "French",
     pillLabel: "French",
     bg: "#0d0d0d",
-    accent: "#002395",
     flag: "🇫🇷",
     city: "France",
   },
@@ -126,7 +113,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "German",
     pillLabel: "German",
     bg: "#0d0d0d",
-    accent: "#DD0000",
     flag: "🇩🇪",
     city: "Germany",
   },
@@ -134,7 +120,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Italian",
     pillLabel: "Italian",
     bg: "#0d0d0d",
-    accent: "#009246",
     flag: "🇮🇹",
     city: "Italy",
   },
@@ -142,7 +127,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Russian",
     pillLabel: "Russian",
     bg: "#0d0d0d",
-    accent: "#D52B1E",
     flag: "🇷🇺",
     city: "Russia",
   },
@@ -150,7 +134,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Portuguese",
     pillLabel: "Portuguese",
     bg: "#0d0d0d",
-    accent: "#006600",
     flag: "🇵🇹",
     city: "Portugal",
   },
@@ -158,7 +141,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Japanese",
     pillLabel: "Japanese",
     bg: "#0d0d0d",
-    accent: "#BC002D",
     flag: "🇯🇵",
     city: "Japan",
   },
@@ -166,7 +148,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Hebrew (Standard)",
     pillLabel: "Hebrew",
     bg: "#0d0d0d",
-    accent: "#0038B8",
     flag: "🇮🇱",
     city: "Israel",
   },
@@ -174,7 +155,6 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "Arabic",
     pillLabel: "Arabic",
     bg: "#0d0d0d",
-    accent: "#007A3D",
     flag: "🇸🇦",
     city: "Arabia",
   },
@@ -280,7 +260,6 @@ export function getDialectScriptLock(dialectId: string): string {
 }
 
 export const NEUTRAL_BG = "#111111";
-export const NEUTRAL_ACCENT = "#888888";
 
 export const LOADING_MESSAGES: Record<string, string> = {
   ...Object.fromEntries(
@@ -324,20 +303,24 @@ export const INPUT_LANGUAGES = [
   { value: "es-ES", label: "Español / Spanish" },
 ] as const;
 
-export function resolveTheme(outputLang: string): {
+/** Dialect display info + its flag palette roles (colors come only from lib/themeConfig.ts). */
+export type ResolvedTheme = FlagPalette & {
   bg: string;
-  accent: string;
   flag: string;
   city: string;
-} {
+};
+
+export function resolveTheme(outputLang: string): ResolvedTheme {
+  const { flagColors, primary, secondary, secondaryText, tertiary } = getCityThemeForDialect(outputLang);
+  const palette = { flagColors, primary, secondary, secondaryText, tertiary };
   const premium = DIALECT_THEMES.find((t) => t.id === outputLang);
   if (premium) {
-    return { bg: premium.bg, accent: premium.accent, flag: premium.flag, city: premium.city };
+    return { ...palette, bg: premium.bg, flag: premium.flag, city: premium.city };
   }
   const std = STANDARD_LANGUAGES.find((o) => o.value === outputLang);
   return {
+    ...palette,
     bg: NEUTRAL_BG,
-    accent: NEUTRAL_ACCENT,
     flag: std?.flag ?? "🌐",
     city: std?.label ?? outputLang,
   };

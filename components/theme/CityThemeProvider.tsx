@@ -53,8 +53,8 @@ export function CityThemeProvider({ children }: { children: ReactNode }) {
         style={{
           backgroundColor: "#000000",
           backgroundImage: `
-            radial-gradient(ellipse 90% 65% at 92% 0%, color-mix(in srgb, var(--theme-glow) 7%, transparent) 0%, transparent 58%),
-            radial-gradient(ellipse 88% 62% at 8% 100%, color-mix(in srgb, var(--accent) 6%, transparent) 0%, transparent 55%)
+            radial-gradient(ellipse 90% 65% at 92% 0%, color-mix(in srgb, var(--theme-tertiary) 7%, transparent) 0%, transparent 58%),
+            radial-gradient(ellipse 88% 62% at 8% 100%, color-mix(in srgb, var(--theme-secondary) 6%, transparent) 0%, transparent 55%)
           `,
         }}
         aria-hidden

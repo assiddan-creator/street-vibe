@@ -8,7 +8,10 @@ export type ShareCardInput = {
   translated: string;
   city: string;
   flag: string;
+  /** Readable flag color: wordmark + translated line (palette primary). */
   accent: string;
+  /** Glow + card stroke (palette tertiary). Defaults to `accent`. */
+  glow?: string;
 };
 
 const SIZE = 1080;
@@ -91,13 +94,14 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
     /* fall back to system fonts */
   }
 
-  const accent = /^#[0-9a-fA-F]{3,6}$/.test(input.accent) ? input.accent : "#4ade80";
+  const accent = /^#[0-9a-fA-F]{3,6}$/.test(input.accent) ? input.accent : "#FFFFFF";
+  const glowColor = input.glow && /^#[0-9a-fA-F]{3,6}$/.test(input.glow) ? input.glow : accent;
 
   // Ground + accent glow
   ctx.fillStyle = "#0b0d10";
   ctx.fillRect(0, 0, SIZE, SIZE);
   const glow = ctx.createRadialGradient(SIZE / 2, PAD, 60, SIZE / 2, PAD, SIZE * 0.9);
-  glow.addColorStop(0, hexA(accent, 0.22));
+  glow.addColorStop(0, hexA(glowColor, 0.22));
   glow.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, SIZE, SIZE);
@@ -111,7 +115,7 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
   ctx.fillStyle = "rgba(255,255,255,0.035)";
   ctx.fill();
   ctx.lineWidth = 2;
-  ctx.strokeStyle = hexA(accent, 0.4);
+  ctx.strokeStyle = hexA(glowColor, 0.4);
   ctx.stroke();
 
   const innerX = cx + 64;
