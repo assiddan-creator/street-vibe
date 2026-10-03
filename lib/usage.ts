@@ -8,12 +8,14 @@ export type UsageKind = "translate" | "tts";
 const UNLIMITED = 1_000_000;
 
 /**
- * Daily allowance per plan. Anonymous visitors are metered by hashed IP;
- * signed-in users by their Clerk id. Keep these in sync with `consume_usage`
+ * Daily allowance per plan. Anonymous visitors get the same free allowance as
+ * signed-in free users (the landing page promises "no sign-up to try"); they
+ * are metered by hashed IP, signed-in users by their Clerk id. The per-IP abuse
+ * guard in lib/apiRequestGuard.ts is separate and unchanged. Keep these in sync with `consume_usage`
  * in supabase/schema.sql (the SQL function is the source of truth at runtime).
  */
 export const DAILY_LIMITS: Record<Plan, Record<UsageKind, number>> = {
-  anon: { translate: 4, tts: 2 },
+  anon: { translate: 10, tts: 5 },
   free: { translate: 10, tts: 5 },
   pro: { translate: UNLIMITED, tts: UNLIMITED },
 };

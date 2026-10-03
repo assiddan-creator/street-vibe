@@ -29,6 +29,8 @@ import {
   type UsageState,
 } from "../lib/usage";
 import { NextRequest } from "next/server";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 describe("no env var — existing limits unchanged", () => {
   test("ttsDailyLimitOverride returns null when unset", () => {
@@ -43,9 +45,26 @@ describe("no env var — existing limits unchanged", () => {
     }
   });
 
-  test("anon tts is still 2, free tts is still 5", () => {
-    assert.equal(dailyLimitFor("anon", "tts"), 2);
+  test("anonymous gets the same free allowance as signed-in free: 10 translations, 5 voice plays", () => {
+    assert.equal(dailyLimitFor("anon", "translate"), 10);
+    assert.equal(dailyLimitFor("anon", "tts"), 5);
+    assert.deepEqual(DAILY_LIMITS.anon, DAILY_LIMITS.free);
+    assert.equal(dailyLimitFor("free", "translate"), 10);
     assert.equal(dailyLimitFor("free", "tts"), 5);
+  });
+
+  test("landing page promises match the real limits", () => {
+    const page = readFileSync(join(__dirname, "..", "app", "page.tsx"), "utf8");
+    assert.ok(page.includes(`${DAILY_LIMITS.anon.translate} free rewrites a day`), "hero line");
+    assert.ok(page.includes(`${DAILY_LIMITS.free.translate} rewrites + ${DAILY_LIMITS.free.tts} voice plays a day`), "Free plan card");
+  });
+
+  test("schema.sql consume_usage uses the same anon/free limits", () => {
+    const sql = readFileSync(join(__dirname, "..", "supabase", "schema.sql"), "utf8").replace(/\s+/g, " ");
+    assert.ok(sql.includes(`when v_plan = 'anon' and p_kind = 'translate' then ${DAILY_LIMITS.anon.translate} `), "anon translate");
+    assert.ok(sql.includes(`when v_plan = 'anon' and p_kind = 'tts' then case when p_tts_limit_override > 0 then p_tts_limit_override else ${DAILY_LIMITS.anon.tts} end`), "anon tts");
+    assert.ok(sql.includes(`when v_plan = 'free' and p_kind = 'translate' then ${DAILY_LIMITS.free.translate} `), "free translate");
+    assert.ok(sql.includes(`when v_plan = 'free' and p_kind = 'tts' then case when p_tts_limit_override > 0 then p_tts_limit_override else ${DAILY_LIMITS.free.tts} end`), "free tts");
   });
 });
 
@@ -65,15 +84,15 @@ describe("override=20 applies to tts for anon/free only", () => {
   });
 
   test("translate limits are unchanged even though tts is overridden", () => {
-    assert.equal(dailyLimitFor("anon", "translate", env), 4);
+    assert.equal(dailyLimitFor("anon", "translate", env), 10);
     assert.equal(dailyLimitFor("free", "translate", env), 10);
-    assert.equal(DAILY_LIMITS.anon.translate, 4);
+    assert.equal(DAILY_LIMITS.anon.translate, 10);
     assert.equal(DAILY_LIMITS.free.translate, 10);
   });
 
   test("real process.env is untouched by passing an explicit env object", () => {
     assert.equal(process.env.USAGE_TTS_DAILY_LIMIT_OVERRIDE, undefined);
-    assert.equal(dailyLimitFor("anon", "tts"), 2);
+    assert.equal(dailyLimitFor("anon", "tts"), 5);
   });
 });
 
@@ -110,7 +129,7 @@ describe("invalid override falls back safely", () => {
     test(`"${label}" (${JSON.stringify(value)}) is ignored`, () => {
       const env = value === undefined ? {} : { USAGE_TTS_DAILY_LIMIT_OVERRIDE: value };
       assert.equal(ttsDailyLimitOverride(env), null);
-      assert.equal(dailyLimitFor("anon", "tts", env), 2);
+      assert.equal(dailyLimitFor("anon", "tts", env), 5);
       assert.equal(dailyLimitFor("free", "tts", env), 5);
     });
   }
@@ -244,7 +263,7 @@ describe("limits per caller: owner / free / Pro / anonymous", () => {
   const PROD = { VERCEL_ENV: "production" };
   const free: UsageState = { plan: "free", kind: "translate", used: 10, limit: 10, remaining: 0, ok: false, metered: true };
   const freeTts: UsageState = { ...free, kind: "tts", used: 5, limit: 5 };
-  const anon: UsageState = { plan: "anon", kind: "translate", used: 4, limit: 4, remaining: 0, ok: false, metered: true };
+  const anon: UsageState = { plan: "anon", kind: "translate", used: 10, limit: 10, remaining: 0, ok: false, metered: true };
   const pro: UsageState = { plan: "pro", kind: "translate", used: 500, limit: 1_000_000, remaining: 999_500, ok: true, metered: true };
 
   test("owner (signed-in free account) is unlimited for translate and tts, usage still counted", () => {
@@ -271,7 +290,7 @@ describe("limits per caller: owner / free / Pro / anonymous", () => {
     assert.deepEqual(applyUsageBypass(anon, false, { ...PROD, USAGE_LIMITS_DISABLED: "true" }), anon);
   });
 
-  test("end to end (no DB, fail-open path): production anon gets 4/day, not unlimited", async (t) => {
+  test("end to end (no DB, fail-open path): production anon gets 10/day, not unlimited", async (t) => {
     const keys = ["VERCEL_ENV", "USAGE_LIMITS_DISABLED", "OWNER_EMAILS", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"];
     const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
     t.after(() => {

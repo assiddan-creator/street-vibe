@@ -79,9 +79,10 @@ begin
     when v_plan = 'free' and p_kind = 'translate' then 10
     when v_plan = 'free' and p_kind = 'tts'       then
       case when p_tts_limit_override > 0 then p_tts_limit_override else 5 end
-    when v_plan = 'anon' and p_kind = 'translate' then 4
+    -- Anonymous visitors get the same free allowance as signed-in free users.
+    when v_plan = 'anon' and p_kind = 'translate' then 10
     when v_plan = 'anon' and p_kind = 'tts'       then
-      case when p_tts_limit_override > 0 then p_tts_limit_override else 2 end
+      case when p_tts_limit_override > 0 then p_tts_limit_override else 5 end
     else 4
   end;
 
@@ -135,5 +136,5 @@ $$;
 
 -- Allow the service role to execute the helpers (RLS is bypassed for it anyway,
 -- but functions still need execute rights).
-grant execute on function public.consume_usage(text, text, text, date) to service_role;
+grant execute on function public.consume_usage(text, text, text, date, integer) to service_role;
 grant execute on function public.peek_usage(text, text, date) to service_role;
