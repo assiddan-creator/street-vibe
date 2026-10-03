@@ -11,7 +11,10 @@ export type ResultLabels = {
 };
 
 type TranslationResultCardProps = {
+  /** Readable flag color for the translation (palette primary). */
   accent: string;
+  /** Border / glow / highlight flag color (palette tertiary). */
+  glow: string;
   originalText: string;
   translatedText: string;
   dictionaryPills: string[];
@@ -26,6 +29,7 @@ type TranslationResultCardProps = {
 
 export function TranslationResultCard({
   accent,
+  glow,
   originalText,
   translatedText,
   dictionaryPills,
@@ -100,7 +104,7 @@ export function TranslationResultCard({
 
           <section
             className="min-w-0 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4 shadow-none backdrop-blur-xl"
-            style={{ boxShadow: `inset 0 1px 0 0 ${accent}18` }}
+            style={{ boxShadow: `inset 0 1px 0 0 ${glow}30` }}
           >
             <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">{labels.translation}</p>
             <div className="min-h-[3rem] min-w-0">
@@ -142,7 +146,7 @@ export function TranslationResultCard({
             key={`${pill}-${i}`}
             className="whitespace-pre-wrap break-words rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[13px] font-medium leading-tight shadow-none backdrop-blur-md transition-all duration-300"
             style={{
-              borderColor: `${accent}35`,
+              borderColor: `${glow}55`,
               color: accent,
             }}
           >

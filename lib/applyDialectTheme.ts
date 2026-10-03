@@ -1,4 +1,4 @@
-import type { CityThemeTokens } from "@/lib/themeConfig";
+import type { FlagPalette } from "@/lib/themeConfig";
 
 /** Convert #RRGGBB to space-separated R G B for Tailwind alpha modifiers. */
 function hexToRgbChannels(hex: string): string {
@@ -11,14 +11,31 @@ function hexToRgbChannels(hex: string): string {
   return `${r} ${g} ${b}`;
 }
 
+/** CSS custom properties for a flag palette (role tokens + legacy aliases). */
+export function dialectThemeCssVars(tokens: FlagPalette): Record<string, string> {
+  return {
+    "--theme-primary": tokens.primary,
+    "--theme-secondary": tokens.secondary,
+    "--theme-on-secondary": tokens.onSecondary,
+    "--theme-tertiary": tokens.tertiary,
+    "--theme-primary-rgb": hexToRgbChannels(tokens.primary),
+    "--theme-secondary-rgb": hexToRgbChannels(tokens.secondary),
+    "--theme-tertiary-rgb": hexToRgbChannels(tokens.tertiary),
+    // Legacy names: glow + borders = tertiary, buttons = secondary, readable accent = primary.
+    "--theme-glow": tokens.tertiary,
+    "--theme-button": tokens.secondary,
+    "--theme-button-border": tokens.tertiary,
+    "--theme-button-rgb": hexToRgbChannels(tokens.secondary),
+    "--theme-button-border-rgb": hexToRgbChannels(tokens.tertiary),
+    "--accent": tokens.primary,
+  };
+}
+
 /** Push dialect tokens to :root for Tailwind CSS variables and legacy --accent. */
-export function applyDialectThemeToDocument(tokens: CityThemeTokens): void {
+export function applyDialectThemeToDocument(tokens: FlagPalette): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  root.style.setProperty("--theme-glow", tokens.glow);
-  root.style.setProperty("--theme-button", tokens.button);
-  root.style.setProperty("--theme-button-border", tokens.buttonBorder);
-  root.style.setProperty("--theme-button-rgb", hexToRgbChannels(tokens.button));
-  root.style.setProperty("--theme-button-border-rgb", hexToRgbChannels(tokens.buttonBorder));
-  root.style.setProperty("--accent", tokens.accent);
+  for (const [name, value] of Object.entries(dialectThemeCssVars(tokens))) {
+    root.style.setProperty(name, value);
+  }
 }

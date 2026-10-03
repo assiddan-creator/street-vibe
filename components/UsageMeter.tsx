@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SignInButton } from "@clerk/nextjs";
+import type { FlagPalette } from "@/lib/themeConfig";
 
 export type PublicUsage = {
   plan: "anon" | "free" | "pro";
@@ -60,12 +61,13 @@ async function openPortal(): Promise<string | null> {
  */
 export function UsageMeter({
   usage,
-  accent,
+  palette,
   upgradeAvailable = false,
   annualAvailable = false,
 }: {
   usage: PublicUsage | null;
-  accent: string;
+  /** Active flag palette roles (lib/themeConfig.ts). */
+  palette: Pick<FlagPalette, "primary" | "secondary" | "onSecondary" | "tertiary">;
   upgradeAvailable?: boolean;
   annualAvailable?: boolean;
 }) {
@@ -124,7 +126,7 @@ export function UsageMeter({
               onClick={run(startCheckout("month"))}
               disabled={busy}
               className="font-semibold underline underline-offset-2 transition-colors hover:text-white/80 disabled:opacity-50"
-              style={{ color: accent }}
+              style={{ color: palette.primary }}
             >
               Go Pro
             </button>
@@ -137,7 +139,7 @@ export function UsageMeter({
   return (
     <div
       className="mb-3 flex flex-col items-center gap-1.5 rounded-xl border px-3 py-2.5 text-center"
-      style={{ borderColor: `${accent}33`, backgroundColor: `${accent}12` }}
+      style={{ borderColor: `${palette.tertiary}55`, backgroundColor: `${palette.tertiary}12` }}
     >
       <span className="text-[12px] font-semibold text-white/80">
         You&apos;ve used today&apos;s free translations.
@@ -150,7 +152,7 @@ export function UsageMeter({
             onClick={run(startCheckout("month"))}
             disabled={busy}
             className="rounded-full px-4 py-2 text-[12px] font-bold transition-transform active:scale-[0.97] disabled:opacity-60"
-            style={{ backgroundColor: accent, color: "#0b0b0c" }}
+            style={{ backgroundColor: palette.secondary, color: palette.onSecondary }}
           >
             {busy ? "One sec…" : `Upgrade to Pro${priceLabel ? ` — ${priceLabel}` : ""}`}
           </button>
@@ -160,7 +162,7 @@ export function UsageMeter({
               onClick={run(startCheckout("year"))}
               disabled={busy}
               className="text-[11px] underline underline-offset-2 transition-colors hover:text-white/80 disabled:opacity-50"
-              style={{ color: accent }}
+              style={{ color: palette.primary }}
             >
               {annualPriceLabel ? `or ${annualPriceLabel}` : "or pay yearly"}
             </button>
@@ -171,7 +173,7 @@ export function UsageMeter({
           <button
             type="button"
             className="rounded-full px-4 py-2 text-[12px] font-bold transition-transform active:scale-[0.97]"
-            style={{ backgroundColor: accent, color: "#0b0b0c" }}
+            style={{ backgroundColor: palette.secondary, color: palette.onSecondary }}
           >
             Sign in for more
           </button>

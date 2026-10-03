@@ -7,7 +7,10 @@ import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
 type HistoryVaultSheetProps = {
   open: boolean;
   onClose: () => void;
+  /** Readable flag color for translated text (palette primary). */
   accent: string;
+  /** Border / glow flag color (palette tertiary). */
+  glow: string;
   entries: HistoryVaultEntry[];
   onClear: () => void;
   onCopySlang: (slang: string) => void | Promise<void>;
@@ -31,6 +34,7 @@ export function HistoryVaultSheet({
   open,
   onClose,
   accent,
+  glow,
   entries,
   onClear,
   onCopySlang,
@@ -70,7 +74,7 @@ export function HistoryVaultSheet({
       <div
         className="pointer-events-auto relative z-10 mx-auto flex w-full max-w-[min(100%,390px)] flex-col rounded-t-[1.75rem] border border-white/10 border-b-0 bg-[#07070c]/80 backdrop-blur-2xl max-h-[min(88vh,640px)] shadow-[0_-20px_60px_rgba(0,0,0,0.55)]"
         style={{
-          boxShadow: `0 -24px 64px rgba(0,0,0,0.5), inset 0 1px 0 ${accent}18`,
+          boxShadow: `0 -24px 64px rgba(0,0,0,0.5), inset 0 1px 0 ${glow}18`,
         }}
         role="dialog"
         aria-modal="true"
@@ -101,7 +105,7 @@ export function HistoryVaultSheet({
                   <article
                     className="rounded-2xl border border-white/[0.06] bg-white/[0.04] p-3.5 shadow-none backdrop-blur-xl transition-[border-color,box-shadow] duration-300"
                     style={{
-                      boxShadow: `inset 0 1px 0 ${accent}12`,
+                      boxShadow: `inset 0 1px 0 ${glow}12`,
                     }}
                   >
                     <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] uppercase tracking-wider text-white/50">
@@ -124,7 +128,7 @@ export function HistoryVaultSheet({
                         type="button"
                         onClick={() => void onCopySlang(e.translatedSlang)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.05] py-2 text-[13px] font-semibold text-white/85 transition-all hover:bg-white/[0.09] active:scale-[0.98]"
-                        style={{ borderColor: `${accent}30` }}
+                        style={{ borderColor: `${glow}30` }}
                       >
                         <MaterialSymbol name="content_copy" className="text-[15px] opacity-80" />
                         Copy
@@ -133,7 +137,7 @@ export function HistoryVaultSheet({
                         type="button"
                         onClick={() => onRestore(e)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.05] py-2 text-[13px] font-semibold text-white/85 transition-all hover:bg-white/[0.09] active:scale-[0.98]"
-                        style={{ borderColor: `${accent}40`, color: accent }}
+                        style={{ borderColor: `${glow}55`, color: accent }}
                       >
                         <MaterialSymbol name="undo" className="text-[15px] opacity-90" />
                         Restore

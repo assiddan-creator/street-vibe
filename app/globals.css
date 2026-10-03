@@ -5,12 +5,21 @@
 :root {
   --background: #0a0a0a;
   --foreground: #f5f5f5;
-  --theme-glow: #a8ff3e;
-  --theme-button: #22c55e;
-  --theme-button-border: #15803d;
-  --theme-button-rgb: 34 197 94;
-  --theme-button-border-rgb: 21 128 61;
-  --accent: #4ade80;
+  /* Pre-hydration defaults = the default dialect's flag palette (Jamaica, lib/themeConfig.ts).
+     CityThemeProvider overwrites these per city. */
+  --theme-primary: #009b3a;
+  --theme-secondary: #fed100;
+  --theme-on-secondary: #000000;
+  --theme-tertiary: #009b3a;
+  --theme-primary-rgb: 0 155 58;
+  --theme-secondary-rgb: 254 209 0;
+  --theme-tertiary-rgb: 0 155 58;
+  --theme-glow: #009b3a;
+  --theme-button: #fed100;
+  --theme-button-border: #009b3a;
+  --theme-button-rgb: 254 209 0;
+  --theme-button-border-rgb: 0 155 58;
+  --accent: #009b3a;
 }
 
 body {
@@ -29,7 +38,7 @@ body {
      tracks the per-dialect theme. Pointer clicks are unaffected. Elements that
      already define their own focus treatment keep it. */
   :focus-visible {
-    outline: 2px solid var(--accent, #4ade80);
+    outline: 2px solid var(--accent, #009b3a);
     outline-offset: 2px;
   }
 }

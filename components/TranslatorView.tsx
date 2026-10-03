@@ -558,7 +558,8 @@ export function TranslatorView() {
         translated: translatedText.trim(),
         city: resultTheme.city,
         flag: resultTheme.flag,
-        accent: resultTheme.accent,
+        accent: resultTheme.primary,
+        glow: resultTheme.tertiary,
       });
       if (result === "downloaded") setToast("Image saved — ready to post");
     } catch {
@@ -730,13 +731,14 @@ export function TranslatorView() {
 
   return (
     <div className="relative w-full">
-      <AmbientAccentGlows accent={theme.accent} />
+      <AmbientAccentGlows accent={theme.tertiary} />
       <div className="relative z-10 w-full">
-      <Toast message={toast} accent={theme.accent} />
+      <Toast message={toast} accent={theme.tertiary} />
       <HistoryVaultSheet
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
-        accent={theme.accent}
+        accent={theme.primary}
+        glow={theme.tertiary}
         entries={historyEntries}
         onClear={handleClearHistoryVault}
         onCopySlang={copySlangFromHistory}
@@ -780,9 +782,9 @@ export function TranslatorView() {
           >
             <MaterialSymbol name="history" className="text-[20px]" />
           </button>
-          <GraffitiLogo accent={theme.accent} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
+          <GraffitiLogo accent={theme.primary} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
           <div className="absolute right-2 top-1/2 -translate-y-1/2">
-            <AuthControl accent={theme.accent} />
+            <AuthControl accent={theme.tertiary} />
           </div>
         </header>
 
@@ -804,9 +806,9 @@ export function TranslatorView() {
                 style={
                   on
                     ? {
-                        color: theme.accent,
-                        backgroundColor: `${theme.accent}24`,
-                        boxShadow: `inset 0 1px 0 ${theme.accent}44`,
+                        color: theme.primary,
+                        backgroundColor: `${theme.primary}24`,
+                        boxShadow: `inset 0 1px 0 ${theme.primary}44`,
                       }
                     : undefined
                 }
@@ -825,7 +827,7 @@ export function TranslatorView() {
 
         <UsageMeter
           usage={usage}
-          accent={theme.accent}
+          palette={theme}
           upgradeAvailable={upgradeAvailable}
           annualAvailable={annualAvailable}
         />
@@ -840,7 +842,7 @@ export function TranslatorView() {
           {isIdle ? (
             <div
               className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
-              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.accent, "10")}` }}
+              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.tertiary, "10")}` }}
             >
             <select
               id="output-lang"
@@ -877,7 +879,7 @@ export function TranslatorView() {
             </select>
             </div>
           ) : (
-            <div style={{ "--accent": theme.accent } as CSSProperties}>
+            <div style={{ "--accent": theme.primary } as CSSProperties}>
               <select
                 id="output-lang"
                 value={outputLang}
@@ -915,7 +917,7 @@ export function TranslatorView() {
           )}
         </div>
 
-        <div className="w-full" style={{ "--accent": theme.accent } as CSSProperties}>
+        <div className="w-full" style={{ "--accent": theme.primary } as CSSProperties}>
           <textarea
             ref={inputRef}
             rows={1}
@@ -950,7 +952,7 @@ export function TranslatorView() {
                     inputRef.current?.focus();
                   }}
                   className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[12px] text-white/60 transition-colors hover:border-white/20 hover:text-white/85"
-                  style={{ borderColor: `${theme.accent}22` }}
+                  style={{ borderColor: `${theme.tertiary}22` }}
                 >
                   {phrase}
                 </button>
@@ -997,9 +999,9 @@ export function TranslatorView() {
                     style={
                       on
                         ? {
-                            color: theme.accent,
-                            backgroundColor: `${theme.accent}24`,
-                            boxShadow: `0 0 24px -8px ${theme.accent}aa, inset 0 1px 0 ${theme.accent}44`,
+                            color: theme.primary,
+                            backgroundColor: `${theme.primary}24`,
+                            boxShadow: `0 0 24px -8px ${theme.tertiary}aa, inset 0 1px 0 ${theme.primary}44`,
                           }
                         : undefined
                     }
@@ -1024,11 +1026,12 @@ export function TranslatorView() {
               style={
                 isListening
                   ? {
-                      background: `linear-gradient(145deg, ${theme.accent}ee, ${theme.accent}88)`,
-                      boxShadow: `0 8px 32px ${theme.accent}77, 0 0 48px ${theme.accent}55`,
+                      background: `linear-gradient(145deg, ${theme.secondary}, ${theme.secondary}cc)`,
+                      color: theme.onSecondary,
+                      boxShadow: `0 8px 32px ${theme.tertiary}77, 0 0 48px ${theme.tertiary}55`,
                     }
                   : {
-                      boxShadow: `0 0 0 1px ${theme.accent}33, 0 0 36px -8px ${theme.accent}99, 0 8px 24px rgba(0,0,0,0.5)`,
+                      boxShadow: `0 0 0 1px ${theme.tertiary}33, 0 0 36px -8px ${theme.tertiary}99, 0 8px 24px rgba(0,0,0,0.5)`,
                     }
               }
             >
@@ -1040,7 +1043,7 @@ export function TranslatorView() {
                   </span>
                 </>
               ) : (
-                <MaterialSymbol name={isListening ? "stop" : "mic"} className={`text-[26px] ${isListening ? "text-black/90" : "text-white"}`} />
+                <MaterialSymbol name={isListening ? "stop" : "mic"} className={`text-[26px] ${isListening ? "" : "text-white"}`} />
               )}
             </button>
 
@@ -1048,29 +1051,17 @@ export function TranslatorView() {
               type="button"
               onClick={handleFlipIt}
               disabled={loading || !inputDisplayValue.trim()}
-              className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3.5 font-bold text-white shadow-none backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
+              className="relative flex-1 overflow-hidden rounded-2xl border py-3.5 font-bold shadow-none transition-all duration-300 hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
               style={{
                 fontFamily: "'Permanent Marker', cursive",
                 fontSize: "1.05rem",
-                borderColor: `${theme.accent}30`,
-                boxShadow: `0 0 0 1px ${theme.accent}20, inset 0 1px 0 ${theme.accent}18`,
+                backgroundColor: theme.secondary,
+                color: theme.onSecondary,
+                borderColor: theme.tertiary,
+                boxShadow: `0 0 24px -6px ${theme.tertiary}aa`,
               }}
             >
-              {cityTheme.bg?.wide ? (
-                <Image
-                  src={cityTheme.bg.wide}
-                  alt=""
-                  fill
-                  sizes="(max-width: 768px) 60vw, 480px"
-                  className="object-cover opacity-75"
-                  draggable={false}
-                />
-              ) : null}
-              <div
-                className="absolute inset-0"
-                style={{ background: `linear-gradient(135deg, ${theme.accent}28 0%, rgba(0,0,0,0.55) 100%)` }}
-              />
-              <span className="relative z-10 flex w-full justify-center drop-shadow-lg">
+              <span className="relative z-10 flex w-full justify-center">
                 {loading ? (
                   <FlipButtonSkeleton />
                 ) : appMode === "reply" ? (
@@ -1090,7 +1081,7 @@ export function TranslatorView() {
               onClick={handleClear}
               aria-label="Clear"
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white/75 shadow-none backdrop-blur-xl transition-all duration-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white active:scale-[0.97]"
-              style={{ borderColor: `${theme.accent}35` }}
+              style={{ borderColor: `${theme.tertiary}35` }}
             >
               <svg className="h-[20px] w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path
@@ -1109,7 +1100,7 @@ export function TranslatorView() {
             </p>
           ) : null}
           {isListening ? (
-            <p className="-mt-2 text-center text-[13px]" style={{ color: theme.accent }}>
+            <p className="-mt-2 text-center text-[13px]" style={{ color: theme.primary }}>
               listening… tap the mic to stop
             </p>
           ) : null}
@@ -1133,7 +1124,7 @@ export function TranslatorView() {
           {isIdle ? (
             <div
               className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
-              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.accent, "10")}` }}
+              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.tertiary, "10")}` }}
             >
             <select
               id="input-lang"
@@ -1164,7 +1155,7 @@ export function TranslatorView() {
             </select>
             </div>
           ) : (
-            <div style={{ "--accent": theme.accent } as CSSProperties}>
+            <div style={{ "--accent": theme.primary } as CSSProperties}>
               <select
                 id="input-lang"
                 value={inputLanguage}
@@ -1197,7 +1188,7 @@ export function TranslatorView() {
         </div>
         <div className="flex w-full justify-center">
           <VoiceGenderSegment
-            accent={theme.accent}
+            accent={theme.primary}
             idle={isIdle}
             value={ttsGender}
             onChange={(value) => {
@@ -1256,9 +1247,9 @@ export function TranslatorView() {
                       style={
                         on
                           ? {
-                              color: theme.accent,
-                              backgroundColor: `${theme.accent}24`,
-                              boxShadow: `0 0 24px -8px ${theme.accent}aa, inset 0 1px 0 ${theme.accent}44`,
+                              color: theme.primary,
+                              backgroundColor: `${theme.primary}24`,
+                              boxShadow: `0 0 24px -8px ${theme.tertiary}aa, inset 0 1px 0 ${theme.primary}44`,
                             }
                           : undefined
                       }
@@ -1272,7 +1263,7 @@ export function TranslatorView() {
             </div>
           ) : null}
         <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
-          <LearnsYouControls accent={theme.accent} idle={isIdle} belowHero onHistoryClick={openHistory} />
+          <LearnsYouControls accent={theme.tertiary} idle={isIdle} belowHero onHistoryClick={openHistory} />
         </div>
             </div>
           </details>
@@ -1311,10 +1302,10 @@ export function TranslatorView() {
                       <div
                         key={r.dialect}
                         className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5"
-                        style={{ borderColor: `${resolveTheme(r.dialect).accent}22` }}
+                        style={{ borderColor: `${resolveTheme(r.dialect).tertiary}22` }}
                         aria-busy={r.status === "pending"}
                       >
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: resolveTheme(r.dialect).accent }}>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: resolveTheme(r.dialect).primary }}>
                           {resolveTheme(r.dialect).flag} {resolveTheme(r.dialect).city}
                         </p>
                         {r.status === "pending" ? (
@@ -1373,11 +1364,11 @@ export function TranslatorView() {
                             type="button"
                             onClick={() => void copyReply(r)}
                             className="group flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-right transition-colors hover:border-white/20 hover:bg-white/[0.07]"
-                            style={{ borderColor: `${theme.accent}22` }}
+                            style={{ borderColor: `${theme.tertiary}22` }}
                           >
                             <span
                               className="flex-1 whitespace-pre-wrap break-words text-[15px] leading-snug"
-                              style={{ color: theme.accent }}
+                              style={{ color: theme.primary }}
                               dir="auto"
                             >
                               {r}
@@ -1470,11 +1461,11 @@ export function TranslatorView() {
                             type="button"
                             onClick={() => void copyReply(checkResult.fixed)}
                             className="group flex w-full items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.07]"
-                            style={{ borderColor: `${theme.accent}22` }}
+                            style={{ borderColor: `${theme.tertiary}22` }}
                           >
                             <span
                               className="flex-1 whitespace-pre-wrap break-words text-[15px] leading-snug"
-                              style={{ color: theme.accent }}
+                              style={{ color: theme.primary }}
                               dir="auto"
                             >
                               {checkResult.fixed}
@@ -1507,7 +1498,7 @@ export function TranslatorView() {
                                   className="flex items-start gap-2 text-[13px] leading-snug text-white/70"
                                   dir="auto"
                                 >
-                                  <span style={{ color: theme.accent }}>•</span>
+                                  <span style={{ color: theme.primary }}>•</span>
                                   <span className="flex-1">{t}</span>
                                 </li>
                               ))}
@@ -1523,7 +1514,8 @@ export function TranslatorView() {
               ) : (
               <>
               <TranslationResultCard
-                accent={resultTheme.accent}
+                accent={resultTheme.primary}
+                glow={resultTheme.tertiary}
                 originalText={originalText}
                 translatedText={translatedText}
                 dictionaryPills={dictionaryPills}
@@ -1543,12 +1535,13 @@ export function TranslatorView() {
                           onClick={() => void handlePlayTranslation()}
                           disabled={ttsLoading || audioPreparing}
                           aria-label={ttsPlaying ? "Stop" : ttsError ? "Retry voice" : "Read aloud"}
-                          className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3 text-sm font-bold text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.99] disabled:opacity-45"
+                          className="relative flex-1 overflow-hidden rounded-2xl border py-3 text-sm font-bold shadow-none transition-all duration-300 hover:brightness-110 active:scale-[0.99] disabled:opacity-45"
                           style={{
-                            borderColor: `${theme.accent}35`,
-                            color: theme.accent,
+                            backgroundColor: theme.secondary,
+                            borderColor: theme.tertiary,
+                            color: theme.onSecondary,
                             fontFamily: "'Permanent Marker', cursive",
-                            boxShadow: `inset 0 1px 0 ${theme.accent}22`,
+                            boxShadow: `0 0 20px -8px ${theme.tertiary}aa`,
                           }}
                         >
                           {ttsLoading ? (
@@ -1565,7 +1558,7 @@ export function TranslatorView() {
                           aria-label="Copy"
                           title="Copy"
                           className="flex w-14 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.97]"
-                          style={{ borderColor: `${theme.accent}35`, color: theme.accent }}
+                          style={{ borderColor: `${theme.tertiary}55`, color: theme.primary }}
                         >
                           <MaterialSymbol name="content_copy" className="text-[20px]" />
                         </button>
@@ -1575,7 +1568,7 @@ export function TranslatorView() {
                           disabled={sharing}
                           aria-label="Share as image"
                           className="flex w-14 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.97] disabled:opacity-45"
-                          style={{ borderColor: `${theme.accent}35`, color: theme.accent }}
+                          style={{ borderColor: `${theme.tertiary}55`, color: theme.primary }}
                         >
                           {sharing ? (
                             <span className="text-[13px]">…</span>
