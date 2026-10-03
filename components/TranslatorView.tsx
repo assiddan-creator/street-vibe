@@ -527,6 +527,9 @@ export function TranslatorView() {
     if (next === appMode) return;
     comparisonRef.current?.clear();
     setAppMode(next);
+    // Start each mode with an empty box so old text doesn't mix with new input.
+    setInputText("");
+    setOriginalText("");
     setReplies([]);
     setCompareResults([]);
     setCheckResult(null);
