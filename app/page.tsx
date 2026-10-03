@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { PublicShell } from "@/components/marketing/PublicShell";
+import { TranslatorView } from "@/components/TranslatorView";
+import { CinematicPortal } from "@/components/portal/CinematicPortal";
 
 const ACCENT = "#4ade80";
 
@@ -66,6 +71,28 @@ const FAQ: { q: string; a: string }[] = [
 ];
 
 export default function Landing() {
+  // The landing is a cinematic gateway: the portal owns the first paint, then a
+  // step-through reveals the translator workspace. "Skip intro" exits into the
+  // original marketing page instead, so nothing is lost.
+  const [inPortalView, setInPortalView] = useState(true);
+  const [showTranslator, setShowTranslator] = useState(false);
+
+  if (inPortalView) {
+    return (
+      <CinematicPortal
+        onEnter={() => {
+          setShowTranslator(true);
+          setInPortalView(false);
+        }}
+        onSkip={() => setInPortalView(false)}
+      />
+    );
+  }
+
+  if (showTranslator) {
+    return <TranslatorView />;
+  }
+
   return (
     <PublicShell>
       {/* Hero */}
