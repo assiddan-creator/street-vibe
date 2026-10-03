@@ -8,6 +8,7 @@ import {
 } from "@/lib/streetVibeTheme";
 import { isKnownPremiumDialect, usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import { CHAT_AUTHENTICITY_RULE, SLANG_LOCK_RULE, SPOKEN_STYLE_RULE, STANDARD_PUNCTUATION_RULE } from "@/lib/spokenStyleRules";
+import { isValidSpeechText, speechTextPromptBlock, splitSpeechText } from "@/lib/speechText";
 import {
   containsLatinLeak,
   countLatinTokens,
@@ -522,7 +523,8 @@ RULE PROFILE above applies to tone/word choice only; it must not change this out
       `${SLANG_LOCK_RULE}\n\n` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +
-      `${formattingRule}`,
+      `${formattingRule}` +
+      `${speechTextPromptBlock(dialectId)}`,
     slangRequested: true,
   };
 }
@@ -948,7 +950,8 @@ export async function POST(req: NextRequest) {
       creative: slangRequested,
       maxOutputTokens: 1024,
     });
-    let fullText = first.text;
+    // Speech-only line (niqqud / tashkeel / kana / ё hints) comes after the dictionary; keep it out of the display text.
+    let { body: fullText, speech: speechRaw, addressee } = splitSpeechText(first.text);
 
     if (!fullText) {
       console.error("[translate] Empty translation after primary Gemini call", {
@@ -1006,7 +1009,10 @@ export async function POST(req: NextRequest) {
           console.warn("[translate][Israeli Street] Retry returned empty; keeping sanitized first-pass translation");
           fullText = combined;
         } else {
-          const { translated: t2, dictRaw: d2 } = splitTranslationAndDictionary(second.text);
+          const secondSplit = splitSpeechText(second.text);
+          speechRaw = secondSplit.speech;
+          addressee = secondSplit.addressee;
+          const { translated: t2, dictRaw: d2 } = splitTranslationAndDictionary(secondSplit.body);
           const t2s = sanitizeIsraeliStreetOutput(t2);
           if (containsLatinLeak(t2s)) {
             console.warn("[translate][Israeli Street] Latin leakage remains after retry", {
@@ -1036,6 +1042,19 @@ export async function POST(req: NextRequest) {
     }
     const translatedMain = cleanedMain;
 
+    // Speech line: same cleanups as the display line, then it must prove it is the same line
+    // (marks / ё / kana readings only) — otherwise TTS just reads the display line.
+    let speechText: string | undefined;
+    if (speechRaw) {
+      let sp = cleanMainTranslationLine(splitTranslationAndDictionary(speechRaw).translated);
+      if (dialectId === "Israeli Street") sp = sanitizeIsraeliStreetOutput(sp);
+      if (sp !== translatedMain && isValidSpeechText(translatedMain, sp, dialectId, addressee)) {
+        speechText = sp;
+      } else if (sp !== translatedMain) {
+        console.info("[translate] speechText rejected (not the same line, or marks contradict the addressee)", { dialect: dialectId, addressee });
+      }
+    }
+
     // Read-aloud phonetics are fetched separately by the client (mode: "transliterate")
     // right after this response lands, so a slow second model call can't delay the result.
     return NextResponse.json(
@@ -1043,6 +1062,7 @@ export async function POST(req: NextRequest) {
         fullText,
         sourceText: rawInput,
         translatedText: translatedMain,
+        ...(speechText ? { speechText } : {}),
         engine: first.engine,
         usage: usagePublic,
       },

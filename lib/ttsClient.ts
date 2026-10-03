@@ -102,7 +102,11 @@ export async function fetchTtsAudioUrl(
   engine: TtsClientEngine = "minimax",
   context?: string,
   implicitExtras?: ImplicitTranslateExtras,
-  options?: { explicitBasicVoice?: boolean }
+  options?: {
+    explicitBasicVoice?: boolean;
+    /** Speech version from /api/translate (niqqud / tashkeel / kana / ё hints); the server re-validates it. */
+    speechText?: string | null;
+  }
 ): Promise<string | null> {
   const learnsYou = getLearnsYouEnabled();
   const implicitExtrasForLog = implicitExtras ?? getImplicitSoftExtrasForRequests(learnsYou, false, undefined);
@@ -192,6 +196,7 @@ export async function fetchTtsAudioUrl(
     tuning,
     ttsGender,
     context: vibeKey,
+    ...(options?.speechText ? { speechText: options.speechText } : {}),
     ...(implicitExtras?.personalSlangProfile
       ? { personalSlangProfile: implicitExtras.personalSlangProfile }
       : {}),

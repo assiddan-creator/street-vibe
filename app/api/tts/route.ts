@@ -39,6 +39,7 @@ import { resolveElevenLabsVoiceSelection, synthesizeElevenLabs } from "@/lib/ele
 import { getVoicePreset } from "@/lib/elevenLabsVoicePresets";
 import { addSpeechPunctuation } from "@/lib/speechPunctuation";
 import { prepareSpeechText } from "@/lib/prepareSpeechText";
+import { speechTextOrDisplay } from "@/lib/speechText";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
 import { checkAndConsumeUsage, publicUsage } from "@/lib/usage";
 
@@ -229,7 +230,15 @@ export async function POST(req: NextRequest) {
   // Keep the configured voice. A failure must not silently change providers.
   if (resolvedEngine !== "google" && process.env.ELEVENLABS_API_KEY) {
     const elGender = parseTtsGender(body.ttsGender);
-    let elText = text.trim();
+    // Speech version from /api/translate (niqqud / tashkeel / kana / ё hints), re-validated here:
+    // it is used only when it is provably the same line as the displayed text.
+    let elText = devRawTts
+      ? text.trim()
+      : speechTextOrDisplay(
+          text.trim(),
+          typeof body.speechText === "string" ? body.speechText : undefined,
+          dialectKeyMm || undefined
+        );
     // First: clean the speech-only copy (markdown, emoji, SSML, chat fillers, !!! / ???).
     if (!devRawTts) {
       elText = prepareSpeechText(elText, dialectKeyMm || undefined);
