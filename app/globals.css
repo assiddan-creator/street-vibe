@@ -44,6 +44,17 @@ body {
   }
 }
 
+/* Native selects draw their arrow on one side only, which pulls centered text off-center.
+   Hide it and draw our own chevron; equal side padding (!px-9) keeps the value centered. */
+.select-centered {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27rgba(255,255,255,0.6)%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 14px;
+}
+
 /* Material Symbols Outlined — ligature icons, color from currentColor */
 .material-symbols-outlined {
   font-family: "Material Symbols Outlined", sans-serif;

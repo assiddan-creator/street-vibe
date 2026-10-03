@@ -124,10 +124,10 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
           style={
             on
               ? {
-                  borderColor: `${accent}32`,
+                  borderColor: `${accent}cc`,
                   backgroundColor: `${accent}08`,
                 }
-              : { borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(0,0,0,0.18)" }
+              : { borderColor: `${accent}59`, backgroundColor: "rgba(0,0,0,0.18)" }
           }
         >
           <span

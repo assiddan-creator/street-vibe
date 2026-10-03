@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 import { CITY_THEME_BY_DIALECT_ID, FLAG_PALETTES, getCityThemeForDialect } from "../lib/themeConfig";
 import { DIALECT_THEMES, OUTPUT_PREMIUM_OPTIONS, OUTPUT_STANDARD_OPTIONS, resolveTheme } from "../lib/streetVibeTheme";
 import { dialectThemeCssVars } from "../lib/applyDialectTheme";
+import { flagOutline, visibleTertiary } from "../lib/themeUiClasses";
 
 function rgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
@@ -124,5 +125,27 @@ describe("theme plumbing", () => {
     assert.equal(t.flagColors.length, 0);
     assert.ok(contrast(t.primary, PAGE) >= AA);
     assert.ok(contrast(t.secondaryText, PAGE) >= AA);
+  });
+});
+
+describe("flag outlines", () => {
+  test("outline accent is never too dark to see as a 1px line on black", () => {
+    for (const [name, p] of Object.entries(FLAG_PALETTES)) {
+      const c = visibleTertiary(p);
+      assert.ok(luminance(c) >= 0.03, `${name}: ${c}`);
+      assert.ok(c === p.secondary || c === p.tertiary, `${name}: ${c} is not a palette role`);
+    }
+    assert.equal(visibleTertiary(FLAG_PALETTES.uk), FLAG_PALETTES.uk.secondary); // navy -> red
+    assert.equal(visibleTertiary(FLAG_PALETTES.jamaica), FLAG_PALETTES.jamaica.tertiary);
+  });
+
+  test("outline is 1px everywhere; selected only changes opacity", () => {
+    const rest = flagOutline("#C8102E");
+    const sel = flagOutline("#C8102E", true);
+    assert.equal(rest.borderWidth, 1);
+    assert.equal(sel.borderWidth, 1);
+    assert.equal(rest.borderStyle, "solid");
+    assert.notEqual(rest.borderColor, sel.borderColor);
+    assert.ok(String(rest.borderColor).startsWith("#C8102E"));
   });
 });
