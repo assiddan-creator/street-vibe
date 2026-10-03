@@ -16,6 +16,25 @@
 
 export type VoiceGender = "male" | "female";
 
+/**
+ * TTS model per city. Default for every city: eleven_v4_turbo, picked from the
+ * 2026-10 blind A/B (v3_conversational vs v4_turbo vs v4) plus a Speech-to-Text
+ * check (v4/v4_turbo kept every slang word; v3_conversational softened Rio
+ * "coé" and Cairo "بقولك"). Brooklyn stays on v3_conversational — preferred by ear.
+ *
+ * Applies to both genders (presets and the Will/Jessica fallback). Only the
+ * model changes here; voices and voice settings are untouched.
+ * `ELEVENLABS_MODEL_OVERRIDE` (see lib/elevenLabsTts.ts) beats all of this.
+ */
+export const ELEVENLABS_DEFAULT_CITY_MODEL_ID = "eleven_v4_turbo";
+export const ELEVENLABS_CITY_MODEL_EXCEPTIONS: Readonly<Record<string, string>> = {
+  "New York Brooklyn": "eleven_v3_conversational",
+};
+
+export function modelForDialect(dialect: string | undefined): string {
+  return (dialect && ELEVENLABS_CITY_MODEL_EXCEPTIONS[dialect]) || ELEVENLABS_DEFAULT_CITY_MODEL_ID;
+}
+
 export type ElevenLabsVoiceSettings = {
   stability: number;
   similarity_boost: number;
@@ -69,7 +88,7 @@ function cityLibraryVoice(
     dialect,
     gender: "male",
     voiceId,
-    modelId: "eleven_v3_conversational",
+    modelId: modelForDialect(dialect),
     languageCode,
     settings: { stability: 0.42, similarity_boost: 0.8, style: 0.28, speed: 1, use_speaker_boost: true },
     applyVibe: true,
@@ -93,10 +112,10 @@ export const ELEVENLABS_VOICE_PRESETS: Record<
       gender: "male",
       voiceId: "JNakJx0PcoBLBnZ9Rvm2",
       // Manual listening test (v2 vs v3 vs v3-conversational) found v3
-      // conversational clearly more natural for this cloned voice than the
-      // originally-approved multilingual v2. Voice ID and every other
-      // setting are unchanged from approval.
-      modelId: "eleven_v3_conversational",
+      // conversational clearly more natural than multilingual v2; the 2026-10
+      // v3c / v4_turbo / v4 blind A/B then picked v4_turbo for Kingston by ear.
+      // Voice ID and every other setting are unchanged from approval.
+      modelId: modelForDialect("Jamaican Patois"),
       settings: {
         stability: 0.5,
         similarity_boost: 0.75,
