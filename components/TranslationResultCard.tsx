@@ -3,7 +3,7 @@
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { TranslationBlockSkeleton } from "@/components/ui/Skeleton";
-import { GLASS_OUTPUT_CARD } from "@/lib/themeUiClasses";
+import { GLASS_OUTPUT_CARD, flagOutline } from "@/lib/themeUiClasses";
 
 export type ResultLabels = {
   source: string;
@@ -95,8 +95,8 @@ export function TranslationResultCard({
           <section className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.04] p-4 backdrop-blur-xl">
             <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">{labels.source}</p>
             <p
-              className={`whitespace-pre-wrap break-words text-[15px] leading-relaxed text-white/85 ${hebrewContext ? "text-right" : ""}`}
-              dir={hebrewContext ? "rtl" : "auto"}
+              className="whitespace-pre-wrap break-words text-start text-[15px] leading-relaxed text-white/85"
+              dir="auto"
             >
               {originalText.trim() || "—"}
             </p>
@@ -114,7 +114,8 @@ export function TranslationResultCard({
                 <p className="text-sm font-normal text-red-400/95">{error}</p>
               ) : translatedText.trim() ? (
                 <p
-                  className="min-w-0 whitespace-pre-wrap break-words text-2xl font-bold leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-3xl"
+                  className="min-w-0 whitespace-pre-wrap break-words text-start text-2xl font-bold leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-3xl"
+                  dir="auto"
                   style={{ color: accent }}
                 >
                   {onWordClick
@@ -144,9 +145,10 @@ export function TranslationResultCard({
         {dictionaryPills.map((pill, i) => (
           <span
             key={`${pill}-${i}`}
-            className="whitespace-pre-wrap break-words rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[13px] font-medium leading-tight shadow-none backdrop-blur-md transition-all duration-300"
+            className="whitespace-pre-wrap break-words rounded-full bg-white/5 px-3 py-1.5 text-[13px] font-medium leading-tight shadow-none backdrop-blur-md transition-all duration-300"
+            dir="auto"
             style={{
-              borderColor: `${glow}55`,
+              ...flagOutline(glow),
               color: accent,
             }}
           >

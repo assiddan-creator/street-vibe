@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { HistoryVaultEntry } from "@/lib/historyVault";
 import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
+import { flagOutline } from "@/lib/themeUiClasses";
 
 type HistoryVaultSheetProps = {
   open: boolean;
@@ -89,7 +90,8 @@ export function HistoryVaultSheet({
           <button
             type="button"
             onClick={onClear}
-            className="rounded-full border border-white/[0.06] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium uppercase tracking-widest text-white/55 transition-colors hover:border-white/10 hover:bg-white/[0.07] hover:text-white/70"
+            className="rounded-full bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium uppercase tracking-widest text-white/55 transition-colors hover:bg-white/[0.07] hover:text-white/70"
+            style={flagOutline(glow)}
           >
             Clear history
           </button>
@@ -116,19 +118,23 @@ export function HistoryVaultSheet({
                       <span>L{e.slangLevel}</span>
                       <span className="ml-auto shrink-0 text-white/40">{formatTime(e.createdAtMs)}</span>
                     </div>
-                    <p className="mb-1.5 line-clamp-2 text-[13px] leading-snug text-white/60">{e.sourceText}</p>
-                    <p className="mb-2 text-[15px] font-semibold leading-snug text-white/90" style={{ color: accent }}>
+                    <p className="mb-1.5 line-clamp-2 text-start text-[13px] leading-snug text-white/60" dir="auto">
+                      {e.sourceText}
+                    </p>
+                    <p className="mb-2 text-start text-[15px] font-semibold leading-snug text-white/90" dir="auto" style={{ color: accent }}>
                       {e.translatedSlang}
                     </p>
                     {e.nativeTransliteration?.trim() ? (
-                      <p className="mb-3 line-clamp-2 text-[13px] leading-relaxed text-white/60">{e.nativeTransliteration}</p>
+                      <p className="mb-3 line-clamp-2 text-start text-[13px] leading-relaxed text-white/60" dir="auto">
+                        {e.nativeTransliteration}
+                      </p>
                     ) : null}
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => void onCopySlang(e.translatedSlang)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.05] py-2 text-[13px] font-semibold text-white/85 transition-all hover:bg-white/[0.09] active:scale-[0.98]"
-                        style={{ borderColor: `${glow}30` }}
+                        style={flagOutline(glow)}
                       >
                         <MaterialSymbol name="content_copy" className="text-[15px] opacity-80" />
                         Copy
@@ -137,7 +143,7 @@ export function HistoryVaultSheet({
                         type="button"
                         onClick={() => onRestore(e)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.05] py-2 text-[13px] font-semibold text-white/85 transition-all hover:bg-white/[0.09] active:scale-[0.98]"
-                        style={{ borderColor: `${glow}55`, color: accent }}
+                        style={{ ...flagOutline(glow, true), color: accent }}
                       >
                         <MaterialSymbol name="undo" className="text-[15px] opacity-90" />
                         Restore

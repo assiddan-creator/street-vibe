@@ -3,6 +3,32 @@
 import type { CSSProperties } from "react";
 import type { FlagPalette } from "@/lib/themeConfig";
 
+/** Hex alpha for the thin flag outline on every control: resting vs selected / action. */
+const OUTLINE_ALPHA = "59"; // ~35%
+const OUTLINE_ALPHA_SELECTED = "cc"; // ~80%
+
+function relativeLuminance(hex: string): number {
+  const h = hex.replace("#", "");
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(h.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * `tertiary` for outlines, unless it is too dark to show as a 1px line on black
+ * (UK / France navy, Brazil blue) — then the palette's `secondary` instead.
+ */
+export function visibleTertiary(p: Pick<FlagPalette, "secondary" | "tertiary">): string {
+  return relativeLuminance(p.tertiary) < 0.03 ? p.secondary : p.tertiary;
+}
+
+/** Thin 1px flag-colored outline. Same thickness everywhere; selected is only more opaque. */
+export function flagOutline(color: string, selected = false): CSSProperties {
+  return { borderWidth: 1, borderStyle: "solid", borderColor: `${color}${selected ? OUTLINE_ALPHA_SELECTED : OUTLINE_ALPHA}` };
+}
+
 /**
  * Subtle flag-tinted button: dark glass fill, thin `secondary` border, readable `secondaryText`,
  * faint `tertiary` glow. Color is a hint, never a solid block (the flag art is the only block).
@@ -10,7 +36,7 @@ import type { FlagPalette } from "@/lib/themeConfig";
 export function subtleButtonStyle(p: Pick<FlagPalette, "secondary" | "secondaryText" | "tertiary">): CSSProperties {
   return {
     backgroundColor: "rgba(0,0,0,0.35)",
-    border: `1px solid ${p.secondary}`,
+    border: `1px solid ${p.secondary}${OUTLINE_ALPHA_SELECTED}`,
     color: p.secondaryText,
     boxShadow: `0 0 18px -10px ${p.tertiary}`,
   };

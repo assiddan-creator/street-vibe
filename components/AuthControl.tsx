@@ -1,6 +1,7 @@
 "use client";
 
 import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
+import { flagOutline } from "@/lib/themeUiClasses";
 
 const enabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -30,7 +31,7 @@ function AuthControlInner({ accent }: { accent: string }) {
           <button
             type="button"
             className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] font-semibold text-white/75 backdrop-blur-md transition-colors hover:text-white"
-            style={{ borderColor: `${accent}40` }}
+            style={flagOutline(accent)}
           >
             Sign in
           </button>

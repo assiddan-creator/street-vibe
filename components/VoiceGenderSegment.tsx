@@ -3,6 +3,7 @@
 import type { TtsVoiceGender } from "@/lib/ttsVoiceGender";
 import { TOP_HELPER_LABEL_CLASS } from "@/lib/topSectionUi";
 import { themeAccentAlpha } from "@/lib/themeAccent";
+import { flagOutline } from "@/lib/themeUiClasses";
 
 type Props = {
   /** Dialect theme accent (e.g. `resolveTheme(outputLang).accent`). */
@@ -28,8 +29,7 @@ export function VoiceGenderSegment({ accent, value, onChange, idle: _unusedIdle,
     >
       <p className={TOP_HELPER_LABEL_CLASS}>Voice</p>
       <div
-        className="mx-auto inline-flex max-w-[8.25rem] rounded-md border border-white/[0.06] bg-black/18 p-px"
-        style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(accent, "10")}` }}
+        className="mx-auto inline-flex max-w-[8.25rem] rounded-md border border-white/[0.06] bg-black/18 p-px gap-px"
       >
         {(["male", "female"] as const).map((v) => {
           const selected = value === v;
@@ -48,10 +48,11 @@ export function VoiceGenderSegment({ accent, value, onChange, idle: _unusedIdle,
               style={
                 selected
                   ? {
+                      ...flagOutline(accent, true),
                       backgroundColor: themeAccentAlpha(accent, "18"),
                       color: accent,
                     }
-                  : undefined
+                  : flagOutline(accent)
               }
             >
               {v === "male" ? "Male" : "Female"}

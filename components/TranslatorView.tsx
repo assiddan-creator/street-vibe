@@ -21,7 +21,9 @@ import {
   GLASS_INPUT,
   GLASS_SELECT,
   GLASS_SELECT_COMPACT,
+  flagOutline,
   subtleButtonStyle,
+  visibleTertiary,
 } from "@/lib/themeUiClasses";
 import { SLANG_INTENSITY_SEGMENTS, VIBE_SEGMENTS, isAudienceValue } from "@/lib/slangSegmentControls";
 import { loadLastAudience, loadLastCity, saveLastAudience, saveLastCity } from "@/lib/lastChoices";
@@ -49,7 +51,6 @@ import {
   getLearnsYouEnabled,
   recordInteractionSignal,
 } from "@/lib/implicitPreferenceEngine";
-import { themeAccentAlpha } from "@/lib/themeAccent";
 import {
   appendHistoryVaultEntry,
   clearHistoryVault,
@@ -714,6 +715,8 @@ export function TranslatorView() {
   };
 
   const cityTheme = getCityThemeForDialect(outputLang);
+  /** Outline roles: selection controls = primary, inputs = secondary, chrome = visible tertiary. */
+  const outlineAccent = visibleTertiary(theme);
   const micBall = cityTheme.micBall ?? null;
   const isActive = inputText.trim().length > 0 || originalText.trim().length > 0;
   const isIdle = !isActive;
@@ -739,7 +742,7 @@ export function TranslatorView() {
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
         accent={theme.primary}
-        glow={theme.tertiary}
+        glow={outlineAccent}
         entries={historyEntries}
         onClear={handleClearHistoryVault}
         onCopySlang={copySlangFromHistory}
@@ -780,12 +783,13 @@ export function TranslatorView() {
             aria-label="My phrases"
             title="My phrases"
             className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+            style={flagOutline(outlineAccent)}
           >
             <MaterialSymbol name="history" className="text-[20px]" />
           </button>
           <GraffitiLogo accent={theme.primary} compact={isIdle} className="w-full max-w-[min(100%,340px)]" />
           <div className="absolute right-2 top-1/2 -translate-y-1/2">
-            <AuthControl accent={theme.tertiary} />
+            <AuthControl accent={outlineAccent} />
           </div>
         </header>
 
@@ -807,11 +811,12 @@ export function TranslatorView() {
                 style={
                   on
                     ? {
+                        ...flagOutline(theme.primary, true),
                         color: theme.primary,
                         backgroundColor: `${theme.primary}24`,
                         boxShadow: `inset 0 1px 0 ${theme.primary}44`,
                       }
-                    : undefined
+                    : flagOutline(theme.primary)
                 }
               >
                 {m === "translate"
@@ -843,7 +848,7 @@ export function TranslatorView() {
           {isIdle ? (
             <div
               className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
-              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.tertiary, "10")}` }}
+              style={flagOutline(theme.secondary)}
             >
             <select
               id="output-lang"
@@ -898,6 +903,7 @@ export function TranslatorView() {
                   }
                 }}
                 className={`${GLASS_SELECT} px-3 py-2.5 text-center text-[13px] font-medium leading-snug text-white/90`}
+                style={flagOutline(theme.secondary)}
               >
                 <optgroup label="City slang" className="bg-zinc-900 text-white">
                   {OUTPUT_PREMIUM_OPTIONS.map((o) => (
@@ -940,7 +946,9 @@ export function TranslatorView() {
                     ? "Paste what you wrote — I'll check it sounds local…"
                     : "Type or say it plain…"
             }
-            className={`${GLASS_INPUT} resize-none border-white/5 bg-white/3 leading-relaxed`}
+            dir="auto"
+            className={`${GLASS_INPUT} resize-none bg-white/3 text-start leading-relaxed`}
+            style={flagOutline(theme.secondary)}
           />
           {appMode === "translate" && isIdle && !inputText.trim() && !isListening ? (
             <div className="mt-2 flex flex-wrap justify-center gap-1.5">
@@ -953,7 +961,7 @@ export function TranslatorView() {
                     inputRef.current?.focus();
                   }}
                   className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[12px] text-white/60 transition-colors hover:border-white/20 hover:text-white/85"
-                  style={{ borderColor: `${theme.tertiary}22` }}
+                  style={flagOutline(outlineAccent)}
                 >
                   {phrase}
                 </button>
@@ -1047,11 +1055,12 @@ export function TranslatorView() {
                     style={
                       on
                         ? {
+                            ...flagOutline(outlineAccent, true),
                             color: theme.primary,
                             backgroundColor: `${theme.primary}24`,
                             boxShadow: `0 0 24px -8px ${theme.tertiary}aa, inset 0 1px 0 ${theme.primary}44`,
                           }
-                        : undefined
+                        : flagOutline(outlineAccent)
                     }
                   >
                     <MaterialSymbol name={icon} className="text-[15px]" />
@@ -1128,7 +1137,7 @@ export function TranslatorView() {
             </p>
           ) : null}
 
-          <details className="group rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2 backdrop-blur-xl">
+          <details className="group rounded-2xl bg-white/[0.03] px-3 py-2 backdrop-blur-xl" style={flagOutline(outlineAccent)}>
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-1 text-[12px] font-medium text-white/60 [&::-webkit-details-marker]:hidden">
               <span className="flex items-center gap-1.5 uppercase tracking-widest">
                 <MaterialSymbol name="tune" className="text-[14px]" />
@@ -1146,7 +1155,7 @@ export function TranslatorView() {
           {isIdle ? (
             <div
               className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
-              style={{ boxShadow: `inset 0 0 0 1px ${themeAccentAlpha(theme.tertiary, "10")}` }}
+              style={flagOutline(theme.secondary)}
             >
             <select
               id="input-lang"
@@ -1198,6 +1207,7 @@ export function TranslatorView() {
                   }
                 }}
                 className={`${GLASS_SELECT_COMPACT} px-2.5 py-1.5 text-center text-[12px] font-medium leading-tight text-white/90`}
+                style={flagOutline(theme.secondary)}
               >
                 {INPUT_LANGUAGES.map((opt) => (
                   <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -1269,11 +1279,12 @@ export function TranslatorView() {
                       style={
                         on
                           ? {
+                              ...flagOutline(outlineAccent, true),
                               color: theme.primary,
                               backgroundColor: `${theme.primary}24`,
                               boxShadow: `0 0 24px -8px ${theme.tertiary}aa, inset 0 1px 0 ${theme.primary}44`,
                             }
-                          : undefined
+                          : flagOutline(outlineAccent)
                       }
                     >
                       <MaterialSymbol name={icon} className="text-[15px]" />
@@ -1285,7 +1296,7 @@ export function TranslatorView() {
             </div>
           ) : null}
         <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
-          <LearnsYouControls accent={theme.tertiary} idle={isIdle} belowHero onHistoryClick={openHistory} />
+          <LearnsYouControls accent={outlineAccent} idle={isIdle} belowHero onHistoryClick={openHistory} />
         </div>
             </div>
           </details>
@@ -1324,7 +1335,7 @@ export function TranslatorView() {
                       <div
                         key={r.dialect}
                         className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5"
-                        style={{ borderColor: `${resolveTheme(r.dialect).tertiary}22` }}
+                        style={flagOutline(visibleTertiary(resolveTheme(r.dialect)))}
                         aria-busy={r.status === "pending"}
                       >
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: resolveTheme(r.dialect).primary }}>
@@ -1349,7 +1360,7 @@ export function TranslatorView() {
                             type="button"
                             onClick={() => void copyReply(r.text)}
                             aria-label={`Copy ${resolveTheme(r.dialect).city} translation`}
-                            className="whitespace-pre-wrap break-words text-left text-[16px] leading-snug text-white/90 hover:text-white"
+                            className="whitespace-pre-wrap break-words text-start text-[16px] leading-snug text-white/90 hover:text-white"
                             dir="auto"
                           >
                             {r.text}
@@ -1385,8 +1396,8 @@ export function TranslatorView() {
                             key={`${i}-${r.slice(0, 12)}`}
                             type="button"
                             onClick={() => void copyReply(r)}
-                            className="group flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-right transition-colors hover:border-white/20 hover:bg-white/[0.07]"
-                            style={{ borderColor: `${theme.tertiary}22` }}
+                            className="group flex items-start gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5 text-start transition-colors hover:bg-white/[0.07]"
+                            style={flagOutline(outlineAccent)}
                           >
                             <span
                               className="flex-1 whitespace-pre-wrap break-words text-[15px] leading-snug"
@@ -1482,8 +1493,8 @@ export function TranslatorView() {
                           <button
                             type="button"
                             onClick={() => void copyReply(checkResult.fixed)}
-                            className="group flex w-full items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.07]"
-                            style={{ borderColor: `${theme.tertiary}22` }}
+                            className="group flex w-full items-start gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5 text-start transition-colors hover:bg-white/[0.07]"
+                            style={flagOutline(outlineAccent)}
                           >
                             <span
                               className="flex-1 whitespace-pre-wrap break-words text-[15px] leading-snug"
@@ -1537,7 +1548,7 @@ export function TranslatorView() {
               <>
               <TranslationResultCard
                 accent={resultTheme.primary}
-                glow={resultTheme.tertiary}
+                glow={visibleTertiary(resultTheme)}
                 originalText={originalText}
                 translatedText={translatedText}
                 dictionaryPills={dictionaryPills}
