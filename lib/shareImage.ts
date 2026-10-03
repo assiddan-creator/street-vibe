@@ -164,7 +164,7 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.fillText(input.city.trim(), innerX, fy);
   ctx.textAlign = "right";
-  ctx.fillText("street-vibe.vercel.app", innerX + innerW, fy);
+  ctx.fillText("getstreetvibe.com", innerX + innerW, fy);
   ctx.textAlign = "left";
 
   return await new Promise<Blob>((resolve, reject) => {

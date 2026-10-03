@@ -13,7 +13,7 @@ function siteUrl(req: NextRequest): string {
   try {
     return new URL(req.url).origin;
   } catch {
-    return "https://street-vibe.vercel.app";
+    return "https://www.getstreetvibe.com";
   }
 }
 
