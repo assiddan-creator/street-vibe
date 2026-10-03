@@ -12,6 +12,7 @@ import {
   type ElevenLabsVoiceSettings,
   type VoiceGender,
 } from "@/lib/elevenLabsVoicePresets";
+import { pronunciationLocatorsFor } from "@/lib/pronunciationDictionary";
 
 /**
  * Optional model for the GLOBAL Will/Jessica fallback only (no preset). When
@@ -134,6 +135,7 @@ export async function synthesizeElevenLabs(opts: {
   const { apiKey, text, gender, dialect, vibe, timeoutMs = 45_000 } = opts;
   const { voiceId, modelId, settings, languageCode, seed, presetId } =
     resolveElevenLabsVoiceSelection(gender, dialect, vibe);
+  const locators = pronunciationLocatorsFor(dialect);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -158,6 +160,9 @@ export async function synthesizeElevenLabs(opts: {
           // Documented top-level field on this endpoint (best-effort
           // deterministic sampling). Only sent when a preset declares one.
           ...(typeof seed === "number" ? { seed } : {}),
+          // ElevenLabs pronunciation dictionaries for this city — only when configured
+          // (none yet), so today's requests are unchanged.
+          ...(locators.length ? { pronunciation_dictionary_locators: locators } : {}),
         }),
         signal: controller.signal,
       }
