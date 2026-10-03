@@ -17,7 +17,7 @@ function allowedOrigin(req?: NextRequest): string {
     }
   }
   const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
-  return vercel ? `https://${vercel}` : "https://street-vibe.vercel.app";
+  return vercel ? `https://${vercel}` : "https://www.getstreetvibe.com";
 }
 
 export function corsHeaders(req?: NextRequest): Record<string, string> {

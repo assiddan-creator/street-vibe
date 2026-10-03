@@ -35,7 +35,7 @@ const inter = Inter({
   display: "swap",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://street-vibe.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.getstreetvibe.com";
 const DESCRIPTION =
   "Text like a local, not a tourist. Street Vibe rewrites your message the way someone who lives there would send it — for DMs, dating apps and group chats in a language that isn't your first. 11 dialects, with an AI voice to match.";
 
