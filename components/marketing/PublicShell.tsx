@@ -6,10 +6,14 @@ import type { ReactNode } from "react";
  * so it reads correctly over the app's themed provider. Server component — no
  * client state; the only interactive bits are plain links.
  */
-export function PublicShell({ children }: { children: ReactNode }) {
+export function PublicShell({ children, overlayHeader = false }: { children: ReactNode; overlayHeader?: boolean }) {
   return (
-    <div className="min-h-[100dvh] bg-[#0b0d0f] text-white/90">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+    <div className="relative min-h-[100dvh] bg-[#0b0d0f] text-white/90">
+      <header
+        className={`mx-auto flex max-w-5xl items-center justify-between px-5 py-4 ${
+          overlayHeader ? "absolute inset-x-0 top-0 z-20" : ""
+        }`}
+      >
         <Link href="/" className="font-heading text-[17px] font-extrabold tracking-tight text-white">
           Street&nbsp;Vibe
         </Link>

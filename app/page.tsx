@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeroDive } from "@/components/marketing/HeroDive";
 import { PublicShell } from "@/components/marketing/PublicShell";
 
 const ACCENT = "#4ade80";
@@ -67,40 +68,47 @@ const FAQ: { q: string; a: string }[] = [
 
 export default function Landing() {
   return (
-    <PublicShell>
+    <PublicShell overlayHeader>
       {/* Hero */}
-      <section className="mx-auto max-w-5xl px-5 pb-14 pt-10 text-center sm:pt-16">
-        <p
-          className="mx-auto mb-4 w-fit rounded-full border px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.18em]"
-          style={{ borderColor: `${ACCENT}44`, color: ACCENT }}
-        >
-          11 dialects · AI voice
-        </p>
-        <h1 className="font-heading text-4xl font-extrabold leading-[1.05] tracking-tight text-white text-balance sm:text-6xl">
-          Talk like a local,
-          <br />
-          not a tourist.
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-[16px] leading-relaxed text-white/60 sm:text-[18px]">
-          Street Vibe rewrites your message the way someone who actually lives there would send it —
-          for DMs, dating apps, and group chats in a language that isn&apos;t your first.
-        </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link
-            href="/app"
-            className="rounded-full px-6 py-3 text-[15px] font-bold text-black transition-transform hover:scale-[1.03]"
-            style={{ backgroundColor: ACCENT }}
+      <section className="relative isolate flex min-h-[100svh] items-end overflow-hidden sm:items-center">
+        <HeroDive />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.55)_0%,rgba(0,0,0,0.15)_30%,rgba(0,0,0,0.35)_60%,#0b0d0f_100%)]"
+        />
+        <div className="relative mx-auto w-full max-w-5xl px-5 pb-14 pt-24 text-center [text-shadow:0_2px_18px_rgba(0,0,0,0.55)] sm:pt-16">
+          <p
+            className="mx-auto mb-4 w-fit rounded-full border px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.18em]"
+            style={{ borderColor: `${ACCENT}44`, color: ACCENT }}
           >
-            Open Street Vibe — it&apos;s free
-          </Link>
-          <a
-            href="#how"
-            className="rounded-full border border-white/15 px-6 py-3 text-[15px] font-semibold text-white/80 transition-colors hover:bg-white/5"
-          >
-            See how it works
-          </a>
+            11 dialects · AI voice
+          </p>
+          <h1 className="font-heading text-4xl font-extrabold leading-[1.05] tracking-tight text-white text-balance sm:text-6xl">
+            Talk like a local,
+            <br />
+            not a tourist.
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-[16px] leading-relaxed text-white/80 sm:text-[18px]">
+            Street Vibe rewrites your message the way someone who actually lives there would send it —
+            for DMs, dating apps, and group chats in a language that isn&apos;t your first.
+          </p>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              href="/app"
+              className="rounded-full px-6 py-3 text-[15px] font-bold text-black transition-transform hover:scale-[1.03]"
+              style={{ backgroundColor: ACCENT }}
+            >
+              Open Street Vibe — it&apos;s free
+            </Link>
+            <a
+              href="#how"
+              className="rounded-full border border-white/30 bg-black/25 px-6 py-3 text-[15px] font-semibold text-white/90 backdrop-blur-sm transition-colors hover:bg-white/10"
+            >
+              See how it works
+            </a>
+          </div>
+          <p className="mt-3 text-[13px] text-white/60">No sign-up to try · 10 free rewrites a day</p>
         </div>
-        <p className="mt-3 text-[13px] text-white/40">No sign-up to try · 10 free rewrites a day</p>
       </section>
 
       {/* Before / after */}
