@@ -60,6 +60,7 @@ import {
 import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
 import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS } from "@/lib/topSectionUi";
+import { textDirection } from "@/lib/textDirection";
 import { AudioShareButton } from "@/components/AudioShareButton";
 import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
 import { canOfferBasicVoice, ttsFailureMessage } from "@/lib/ttsErrors";
@@ -794,7 +795,7 @@ export function TranslatorView() {
         </header>
 
         <div
-          className="mx-auto mb-4 flex w-full max-w-[min(100%,300px)] items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-xl"
+          className="mx-auto mb-4 grid w-full max-w-[min(100%,320px)] grid-cols-4 gap-1 rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-xl"
           role="group"
           aria-label="Mode"
         >
@@ -805,7 +806,7 @@ export function TranslatorView() {
                 key={m}
                 type="button"
                 onClick={() => switchAppMode(m)}
-                className={`flex-1 rounded-full px-2 py-2 text-[12px] font-semibold transition-all duration-300 ${
+                className={`min-w-0 rounded-full px-1 py-2 text-center text-[12px] font-semibold transition-all duration-300 ${
                   on ? "" : "text-white/55 hover:text-white/80"
                 }`}
                 style={
@@ -924,7 +925,7 @@ export function TranslatorView() {
           )}
         </div>
 
-        <div className="w-full" style={{ "--accent": theme.primary } as CSSProperties}>
+        <div className="relative w-full" style={{ "--accent": theme.primary } as CSSProperties}>
           <textarea
             ref={inputRef}
             rows={1}
@@ -947,9 +948,22 @@ export function TranslatorView() {
                     : "Type or say it plain…"
             }
             dir="auto"
-            className={`${GLASS_INPUT} resize-none bg-white/3 text-start leading-relaxed`}
+            className={`${GLASS_INPUT} resize-none bg-white/3 !px-9 text-start leading-relaxed`}
             style={flagOutline(theme.secondary)}
           />
+          {inputDisplayValue.trim() ? (
+            <button
+              type="button"
+              onClick={handleClear}
+              aria-label="Clear"
+              title="Clear"
+              className={`absolute top-2 flex h-6 w-6 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/10 hover:text-white ${
+                textDirection(inputDisplayValue) === "rtl" ? "left-2" : "right-2"
+              }`}
+            >
+              <MaterialSymbol name="close" className="text-[16px]" />
+            </button>
+          ) : null}
           {appMode === "translate" && isIdle && !inputText.trim() && !isListening ? (
             <div className="mt-2 flex flex-wrap justify-center gap-1.5">
               {exampleInputs.map((phrase) => (
@@ -1023,7 +1037,7 @@ export function TranslatorView() {
               Who&apos;s it for?
             </p>
             <div
-              className="mx-auto flex w-full max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl transition-opacity"
+              className="mx-auto grid w-full grid-cols-2 gap-1.5 rounded-2xl border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl transition-opacity"
               role="group"
               aria-label="Who is the message for"
             >
@@ -1049,7 +1063,7 @@ export function TranslatorView() {
                         });
                       }
                     }}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition-all duration-300 ${
+                    className={`flex h-11 w-full min-w-0 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-semibold transition-all duration-300 ${
                       on ? "" : "bg-transparent text-white/60 hover:text-white/80"
                     }`}
                     style={
@@ -1071,12 +1085,12 @@ export function TranslatorView() {
             </div>
           </div>
 
-          <div className="flex w-full items-center gap-2.5">
+          <div className="flex w-full items-center">
             <button
               type="button"
               onClick={handleFlipIt}
               disabled={loading || !inputDisplayValue.trim()}
-              className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3.5 font-bold text-white shadow-none backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
+              className="relative w-full overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3.5 font-bold text-white shadow-none backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
               style={{
                 fontFamily: "'Permanent Marker', cursive",
                 fontSize: "1.05rem",
@@ -1089,8 +1103,10 @@ export function TranslatorView() {
                   src={cityTheme.bg.wide}
                   alt=""
                   fill
-                  sizes="(max-width: 768px) 60vw, 480px"
-                  className="object-cover opacity-75"
+                  // The art is a glass ball in the middle half of a dark 16:9 frame: zoom ~2.1x
+                  // around the center so the ball spans the full button (no dark side areas).
+                  sizes="(max-width: 768px) 210vw, 1000px"
+                  className="scale-[2.1] object-cover object-center opacity-75"
                   draggable={false}
                 />
               ) : null}
@@ -1111,23 +1127,6 @@ export function TranslatorView() {
                   "Flip it 🔥"
                 )}
               </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleClear}
-              aria-label="Clear"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl backdrop-blur-xl transition-all duration-300 hover:brightness-125 active:scale-[0.97]"
-              style={subtleButtonStyle(theme)}
-            >
-              <svg className="h-[20px] w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
             </button>
           </div>
           {appMode === "compare" ? (
