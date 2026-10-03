@@ -38,6 +38,7 @@ import {
 import { resolveElevenLabsVoiceSelection, synthesizeElevenLabs } from "@/lib/elevenLabsTts";
 import { getVoicePreset } from "@/lib/elevenLabsVoicePresets";
 import { addSpeechPunctuation } from "@/lib/speechPunctuation";
+import { prepareSpeechText } from "@/lib/prepareSpeechText";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
 import { checkAndConsumeUsage, publicUsage } from "@/lib/usage";
 
@@ -229,6 +230,17 @@ export async function POST(req: NextRequest) {
   if (resolvedEngine !== "google" && process.env.ELEVENLABS_API_KEY) {
     const elGender = parseTtsGender(body.ttsGender);
     let elText = text.trim();
+    // First: clean the speech-only copy (markdown, emoji, SSML, chat fillers, !!! / ???).
+    if (!devRawTts) {
+      elText = prepareSpeechText(elText, dialectKeyMm || undefined);
+      if (!elText) {
+        // Only emoji / symbols: nothing to say, and emoji names must not be read out.
+        return NextResponse.json(
+          { error: "Nothing to read aloud.", engine: "elevenlabs" },
+          { status: 422, headers: corsHeaders }
+        );
+      }
+    }
     // Speech-only commas after slang openers / before vocatives ("Deadass, can't…").
     // The on-screen translation keeps its text-message style; only the voice sees this.
     if (!devRawTts) {
