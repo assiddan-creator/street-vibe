@@ -12,7 +12,7 @@ const STILL = "/video/telaviv-dive-end.jpg";
 type DiveState = "auto" | "idle" | "playing" | "ended";
 
 /**
- * Landing hero backdrop: a ~3.6s dive from above the clouds down to the Tel Aviv beachfront,
+ * Landing hero backdrop: an 8s dive from the whole Earth in space down to the Tel Aviv beachfront,
  * played once (muted, no loop) so it rests on the last frame, with a Replay button.
  * Reduced motion (e.g. Windows "Animation effects" off), Save-Data or a blocked autoplay
  * (iOS Low Power Mode) show the final frame with a "Watch the dive" button instead.
