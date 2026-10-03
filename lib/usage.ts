@@ -67,10 +67,15 @@ export function dailyLimitFor(
  * Accepts the same truthy vocabulary as the codebase's other boolean env
  * flags (e.g. `ELEVENLABS_REGIONAL_VOICES`): "true", "1", "yes", "on"
  * (case-insensitive). Unset or anything else keeps normal limits.
+ *
+ * Local/preview only: ignored whenever `VERCEL_ENV === "production"`, so it can
+ * never lift the limit for every visitor of the live site. Use `OWNER_EMAILS`
+ * for owner testing in production.
  */
 export function usageLimitsDisabled(
   env: Record<string, string | undefined> = process.env
 ): boolean {
+  if (env.VERCEL_ENV === "production") return false;
   const raw = env.USAGE_LIMITS_DISABLED?.trim().toLowerCase();
   return raw === "true" || raw === "1" || raw === "yes" || raw === "on";
 }
@@ -80,7 +85,67 @@ export function applyLimitsDisabled(
   state: UsageState,
   env: Record<string, string | undefined> = process.env
 ): UsageState {
-  if (!usageLimitsDisabled(env)) return state;
+  return applyUsageBypass(state, false, env);
+}
+
+/**
+ * `OWNER_EMAILS`: comma-separated allowlist (case-insensitive, whitespace
+ * ignored). A signed-in user whose verified primary email is listed gets
+ * unlimited translate/tts (which also covers Reply and Check). Server-side only.
+ */
+export function ownerEmails(env: Record<string, string | undefined> = process.env): Set<string> {
+  return new Set(
+    (env.OWNER_EMAILS ?? "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => e.includes("@"))
+  );
+}
+
+export function isOwnerEmail(
+  email: string | null | undefined,
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  if (!email) return false;
+  return ownerEmails(env).has(email.trim().toLowerCase());
+}
+
+/** Verified primary email of the signed-in Clerk user, or null. */
+export async function getRequestPrimaryEmail(): Promise<string | null> {
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return null;
+  try {
+    const { currentUser } = await import("@clerk/nextjs/server");
+    const primary = (await currentUser())?.primaryEmailAddress;
+    if (!primary || primary.verification?.status !== "verified") return null;
+    return primary.emailAddress ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether this request comes from an owner. Anonymous visitors are never owners,
+ * and the Clerk lookup is skipped entirely when `OWNER_EMAILS` is empty.
+ */
+export async function isRequestOwner(
+  userId: string | null,
+  env: Record<string, string | undefined> = process.env,
+  getEmail: () => Promise<string | null> = getRequestPrimaryEmail
+): Promise<boolean> {
+  if (!userId || ownerEmails(env).size === 0) return false;
+  return isOwnerEmail(await getEmail(), env);
+}
+
+/**
+ * Owner allowlist or the (non-production) dev bypass → unlimited and allowed.
+ * Usage is still counted as normal; only the outcome changes.
+ */
+export function applyUsageBypass(
+  state: UsageState,
+  owner: boolean,
+  env: Record<string, string | undefined> = process.env
+): UsageState {
+  if (!owner && !usageLimitsDisabled(env)) return state;
   return { ...state, limit: UNLIMITED, remaining: UNLIMITED, ok: true };
 }
 
@@ -136,9 +201,9 @@ export function publicUsage(u: UsageState) {
   };
 }
 
-function failOpen(kind: UsageKind, plan: Plan): UsageState {
+function failOpen(kind: UsageKind, plan: Plan, owner: boolean): UsageState {
   const limit = dailyLimitFor(plan, kind);
-  return applyLimitsDisabled({ plan, kind, used: 0, limit, remaining: limit, ok: true, metered: false });
+  return applyUsageBypass({ plan, kind, used: 0, limit, remaining: limit, ok: true, metered: false }, owner);
 }
 
 /**
@@ -153,13 +218,14 @@ export async function checkAndConsumeUsage(
   kind: UsageKind
 ): Promise<UsageState> {
   const userId = await getRequestUserId();
+  const owner = await isRequestOwner(userId);
 
   if (!isSupabaseConfigured()) {
-    return failOpen(kind, userId ? "free" : "anon");
+    return failOpen(kind, userId ? "free" : "anon", owner);
   }
 
   const db = getSupabaseAdmin();
-  if (!db) return failOpen(kind, userId ? "free" : "anon");
+  if (!db) return failOpen(kind, userId ? "free" : "anon", owner);
 
   try {
     // The Postgres function `consume_usage` is the actual source of truth for
@@ -184,23 +250,26 @@ export async function checkAndConsumeUsage(
       console.warn("[usage] consume_usage RPC failed; failing open", {
         message: error?.message,
       });
-      return failOpen(kind, userId ? "free" : "anon");
+      return failOpen(kind, userId ? "free" : "anon", owner);
     }
 
-    return applyLimitsDisabled({
-      plan: row.plan,
-      kind,
-      used: row.used,
-      limit: row.limit,
-      remaining: row.limit - row.used,
-      ok: row.allowed,
-      metered: true,
-    });
+    return applyUsageBypass(
+      {
+        plan: row.plan,
+        kind,
+        used: row.used,
+        limit: row.limit,
+        remaining: row.limit - row.used,
+        ok: row.allowed,
+        metered: true,
+      },
+      owner
+    );
   } catch (e) {
     console.warn("[usage] consume_usage threw; failing open", {
       message: e instanceof Error ? e.message : String(e),
     });
-    return failOpen(kind, userId ? "free" : "anon");
+    return failOpen(kind, userId ? "free" : "anon", owner);
   }
 }
 
@@ -213,6 +282,7 @@ export async function peekUsage(
   if (!db) return null;
 
   const userId = await getRequestUserId();
+  const owner = await isRequestOwner(userId);
   try {
     const { data, error } = await db
       .rpc("peek_usage", {
@@ -227,15 +297,18 @@ export async function peekUsage(
 
     const build = (kind: UsageKind, used: number): UsageState => {
       const limit = dailyLimitFor(row.plan, kind);
-      return applyLimitsDisabled({
-        plan: row.plan,
-        kind,
-        used,
-        limit,
-        remaining: limit - used,
-        ok: used < limit,
-        metered: true,
-      });
+      return applyUsageBypass(
+        {
+          plan: row.plan,
+          kind,
+          used,
+          limit,
+          remaining: limit - used,
+          ok: used < limit,
+          metered: true,
+        },
+        owner
+      );
     };
     return {
       translate: publicUsage(build("translate", row.translate_used)),
