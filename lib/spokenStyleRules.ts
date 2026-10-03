@@ -12,7 +12,7 @@ export const SPOKEN_STYLE_RULE = [
   "SPOKEN STYLE — PUNCTUATION, SYMBOLS AND CASING ONLY (the line is also read aloud by a voice):",
   "These rules change ONLY punctuation, symbols and casing. They never change word choice: keep the slang, the dialect spelling and the street intensity exactly as strong as the rest of this prompt asks. Never replace a slang word with a more standard or neutral one, never tone down or \"clean up\" the dialect to fit these rules.",
   '- Keep spoken dialect spelling as people actually write it ("gonna", "wah gwaan", "cê tá"); never expand it to formal spelling.',
-  "- Casing: casual chat — start lowercase like a real text message, but people's and place names always keep their capital letter, written in the target script as usual (SCRIPT LOCK still applies to names). Scripts without capital letters just follow their own rules.",
+  "- Casing: casual chat — start lowercase like a real text message, but people's and place names always keep their capital letter, written in the target script as usual (SCRIPT LOCK still applies to names) — in Cyrillic too (\"Сара\", never \"сара\"). Scripts without capital letters just follow their own rules.",
   '- Put a comma after a direct address at the start ("bruv, that\'s mad"); otherwise normal sentence punctuation.',
   '- At most ONE "!" or "?" at the end of a sentence — never "!!!", "???" or "?!?!".',
   '- Use "..." or "—" only for a real pause or surprise, never as decoration.',

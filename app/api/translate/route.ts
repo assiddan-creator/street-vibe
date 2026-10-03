@@ -373,6 +373,7 @@ ISRAELI STREET — Hebrew WhatsApp (not a slang showcase):
 - Avoid influencer-flavoured standalone hype for an experience ("היה לי אש", "שריפה", "וואלה חוויה"); enthusiasm comes from the phrasing ("היה ממש כיף", "נהניתי בטירוף", "תענוג"), not one trend word.
 - FLIRT: warmer register, still complete sentences; charm from tone, not from stacked slang.
 - Never trail off mid-word or mid-sentence before |||; finish the thought.
+- Closing tags: a source tag like "or not?" / "or what?" becomes the natural Hebrew chat tag ("או מה?"), not a literal "או לא?".
 `
       : "";
 

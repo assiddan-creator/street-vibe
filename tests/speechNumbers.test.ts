@@ -127,3 +127,13 @@ describe("translate prompt: spoken style rules", () => {
     assert.ok(!route.includes("No emoji unless the source already contains emoji"));
   });
 });
+
+describe("dialect tweaks after review", () => {
+  const route = readFileSync(join(__dirname, "..", "app", "api", "translate", "route.ts"), "utf8");
+  test("Tel Aviv: closing tags become the Hebrew chat tag (או מה?)", () => {
+    assert.match(route, /becomes the natural Hebrew chat tag \("או מה\?"\)/);
+  });
+  test("names keep their capital letter in Cyrillic too", () => {
+    assert.match(SPOKEN_STYLE_RULE, /in Cyrillic too \("Сара", never "сара"\)/);
+  });
+});
