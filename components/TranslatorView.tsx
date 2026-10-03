@@ -773,7 +773,7 @@ export function TranslatorView() {
         className="mx-auto flex min-w-0 w-full max-w-[min(100%,440px)] flex-col px-2.5 pb-4 pt-3 lg:max-w-[1040px] lg:px-6"
         onClick={() => setPopupWord(null)}
       >
-        <header className="relative mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-3 py-2 backdrop-blur-xl">
+        <header className="relative mb-4 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] px-[5.5rem] py-2 backdrop-blur-xl">
           <button
             type="button"
             onClick={openHistory}
@@ -1598,6 +1598,7 @@ export function TranslatorView() {
                       {resultContext ? <AudioShareButton
                         key={JSON.stringify([translatedText, resultContext, ttsGender, ttsEngine])}
                         city={resultTheme.city}
+                        buttonStyle={subtleButtonStyle(theme)}
                         disabled={ttsLoading || sharing}
                         onPreparing={setAudioPreparing}
                         prepare={async () => {
