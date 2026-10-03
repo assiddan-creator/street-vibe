@@ -72,6 +72,7 @@ const ttsRequest = (dialect: string) =>
 for (const [dialect, want] of [
   ["London Roadman", "eleven_v4_turbo"],
   ["Rio Favela", "eleven_v4_turbo"],
+  ["Jamaican Patois", "eleven_v3_conversational"],
   ["New York Brooklyn", "eleven_v3_conversational"],
 ] as const) {
   test(`${dialect}: ElevenLabs request uses model ${want}`, async (t) => {

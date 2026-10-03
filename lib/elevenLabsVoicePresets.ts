@@ -21,6 +21,8 @@ export type VoiceGender = "male" | "female";
  * 2026-10 blind A/B (v3_conversational vs v4_turbo vs v4) plus a Speech-to-Text
  * check (v4/v4_turbo kept every slang word; v3_conversational softened Rio
  * "coé" and Cairo "بقولك"). Brooklyn stays on v3_conversational — preferred by ear.
+ * Kingston was moved to v4_turbo and then reverted to v3_conversational (owner's
+ * call after listening in production).
  *
  * Applies to both genders (presets and the Will/Jessica fallback). Only the
  * model changes here; voices and voice settings are untouched.
@@ -29,6 +31,7 @@ export type VoiceGender = "male" | "female";
 export const ELEVENLABS_DEFAULT_CITY_MODEL_ID = "eleven_v4_turbo";
 export const ELEVENLABS_CITY_MODEL_EXCEPTIONS: Readonly<Record<string, string>> = {
   "New York Brooklyn": "eleven_v3_conversational",
+  "Jamaican Patois": "eleven_v3_conversational",
 };
 
 export function modelForDialect(dialect: string | undefined): string {
@@ -112,8 +115,8 @@ export const ELEVENLABS_VOICE_PRESETS: Record<
       gender: "male",
       voiceId: "JNakJx0PcoBLBnZ9Rvm2",
       // Manual listening test (v2 vs v3 vs v3-conversational) found v3
-      // conversational clearly more natural than multilingual v2; the 2026-10
-      // v3c / v4_turbo / v4 blind A/B then picked v4_turbo for Kingston by ear.
+      // conversational clearly more natural than multilingual v2. A later move
+      // to v4_turbo was reverted: Kingston stays on v3 conversational.
       // Voice ID and every other setting are unchanged from approval.
       modelId: modelForDialect("Jamaican Patois"),
       settings: {

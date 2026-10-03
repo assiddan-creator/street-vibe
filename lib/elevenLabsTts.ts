@@ -15,7 +15,7 @@ import {
 /**
  * Optional model for the GLOBAL Will/Jessica fallback only (no preset). When
  * unset, the fallback uses the per-city model from `modelForDialect`
- * (eleven_v4_turbo; Brooklyn eleven_v3_conversational). A preset carries its
+ * (eleven_v4_turbo; Brooklyn and Kingston eleven_v3_conversational). A preset carries its
  * own `modelId` and is never affected by this env var.
  */
 export const ELEVENLABS_MODEL_ID = process.env.ELEVENLABS_MODEL_ID || undefined;
