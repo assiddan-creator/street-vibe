@@ -5,19 +5,30 @@
  * failures so the user can retry or explicitly choose a basic browser voice.
  */
 
-import { getVoicePreset, type ElevenLabsVoiceSettings, type VoiceGender } from "@/lib/elevenLabsVoicePresets";
+import {
+  getVoicePreset,
+  modelForDialect,
+  type ElevenLabsVoiceSettings,
+  type VoiceGender,
+} from "@/lib/elevenLabsVoicePresets";
 
 /**
- * eleven_v3_conversational: v3's expressiveness with sub-second latency, 74
- * languages — best all-round for short chat lines. Verified ~0.9s / 49 chars.
- * Override with eleven_multilingual_v2 (steadier on very short text) or
- * eleven_flash_v2_5 (half price).
- *
- * This is the GLOBAL default model, used when no dialect+gender preset
- * applies. A preset (see `lib/elevenLabsVoicePresets.ts`) carries its own
- * `modelId` and is never affected by this env var.
+ * Optional model for the GLOBAL Will/Jessica fallback only (no preset). When
+ * unset, the fallback uses the per-city model from `modelForDialect`
+ * (eleven_v4_turbo; Brooklyn eleven_v3_conversational). A preset carries its
+ * own `modelId` and is never affected by this env var.
  */
-export const ELEVENLABS_MODEL_ID = process.env.ELEVENLABS_MODEL_ID || "eleven_v3_conversational";
+export const ELEVENLABS_MODEL_ID = process.env.ELEVENLABS_MODEL_ID || undefined;
+
+/**
+ * Kill switch: when `ELEVENLABS_MODEL_OVERRIDE` is set, that one model is used
+ * for EVERY city and gender — presets included — so a model rollout can be
+ * rolled back without a code change (e.g. =eleven_v3_conversational).
+ * Only the model changes; voices and settings stay as resolved.
+ */
+export function elevenLabsModelOverride(): string | undefined {
+  return process.env.ELEVENLABS_MODEL_OVERRIDE?.trim() || undefined;
+}
 
 /** Premade voices — young, casual, conversational; always on any account. */
 const VOICE_MALE = process.env.ELEVENLABS_VOICE_MALE || "bIHbv24MWmeRgasZH58o"; // Will — relaxed optimist
@@ -51,7 +62,8 @@ function voiceSettingsForVibe(vibe: string | undefined): VoiceSettings {
  * Precedence: an approved dialect+gender preset wins outright. Everything
  * else — every other dialect, every other gender, dialect=undefined — keeps
  * the exact existing global behaviour: Will/Jessica (or their env overrides)
- * with `ELEVENLABS_MODEL_ID` and vibe-driven settings.
+ * with vibe-driven settings, on `ELEVENLABS_MODEL_ID` or the per-city model.
+ * `ELEVENLABS_MODEL_OVERRIDE`, when set, replaces only the model everywhere.
  */
 export function resolveElevenLabsVoiceSelection(
   gender: VoiceGender,
@@ -65,11 +77,12 @@ export function resolveElevenLabsVoiceSelection(
   seed?: number;
   presetId?: string;
 } {
+  const override = elevenLabsModelOverride();
   const preset = getVoicePreset(dialect, gender);
   if (preset) {
     return {
       voiceId: preset.voiceId,
-      modelId: preset.modelId,
+      modelId: override ?? preset.modelId,
       // applyVibe: false means these settings are final; vibe never touches
       // them. applyVibe: true swaps only the voice, keeping vibe delivery.
       settings: preset.applyVibe ? voiceSettingsForVibe(vibe) : preset.settings,
@@ -81,7 +94,7 @@ export function resolveElevenLabsVoiceSelection(
 
   return {
     voiceId: gender === "female" ? VOICE_FEMALE : VOICE_MALE,
-    modelId: ELEVENLABS_MODEL_ID,
+    modelId: override ?? ELEVENLABS_MODEL_ID ?? modelForDialect(dialect),
     settings: voiceSettingsForVibe(vibe),
   };
 }

@@ -35,7 +35,7 @@ import {
   JAMAICAN_PATOIS_DIALECT_ID,
   normalizeJamaicanPatoisForSpeech,
 } from "@/lib/jamaicanPatoisSpeechNormalize";
-import { synthesizeElevenLabs } from "@/lib/elevenLabsTts";
+import { resolveElevenLabsVoiceSelection, synthesizeElevenLabs } from "@/lib/elevenLabsTts";
 import { getVoicePreset } from "@/lib/elevenLabsVoicePresets";
 import { addSpeechPunctuation } from "@/lib/speechPunctuation";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
@@ -242,6 +242,8 @@ export async function POST(req: NextRequest) {
       elText = normalizeSpanishMadridForSpeech(elText, dialectKeyMm);
     }
     const elPreset = getVoicePreset(dialectKeyMm || undefined, elGender);
+    // Per-city model (or the ELEVENLABS_MODEL_OVERRIDE kill switch) — logged on failure too.
+    const elModel = resolveElevenLabsVoiceSelection(elGender, dialectKeyMm || undefined, vibeContext).modelId;
     try {
       const { audioBase64, voiceId, modelId, presetId } = await synthesizeElevenLabs({
         apiKey: process.env.ELEVENLABS_API_KEY,
@@ -269,6 +271,8 @@ export async function POST(req: NextRequest) {
       console.warn("[tts][elevenlabs] failed", {
         preset: elPreset?.id ?? null,
         provider: "elevenlabs",
+        model: elModel,
+        dialect: dialectKeyMm || null,
         reason,
       });
       return NextResponse.json(
