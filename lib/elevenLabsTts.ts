@@ -7,6 +7,7 @@
 
 import {
   getVoicePreset,
+  isV4Model,
   modelForDialect,
   type ElevenLabsVoiceSettings,
   type VoiceGender,
@@ -55,6 +56,16 @@ function voiceSettingsForVibe(vibe: string | undefined): VoiceSettings {
 }
 
 /**
+ * eleven_v4 / eleven_v4_turbo officially support only stability and
+ * similarity_boost, so style / speed / use_speaker_boost are never sent to them.
+ * v2/v3 models get the settings unchanged.
+ */
+export function voiceSettingsForModel(modelId: string, settings: VoiceSettings): VoiceSettings {
+  if (!isV4Model(modelId)) return settings;
+  return { stability: settings.stability, similarity_boost: settings.similarity_boost };
+}
+
+/**
  * Resolves everything ElevenLabs needs for one request: which voice, which
  * model, which settings, and whether the vibe system may still adjust the
  * settings (it may not, for a `applyVibe: false` preset).
@@ -80,22 +91,25 @@ export function resolveElevenLabsVoiceSelection(
   const override = elevenLabsModelOverride();
   const preset = getVoicePreset(dialect, gender);
   if (preset) {
+    const modelId = override ?? preset.modelId;
     return {
       voiceId: preset.voiceId,
-      modelId: override ?? preset.modelId,
+      modelId,
       // applyVibe: false means these settings are final; vibe never touches
       // them. applyVibe: true swaps only the voice, keeping vibe delivery.
-      settings: preset.applyVibe ? voiceSettingsForVibe(vibe) : preset.settings,
+      // Either way only the fields the final model supports are sent.
+      settings: voiceSettingsForModel(modelId, preset.applyVibe ? voiceSettingsForVibe(vibe) : preset.settings),
       languageCode: preset.languageCode,
       seed: preset.recommendedSeed,
       presetId: preset.id,
     };
   }
 
+  const modelId = override ?? ELEVENLABS_MODEL_ID ?? modelForDialect(dialect);
   return {
     voiceId: gender === "female" ? VOICE_FEMALE : VOICE_MALE,
-    modelId: override ?? ELEVENLABS_MODEL_ID ?? modelForDialect(dialect),
-    settings: voiceSettingsForVibe(vibe),
+    modelId,
+    settings: voiceSettingsForModel(modelId, voiceSettingsForVibe(vibe)),
   };
 }
 
