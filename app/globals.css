@@ -9,16 +9,17 @@
      CityThemeProvider overwrites these per city. */
   --theme-primary: #009b3a;
   --theme-secondary: #fed100;
-  --theme-on-secondary: #000000;
+  --theme-secondary-text: #fed100;
   --theme-tertiary: #009b3a;
   --theme-primary-rgb: 0 155 58;
   --theme-secondary-rgb: 254 209 0;
+  --theme-secondary-text-rgb: 254 209 0;
   --theme-tertiary-rgb: 0 155 58;
   --theme-glow: #009b3a;
   --theme-button: #fed100;
-  --theme-button-border: #009b3a;
+  --theme-button-border: #fed100;
   --theme-button-rgb: 254 209 0;
-  --theme-button-border-rgb: 0 155 58;
+  --theme-button-border-rgb: 254 209 0;
   --accent: #009b3a;
 }
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SignInButton } from "@clerk/nextjs";
 import type { FlagPalette } from "@/lib/themeConfig";
+import { subtleButtonStyle } from "@/lib/themeUiClasses";
 
 export type PublicUsage = {
   plan: "anon" | "free" | "pro";
@@ -67,7 +68,7 @@ export function UsageMeter({
 }: {
   usage: PublicUsage | null;
   /** Active flag palette roles (lib/themeConfig.ts). */
-  palette: Pick<FlagPalette, "primary" | "secondary" | "onSecondary" | "tertiary">;
+  palette: Pick<FlagPalette, "primary" | "secondary" | "secondaryText" | "tertiary">;
   upgradeAvailable?: boolean;
   annualAvailable?: boolean;
 }) {
@@ -152,7 +153,7 @@ export function UsageMeter({
             onClick={run(startCheckout("month"))}
             disabled={busy}
             className="rounded-full px-4 py-2 text-[12px] font-bold transition-transform active:scale-[0.97] disabled:opacity-60"
-            style={{ backgroundColor: palette.secondary, color: palette.onSecondary }}
+            style={subtleButtonStyle(palette)}
           >
             {busy ? "One sec…" : `Upgrade to Pro${priceLabel ? ` — ${priceLabel}` : ""}`}
           </button>
@@ -173,7 +174,7 @@ export function UsageMeter({
           <button
             type="button"
             className="rounded-full px-4 py-2 text-[12px] font-bold transition-transform active:scale-[0.97]"
-            style={{ backgroundColor: palette.secondary, color: palette.onSecondary }}
+            style={subtleButtonStyle(palette)}
           >
             Sign in for more
           </button>

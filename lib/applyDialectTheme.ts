@@ -16,17 +16,18 @@ export function dialectThemeCssVars(tokens: FlagPalette): Record<string, string>
   return {
     "--theme-primary": tokens.primary,
     "--theme-secondary": tokens.secondary,
-    "--theme-on-secondary": tokens.onSecondary,
+    "--theme-secondary-text": tokens.secondaryText,
     "--theme-tertiary": tokens.tertiary,
     "--theme-primary-rgb": hexToRgbChannels(tokens.primary),
     "--theme-secondary-rgb": hexToRgbChannels(tokens.secondary),
+    "--theme-secondary-text-rgb": hexToRgbChannels(tokens.secondaryText),
     "--theme-tertiary-rgb": hexToRgbChannels(tokens.tertiary),
-    // Legacy names: glow + borders = tertiary, buttons = secondary, readable accent = primary.
+    // Legacy names: glow = tertiary, button tint + border = secondary, readable accent = primary.
     "--theme-glow": tokens.tertiary,
     "--theme-button": tokens.secondary,
-    "--theme-button-border": tokens.tertiary,
+    "--theme-button-border": tokens.secondary,
     "--theme-button-rgb": hexToRgbChannels(tokens.secondary),
-    "--theme-button-border-rgb": hexToRgbChannels(tokens.tertiary),
+    "--theme-button-border-rgb": hexToRgbChannels(tokens.secondary),
     "--accent": tokens.primary,
   };
 }

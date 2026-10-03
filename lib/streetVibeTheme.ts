@@ -311,8 +311,8 @@ export type ResolvedTheme = FlagPalette & {
 };
 
 export function resolveTheme(outputLang: string): ResolvedTheme {
-  const { flagColors, primary, secondary, onSecondary, tertiary } = getCityThemeForDialect(outputLang);
-  const palette = { flagColors, primary, secondary, onSecondary, tertiary };
+  const { flagColors, primary, secondary, secondaryText, tertiary } = getCityThemeForDialect(outputLang);
+  const palette = { flagColors, primary, secondary, secondaryText, tertiary };
   const premium = DIALECT_THEMES.find((t) => t.id === outputLang);
   if (premium) {
     return { ...palette, bg: premium.bg, flag: premium.flag, city: premium.city };

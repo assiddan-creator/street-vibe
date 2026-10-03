@@ -1,5 +1,6 @@
 /**
  * Per-city flag palettes: only flag colors, every flag color has a role, WCAG AA for every text pair.
+ * Buttons are subtle (dark glass + thin flag border), so every text role is checked on dark surfaces.
  *
  *     npm test
  */
@@ -7,7 +8,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
-import { APP_INK, CITY_THEME_BY_DIALECT_ID, FLAG_PALETTES, getCityThemeForDialect } from "../lib/themeConfig";
+import { CITY_THEME_BY_DIALECT_ID, FLAG_PALETTES, getCityThemeForDialect } from "../lib/themeConfig";
 import { DIALECT_THEMES, OUTPUT_PREMIUM_OPTIONS, OUTPUT_STANDARD_OPTIONS, resolveTheme } from "../lib/streetVibeTheme";
 import { dialectThemeCssVars } from "../lib/applyDialectTheme";
 
@@ -39,6 +40,7 @@ function over(top: string, alpha: number, bottom: string): string {
 const AA = 4.5;
 const PAGE = "#000000"; // CityThemeProvider ground
 const CARD = over("#FFFFFF", 0.05, PAGE); // bg-white/5 glass cards
+const SUBTLE_BUTTON = over("#000000", 0.35, CARD); // subtleButtonStyle() over a card
 
 const ALL_OUTPUT_IDS = [...OUTPUT_PREMIUM_OPTIONS, ...OUTPUT_STANDARD_OPTIONS].map((o) => o.value);
 
@@ -57,17 +59,18 @@ describe("flag palettes", () => {
       const flag = p.flagColors.map((c) => c.toUpperCase());
       const inFlag = (c: string) => flag.includes(c.toUpperCase());
 
-      test("roles use only flag colors (onSecondary may be the app ink)", () => {
+      test("roles use only flag colors", () => {
         assert.ok(inFlag(p.primary), `primary ${p.primary}`);
         assert.ok(inFlag(p.secondary), `secondary ${p.secondary}`);
         assert.ok(inFlag(p.tertiary), `tertiary ${p.tertiary}`);
-        assert.ok(inFlag(p.onSecondary) || p.onSecondary === APP_INK, `onSecondary ${p.onSecondary}`);
+        assert.ok(inFlag(p.secondaryText), `secondaryText ${p.secondaryText}`);
       });
 
-      test("every non-white flag color has a role", () => {
-        const used = [p.primary, p.secondary, p.onSecondary, p.tertiary].map((c) => c.toUpperCase());
+      test("every flag color except white and black has a role", () => {
+        const used = [p.primary, p.secondary, p.secondaryText, p.tertiary].map((c) => c.toUpperCase());
         for (const c of flag) {
           if (luminance(c) > 0.85) continue; // white is the app's neutral text everywhere
+          if (luminance(c) < 0.005) continue; // black is the app ground everywhere
           assert.ok(used.includes(c), `${c} unused`);
         }
       });
@@ -81,9 +84,11 @@ describe("flag palettes", () => {
         }
       });
 
-      test("button text passes AA on the button fill", () => {
-        const r = contrast(p.onSecondary, p.secondary);
-        assert.ok(r >= AA, `${p.onSecondary} on ${p.secondary}: ${r.toFixed(2)}`);
+      test("subtle button text passes AA on the page, cards and the button glass", () => {
+        for (const [surface, bg] of [["page", PAGE], ["card", CARD], ["button", SUBTLE_BUTTON]]) {
+          const r = contrast(p.secondaryText, bg);
+          assert.ok(r >= AA, `${p.secondaryText} on ${surface} ${bg}: ${r.toFixed(2)}`);
+        }
       });
     });
   }
@@ -95,8 +100,8 @@ describe("theme plumbing", () => {
       const t = resolveTheme(id);
       const c = getCityThemeForDialect(id);
       assert.deepEqual(
-        [t.primary, t.secondary, t.onSecondary, t.tertiary],
-        [c.primary, c.secondary, c.onSecondary, c.tertiary],
+        [t.primary, t.secondary, t.secondaryText, t.tertiary],
+        [c.primary, c.secondary, c.secondaryText, c.tertiary],
         id,
       );
     }
@@ -106,7 +111,7 @@ describe("theme plumbing", () => {
     const vars = dialectThemeCssVars(FLAG_PALETTES.brazil);
     assert.equal(vars["--theme-primary"], "#009C3B");
     assert.equal(vars["--theme-secondary"], "#FFDF00");
-    assert.equal(vars["--theme-on-secondary"], "#002776");
+    assert.equal(vars["--theme-secondary-text"], "#FFDF00");
     assert.equal(vars["--theme-tertiary"], "#002776");
     assert.equal(vars["--theme-secondary-rgb"], "255 223 0");
     assert.equal(vars["--accent"], "#009C3B");
@@ -118,6 +123,6 @@ describe("theme plumbing", () => {
     const t = getCityThemeForDialect("Klingon");
     assert.equal(t.flagColors.length, 0);
     assert.ok(contrast(t.primary, PAGE) >= AA);
-    assert.ok(contrast(t.onSecondary, t.secondary) >= AA);
+    assert.ok(contrast(t.secondaryText, PAGE) >= AA);
   });
 });

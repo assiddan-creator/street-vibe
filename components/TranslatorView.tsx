@@ -21,6 +21,7 @@ import {
   GLASS_INPUT,
   GLASS_SELECT,
   GLASS_SELECT_COMPACT,
+  subtleButtonStyle,
 } from "@/lib/themeUiClasses";
 import { SLANG_INTENSITY_SEGMENTS, VIBE_SEGMENTS, isAudienceValue } from "@/lib/slangSegmentControls";
 import { loadLastAudience, loadLastCity, saveLastAudience, saveLastCity } from "@/lib/lastChoices";
@@ -961,6 +962,53 @@ export function TranslatorView() {
           ) : null}
         </div>
 
+        {/* Big centered mic — the main element (restored from before the compose layout). */}
+        <div className="flex flex-col items-center py-1">
+          <button
+            type="button"
+            onClick={toggleMic}
+            aria-label={isListening ? "Stop listening" : "Tap to speak"}
+            title={isListening ? "Stop listening" : "Tap to speak"}
+            className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out active:scale-95 ${
+              isListening ? "mic-pulse border-transparent" : isIdle ? "animate-pulse-slow" : ""
+            }`}
+            style={
+              isListening
+                ? {
+                    boxShadow: `0 0 0 2px ${theme.secondary}, 0 12px 56px ${theme.tertiary}77, 0 0 100px ${theme.tertiary}66, 0 8px 28px rgba(0,0,0,0.45)`,
+                  }
+                : {
+                    boxShadow: `0 0 0 1px ${theme.secondary}55, 0 0 120px -8px ${theme.tertiary}99, 0 24px 64px ${theme.tertiary}44, 0 12px 40px rgba(0,0,0,0.55)`,
+                  }
+            }
+          >
+            {micBall ? (
+              // Source art is ~630 KB; next/image serves a resized copy for a 96px button.
+              <Image src={micBall} alt="" fill sizes="96px" className="rounded-full object-cover" draggable={false} />
+            ) : (
+              <MaterialSymbol name="mic" className="text-[40px]" />
+            )}
+          </button>
+          {isListening ? (
+            <p className="mt-2 text-center text-[13px]" style={{ color: theme.primary }}>
+              listening… tap the mic to stop
+            </p>
+          ) : isActive ? (
+            <p className="mt-2 text-center text-[13px] text-white/55">tap to speak again</p>
+          ) : (
+            <>
+              <p
+                className="mt-3 text-center text-[13px] uppercase"
+                style={{ color: theme.secondaryText, letterSpacing: "0.15em" }}
+              >
+                or tap to speak
+              </p>
+              <p className="mt-1 text-center text-[11px] tracking-wider text-white/50">speak or type in any language</p>
+            </>
+          )}
+          {micError ? <p className="mt-1 text-center text-[12px] text-red-400">{micError}</p> : null}
+        </div>
+
           <div className="flex flex-col gap-2">
             <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
               <MaterialSymbol name="person" className="text-[13px]" />
@@ -1017,51 +1065,31 @@ export function TranslatorView() {
           <div className="flex w-full items-center gap-2.5">
             <button
               type="button"
-              onClick={toggleMic}
-              aria-label={isListening ? "Stop listening" : "Tap to speak"}
-              title={isListening ? "Stop listening" : "Tap to speak"}
-              className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out active:scale-95 ${
-                isListening ? "mic-pulse border-transparent" : ""
-              }`}
-              style={
-                isListening
-                  ? {
-                      background: `linear-gradient(145deg, ${theme.secondary}, ${theme.secondary}cc)`,
-                      color: theme.onSecondary,
-                      boxShadow: `0 8px 32px ${theme.tertiary}77, 0 0 48px ${theme.tertiary}55`,
-                    }
-                  : {
-                      boxShadow: `0 0 0 1px ${theme.tertiary}33, 0 0 36px -8px ${theme.tertiary}99, 0 8px 24px rgba(0,0,0,0.5)`,
-                    }
-              }
-            >
-              {micBall && !isListening ? (
-                <>
-                  <Image src={micBall} alt="" fill sizes="56px" className="rounded-full object-cover" draggable={false} />
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/35">
-                    <MaterialSymbol name="mic" className="text-[22px] text-white drop-shadow" />
-                  </span>
-                </>
-              ) : (
-                <MaterialSymbol name={isListening ? "stop" : "mic"} className={`text-[26px] ${isListening ? "" : "text-white"}`} />
-              )}
-            </button>
-
-            <button
-              type="button"
               onClick={handleFlipIt}
               disabled={loading || !inputDisplayValue.trim()}
-              className="relative flex-1 overflow-hidden rounded-2xl border py-3.5 font-bold shadow-none transition-all duration-300 hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
+              className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3.5 font-bold text-white shadow-none backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
               style={{
                 fontFamily: "'Permanent Marker', cursive",
                 fontSize: "1.05rem",
-                backgroundColor: theme.secondary,
-                color: theme.onSecondary,
-                borderColor: theme.tertiary,
-                boxShadow: `0 0 24px -6px ${theme.tertiary}aa`,
+                borderColor: `${theme.primary}30`,
+                boxShadow: `0 0 0 1px ${theme.primary}20, inset 0 1px 0 ${theme.primary}18`,
               }}
             >
-              <span className="relative z-10 flex w-full justify-center">
+              {cityTheme.bg?.wide ? (
+                <Image
+                  src={cityTheme.bg.wide}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 60vw, 480px"
+                  className="object-cover opacity-75"
+                  draggable={false}
+                />
+              ) : null}
+              <div
+                className="absolute inset-0"
+                style={{ background: `linear-gradient(135deg, ${theme.primary}28 0%, rgba(0,0,0,0.55) 100%)` }}
+              />
+              <span className="relative z-10 flex w-full justify-center drop-shadow-lg">
                 {loading ? (
                   <FlipButtonSkeleton />
                 ) : appMode === "reply" ? (
@@ -1080,8 +1108,8 @@ export function TranslatorView() {
               type="button"
               onClick={handleClear}
               aria-label="Clear"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white/75 shadow-none backdrop-blur-xl transition-all duration-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white active:scale-[0.97]"
-              style={{ borderColor: `${theme.tertiary}35` }}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl backdrop-blur-xl transition-all duration-300 hover:brightness-125 active:scale-[0.97]"
+              style={subtleButtonStyle(theme)}
             >
               <svg className="h-[20px] w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path
@@ -1099,12 +1127,6 @@ export function TranslatorView() {
               Each city retry uses 1 more; failed generation attempts may still count.
             </p>
           ) : null}
-          {isListening ? (
-            <p className="-mt-2 text-center text-[13px]" style={{ color: theme.primary }}>
-              listening… tap the mic to stop
-            </p>
-          ) : null}
-          {micError ? <p className="-mt-2 text-center text-[12px] text-red-400">{micError}</p> : null}
 
           <details className="group rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2 backdrop-blur-xl">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-1 text-[12px] font-medium text-white/60 [&::-webkit-details-marker]:hidden">
@@ -1535,14 +1557,8 @@ export function TranslatorView() {
                           onClick={() => void handlePlayTranslation()}
                           disabled={ttsLoading || audioPreparing}
                           aria-label={ttsPlaying ? "Stop" : ttsError ? "Retry voice" : "Read aloud"}
-                          className="relative flex-1 overflow-hidden rounded-2xl border py-3 text-sm font-bold shadow-none transition-all duration-300 hover:brightness-110 active:scale-[0.99] disabled:opacity-45"
-                          style={{
-                            backgroundColor: theme.secondary,
-                            borderColor: theme.tertiary,
-                            color: theme.onSecondary,
-                            fontFamily: "'Permanent Marker', cursive",
-                            boxShadow: `0 0 20px -8px ${theme.tertiary}aa`,
-                          }}
+                          className="relative flex-1 overflow-hidden rounded-2xl py-3 text-sm font-bold backdrop-blur-xl transition-all duration-300 hover:brightness-125 active:scale-[0.99] disabled:opacity-45"
+                          style={{ ...subtleButtonStyle(theme), fontFamily: "'Permanent Marker', cursive" }}
                         >
                           {ttsLoading ? (
                             <TtsPlaySkeleton />
@@ -1557,8 +1573,8 @@ export function TranslatorView() {
                           onClick={() => void handleCopy()}
                           aria-label="Copy"
                           title="Copy"
-                          className="flex w-14 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.97]"
-                          style={{ borderColor: `${theme.tertiary}55`, color: theme.primary }}
+                          className="flex w-14 shrink-0 items-center justify-center rounded-2xl backdrop-blur-xl transition-all duration-300 hover:brightness-125 active:scale-[0.97]"
+                          style={subtleButtonStyle(theme)}
                         >
                           <MaterialSymbol name="content_copy" className="text-[20px]" />
                         </button>
@@ -1567,8 +1583,8 @@ export function TranslatorView() {
                           onClick={() => void handleShare()}
                           disabled={sharing}
                           aria-label="Share as image"
-                          className="flex w-14 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-white shadow-none backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.08] active:scale-[0.97] disabled:opacity-45"
-                          style={{ borderColor: `${theme.tertiary}55`, color: theme.primary }}
+                          className="flex w-14 shrink-0 items-center justify-center rounded-2xl backdrop-blur-xl transition-all duration-300 hover:brightness-125 active:scale-[0.97] disabled:opacity-45"
+                          style={subtleButtonStyle(theme)}
                         >
                           {sharing ? (
                             <span className="text-[13px]">…</span>

@@ -1,5 +1,21 @@
 /** Glossy translucent controls — Tailwind theme tokens (see tailwind.config.ts). */
 
+import type { CSSProperties } from "react";
+import type { FlagPalette } from "@/lib/themeConfig";
+
+/**
+ * Subtle flag-tinted button: dark glass fill, thin `secondary` border, readable `secondaryText`,
+ * faint `tertiary` glow. Color is a hint, never a solid block (the flag art is the only block).
+ */
+export function subtleButtonStyle(p: Pick<FlagPalette, "secondary" | "secondaryText" | "tertiary">): CSSProperties {
+  return {
+    backgroundColor: "rgba(0,0,0,0.35)",
+    border: `1px solid ${p.secondary}`,
+    color: p.secondaryText,
+    boxShadow: `0 0 18px -10px ${p.tertiary}`,
+  };
+}
+
 export const THEME_GLASS_ICON_BTN =
   "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border-2 border-themeButtonBorder bg-themeButton/10 backdrop-blur-sm text-white shadow-glow-theme transition-all hover:bg-themeButton/20 active:scale-[0.98]";
 

@@ -1,22 +1,24 @@
 /**
  * Per-city theme = the city's full flag palette, split into roles so every flag color shows at once.
+ * Color is a hint, not a block: buttons stay dark/glass with a thin flag-colored border and
+ * flag-colored text. The only large color areas are the flag art (Flip it button, mic ball).
  *
  * Roles (all values are official flag colors — see `flagColors`):
- * - primary     readable on the dark UI: translated text, selected tab / segment, accent text, focus ring
- * - secondary   main button fill (Flip it, Upgrade, active mic)
- * - onSecondary text / icon on a `secondary` fill
- * - tertiary    glow, borders, highlights — may be a dark flag color (navy, dark red); never used for text
+ * - primary        readable text: translated text, selected tab / segment, accent text, focus ring
+ * - secondary      thin button borders (Read aloud, Copy, Share, Upgrade, Clear) — may be dark
+ * - secondaryText  readable text / icons on those subtle buttons
+ * - tertiary       glow and soft highlights — may be a dark flag color (navy, dark red)
  *
- * Contrast (WCAG AA, 4.5:1) for primary-on-dark and onSecondary-on-secondary is enforced in
+ * WCAG AA (4.5:1) for primary and secondaryText on the dark UI is enforced in
  * tests/themeConfig.test.ts. A flag color too dark to read (navy, black, dark red) is only ever
- * a fill, border or glow.
+ * a border or glow, never text.
  */
 export type FlagPalette = {
-  /** Official flag colors. Every role below must be one of these (onSecondary may also be APP_INK). */
+  /** Official flag colors. Every role below must be one of these. */
   flagColors: readonly string[];
   primary: string;
   secondary: string;
-  onSecondary: string;
+  secondaryText: string;
   tertiary: string;
 };
 
@@ -24,12 +26,6 @@ export type CityThemeTokens = FlagPalette & {
   bg: { wide: string; long: string };
   micBall?: string | null;
 };
-
-/**
- * The app's own near-black background ink. Used as `onSecondary` only where no flag color reaches
- * AA on the button fill (Spain: red/yellow is 4.3:1 either way).
- */
-export const APP_INK = "#0B0B0C";
 
 /** Per-dialect hero images: `wide` (desktop), `long` (phone). Ball art aligned with micBall. */
 const IMG = {
@@ -51,12 +47,12 @@ const IMG = {
 
 /** Official flag palettes with role assignments. Sources noted per flag. */
 export const FLAG_PALETTES = {
-  /** Jamaica — Jamaica Information Service spec: green, gold, black. */
+  /** Jamaica — Jamaica Information Service spec: green, gold, black (black = the app ground). */
   jamaica: {
     flagColors: ["#009B3A", "#FED100", "#000000"],
     primary: "#009B3A",
     secondary: "#FED100",
-    onSecondary: "#000000",
+    secondaryText: "#FED100",
     tertiary: "#009B3A",
   },
   /** United Kingdom — Union Flag, Pantone 186C red / 280C blue, white. */
@@ -64,7 +60,7 @@ export const FLAG_PALETTES = {
     flagColors: ["#C8102E", "#012169", "#FFFFFF"],
     primary: "#FFFFFF",
     secondary: "#C8102E",
-    onSecondary: "#FFFFFF",
+    secondaryText: "#FFFFFF",
     tertiary: "#012169",
   },
   /** United States — Old Glory Red / Old Glory Blue, white. */
@@ -72,7 +68,7 @@ export const FLAG_PALETTES = {
     flagColors: ["#B22234", "#3C3B6E", "#FFFFFF"],
     primary: "#FFFFFF",
     secondary: "#B22234",
-    onSecondary: "#FFFFFF",
+    secondaryText: "#FFFFFF",
     tertiary: "#3C3B6E",
   },
   /** Japan — Nisshōki, crimson disc on white. */
@@ -80,7 +76,7 @@ export const FLAG_PALETTES = {
     flagColors: ["#BC002D", "#FFFFFF"],
     primary: "#FFFFFF",
     secondary: "#BC002D",
-    onSecondary: "#FFFFFF",
+    secondaryText: "#FFFFFF",
     tertiary: "#BC002D",
   },
   /** France — Système de design de l'État: bleu France, blanc, rouge Marianne. */
@@ -88,7 +84,7 @@ export const FLAG_PALETTES = {
     flagColors: ["#000091", "#FFFFFF", "#E1000F"],
     primary: "#FFFFFF",
     secondary: "#E1000F",
-    onSecondary: "#FFFFFF",
+    secondaryText: "#FFFFFF",
     tertiary: "#000091",
   },
   /** Russia — white, blue, red. */
@@ -96,7 +92,7 @@ export const FLAG_PALETTES = {
     flagColors: ["#FFFFFF", "#0039A6", "#D52B1E"],
     primary: "#FFFFFF",
     secondary: "#D52B1E",
-    onSecondary: "#FFFFFF",
+    secondaryText: "#FFFFFF",
     tertiary: "#0039A6",
   },
   /** Mexico — Pantone 3425C green, white, 186C red. */
@@ -104,7 +100,7 @@ export const FLAG_PALETTES = {
     flagColors: ["#006847", "#FFFFFF", "#CE1126"],
     primary: "#FFFFFF",
     secondary: "#006847",
-    onSecondary: "#FFFFFF",
+    secondaryText: "#FFFFFF",
     tertiary: "#CE1126",
   },
   /** Brazil — green, yellow, blue, white. */
@@ -112,7 +108,7 @@ export const FLAG_PALETTES = {
     flagColors: ["#009C3B", "#FFDF00", "#002776", "#FFFFFF"],
     primary: "#009C3B",
     secondary: "#FFDF00",
-    onSecondary: "#002776",
+    secondaryText: "#FFDF00",
     tertiary: "#002776",
   },
   /** Israel — blue (#0038B8) on white. */
@@ -120,31 +116,31 @@ export const FLAG_PALETTES = {
     flagColors: ["#0038B8", "#FFFFFF"],
     primary: "#FFFFFF",
     secondary: "#0038B8",
-    onSecondary: "#FFFFFF",
+    secondaryText: "#FFFFFF",
     tertiary: "#0038B8",
   },
-  /** Egypt — red, white, black, gold (Eagle of Saladin). */
+  /** Egypt — red, white, black (= the app ground), gold (Eagle of Saladin). */
   egypt: {
     flagColors: ["#CE1126", "#FFFFFF", "#000000", "#C09300"],
     primary: "#FFFFFF",
     secondary: "#C09300",
-    onSecondary: "#000000",
+    secondaryText: "#C09300",
     tertiary: "#CE1126",
   },
   /** Spain — Real Decreto 2964/1981 / Manual de identidad: rojo, gualda. */
   spain: {
     flagColors: ["#AA151B", "#F1BF00"],
     primary: "#F1BF00",
-    secondary: "#F1BF00",
-    onSecondary: APP_INK,
+    secondary: "#AA151B",
+    secondaryText: "#F1BF00",
     tertiary: "#AA151B",
   },
-  /** Germany — Bundesregierung: schwarz, rot, gold. */
+  /** Germany — Bundesregierung: schwarz (= the app ground), rot, gold. */
   germany: {
     flagColors: ["#000000", "#DD0000", "#FFCE00"],
     primary: "#FFCE00",
-    secondary: "#FFCE00",
-    onSecondary: "#000000",
+    secondary: "#DD0000",
+    secondaryText: "#FFCE00",
     tertiary: "#DD0000",
   },
   /** Italy — Presidenza del Consiglio: fern green, bright white, flame scarlet. */
@@ -152,7 +148,7 @@ export const FLAG_PALETTES = {
     flagColors: ["#009246", "#F4F5F0", "#CE2B37"],
     primary: "#F4F5F0",
     secondary: "#CE2B37",
-    onSecondary: "#F4F5F0",
+    secondaryText: "#F4F5F0",
     tertiary: "#009246",
   },
   /** Portugal — green, red, yellow (armillary sphere). */
@@ -160,7 +156,7 @@ export const FLAG_PALETTES = {
     flagColors: ["#006600", "#FF0000", "#FFFF00"],
     primary: "#FFFF00",
     secondary: "#006600",
-    onSecondary: "#FFFF00",
+    secondaryText: "#FFFF00",
     tertiary: "#FF0000",
   },
   /** Saudi Arabia — green, white. */
@@ -168,7 +164,7 @@ export const FLAG_PALETTES = {
     flagColors: ["#006C35", "#FFFFFF"],
     primary: "#FFFFFF",
     secondary: "#006C35",
-    onSecondary: "#FFFFFF",
+    secondaryText: "#FFFFFF",
     tertiary: "#006C35",
   },
 } as const satisfies Record<string, FlagPalette>;
@@ -205,7 +201,7 @@ const NEUTRAL_PALETTE: FlagPalette = {
   flagColors: [],
   primary: "#888888",
   secondary: "#888888",
-  onSecondary: APP_INK,
+  secondaryText: "#888888",
   tertiary: "#888888",
 };
 
