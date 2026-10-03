@@ -6,7 +6,6 @@ export type DialectTheme = {
   id: string;
   pillLabel: string;
   bg: string;
-  flag: string;
   city: string;
 };
 
@@ -15,192 +14,171 @@ export const DIALECT_THEMES: DialectTheme[] = [
     id: "London Roadman",
     pillLabel: "London",
     bg: "#0d0d1a",
-    flag: "🇬🇧",
     city: "London",
   },
   {
     id: "Jamaican Patois",
     pillLabel: "Kingston",
     bg: "#0a1a0a",
-    flag: "🇯🇲",
     city: "Kingston",
   },
   {
     id: "New York Brooklyn",
     pillLabel: "NYC",
     bg: "#1a0a0a",
-    flag: "🇺🇸",
     city: "Brooklyn",
   },
   {
     id: "Tokyo Gyaru",
     pillLabel: "Tokyo",
     bg: "#0a0f1a",
-    flag: "🇯🇵",
     city: "Tokyo",
   },
   {
     id: "Paris Banlieue",
     pillLabel: "Paris",
     bg: "#1a1400",
-    flag: "🇫🇷",
     city: "Paris",
   },
   {
     id: "Russian Street",
     pillLabel: "Moscow",
     bg: "#0f0f0f",
-    flag: "🇷🇺",
     city: "Moscow",
   },
   {
     id: "Mexico City Barrio",
     pillLabel: "CDMX",
     bg: "#1a0a0f",
-    flag: "🇲🇽",
     city: "CDMX",
   },
   {
     id: "Rio Favela",
     pillLabel: "Rio",
     bg: "#001a0f",
-    flag: "🇧🇷",
     city: "Rio",
   },
   {
     id: "Israeli Street",
     pillLabel: "Tel Aviv",
     bg: "#0a1528",
-    flag: "🇮🇱",
     city: "Tel Aviv",
   },
   {
     id: "Arabic Egyptian",
     pillLabel: "Cairo",
     bg: "#1a1510",
-    flag: "🇪🇬",
     city: "Cairo",
   },
   {
     id: "Spanish Madrid",
     pillLabel: "Madrid",
     bg: "#1a0f0a",
-    flag: "🇪🇸",
     city: "Madrid",
   },
   {
     id: "English (Standard)",
     pillLabel: "English",
     bg: "#0d0d0d",
-    flag: "🇺🇸",
     city: "USA",
   },
   {
     id: "Spanish",
     pillLabel: "Spanish",
     bg: "#0d0d0d",
-    flag: "🇪🇸",
     city: "Spain",
   },
   {
     id: "French",
     pillLabel: "French",
     bg: "#0d0d0d",
-    flag: "🇫🇷",
     city: "France",
   },
   {
     id: "German",
     pillLabel: "German",
     bg: "#0d0d0d",
-    flag: "🇩🇪",
     city: "Germany",
   },
   {
     id: "Italian",
     pillLabel: "Italian",
     bg: "#0d0d0d",
-    flag: "🇮🇹",
     city: "Italy",
   },
   {
     id: "Russian",
     pillLabel: "Russian",
     bg: "#0d0d0d",
-    flag: "🇷🇺",
     city: "Russia",
   },
   {
     id: "Portuguese",
     pillLabel: "Portuguese",
     bg: "#0d0d0d",
-    flag: "🇵🇹",
     city: "Portugal",
   },
   {
     id: "Japanese",
     pillLabel: "Japanese",
     bg: "#0d0d0d",
-    flag: "🇯🇵",
     city: "Japan",
   },
   {
     id: "Hebrew (Standard)",
     pillLabel: "Hebrew",
     bg: "#0d0d0d",
-    flag: "🇮🇱",
     city: "Israel",
   },
   {
     id: "Arabic",
     pillLabel: "Arabic",
     bg: "#0d0d0d",
-    flag: "🇸🇦",
     city: "Arabia",
   },
 ];
 
-export type StandardOption = { value: string; label: string; flag: string };
+export type StandardOption = { value: string; label: string };
 
 export const STANDARD_LANGUAGES: StandardOption[] = [
-  { value: "English (Standard)", label: "English", flag: "🇺🇸" },
-  { value: "Spanish", label: "Spanish", flag: "🇪🇸" },
-  { value: "French", label: "French", flag: "🇫🇷" },
-  { value: "German", label: "German", flag: "🇩🇪" },
-  { value: "Italian", label: "Italian", flag: "🇮🇹" },
-  { value: "Russian", label: "Russian", flag: "🇷🇺" },
-  { value: "Portuguese", label: "Portuguese", flag: "🇵🇹" },
-  { value: "Japanese", label: "Japanese", flag: "🇯🇵" },
-  { value: "Arabic", label: "Arabic", flag: "🇸🇦" },
-  { value: "Hebrew (Standard)", label: "Hebrew", flag: "🇮🇱" },
+  { value: "English (Standard)", label: "English" },
+  { value: "Spanish", label: "Spanish" },
+  { value: "French", label: "French" },
+  { value: "German", label: "German" },
+  { value: "Italian", label: "Italian" },
+  { value: "Russian", label: "Russian" },
+  { value: "Portuguese", label: "Portuguese" },
+  { value: "Japanese", label: "Japanese" },
+  { value: "Arabic", label: "Arabic" },
+  { value: "Hebrew (Standard)", label: "Hebrew" },
 ];
 
 // Labels are cool, neutral city names — the internal `value` keys are unchanged.
 export const OUTPUT_PREMIUM_OPTIONS: { value: string; label: string }[] = [
-  { value: "Jamaican Patois", label: "🇯🇲 Kingston" },
-  { value: "London Roadman", label: "🇬🇧 London" },
-  { value: "New York Brooklyn", label: "🗽 Brooklyn" },
-  { value: "Tokyo Gyaru", label: "🇯🇵 Tokyo" },
-  { value: "Paris Banlieue", label: "🇫🇷 Paris" },
-  { value: "Russian Street", label: "🇷🇺 Moscow" },
-  { value: "Mexico City Barrio", label: "🇲🇽 CDMX" },
-  { value: "Rio Favela", label: "🇧🇷 Rio" },
-  { value: "Israeli Street", label: "🇮🇱 Tel Aviv" },
-  { value: "Arabic Egyptian", label: "🇪🇬 Cairo" },
-  { value: "Spanish Madrid", label: "🇪🇸 Madrid" },
+  { value: "Jamaican Patois", label: "Kingston" },
+  { value: "London Roadman", label: "London" },
+  { value: "New York Brooklyn", label: "Brooklyn" },
+  { value: "Tokyo Gyaru", label: "Tokyo" },
+  { value: "Paris Banlieue", label: "Paris" },
+  { value: "Russian Street", label: "Moscow" },
+  { value: "Mexico City Barrio", label: "CDMX" },
+  { value: "Rio Favela", label: "Rio" },
+  { value: "Israeli Street", label: "Tel Aviv" },
+  { value: "Arabic Egyptian", label: "Cairo" },
+  { value: "Spanish Madrid", label: "Madrid" },
 ];
 
 export const OUTPUT_STANDARD_OPTIONS: { value: string; label: string }[] = [
-  { value: "English (Standard)", label: "🇺🇸 English" },
-  { value: "Spanish", label: "🇪🇸 Spanish" },
-  { value: "French", label: "🇫🇷 French" },
-  { value: "German", label: "🇩🇪 German" },
-  { value: "Italian", label: "🇮🇹 Italian" },
-  { value: "Russian", label: "🇷🇺 Russian" },
-  { value: "Portuguese", label: "🇵🇹 Portuguese" },
-  { value: "Japanese", label: "🇯🇵 Japanese" },
-  { value: "Arabic", label: "🇸🇦 Arabic" },
-  { value: "Hebrew (Standard)", label: "🇮🇱 Hebrew" },
+  { value: "English (Standard)", label: "English" },
+  { value: "Spanish", label: "Spanish" },
+  { value: "French", label: "French" },
+  { value: "German", label: "German" },
+  { value: "Italian", label: "Italian" },
+  { value: "Russian", label: "Russian" },
+  { value: "Portuguese", label: "Portuguese" },
+  { value: "Japanese", label: "Japanese" },
+  { value: "Arabic", label: "Arabic" },
+  { value: "Hebrew (Standard)", label: "Hebrew" },
 ];
 
 /** Universal script rule injected before dialect-specific locks (translate API). */
@@ -306,7 +284,6 @@ export const INPUT_LANGUAGES = [
 /** Dialect display info + its flag palette roles (colors come only from lib/themeConfig.ts). */
 export type ResolvedTheme = FlagPalette & {
   bg: string;
-  flag: string;
   city: string;
 };
 
@@ -315,13 +292,12 @@ export function resolveTheme(outputLang: string): ResolvedTheme {
   const palette = { flagColors, primary, secondary, secondaryText, tertiary };
   const premium = DIALECT_THEMES.find((t) => t.id === outputLang);
   if (premium) {
-    return { ...palette, bg: premium.bg, flag: premium.flag, city: premium.city };
+    return { ...palette, bg: premium.bg, city: premium.city };
   }
   const std = STANDARD_LANGUAGES.find((o) => o.value === outputLang);
   return {
     ...palette,
     bg: NEUTRAL_BG,
-    flag: std?.flag ?? "🌐",
     city: std?.label ?? outputLang,
   };
 }

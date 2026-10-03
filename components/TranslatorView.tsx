@@ -158,7 +158,7 @@ export function TranslatorView() {
     try {
       const params = new URLSearchParams(window.location.search);
       if (params.get("upgraded") === "1") {
-        setToast("You're on Pro now — unlimited 🎉");
+        setToast("You're on Pro now — unlimited");
         params.delete("upgraded");
         const qs = params.toString();
         window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
@@ -560,7 +560,6 @@ export function TranslatorView() {
         original: (originalText || inputDisplayValue).trim(),
         translated: translatedText.trim(),
         city: resultTheme.city,
-        flag: resultTheme.flag,
         accent: resultTheme.primary,
         glow: resultTheme.tertiary,
       });
@@ -848,7 +847,7 @@ export function TranslatorView() {
           </label>
           {isIdle ? (
             <div
-              className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
+              className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 py-0.5 backdrop-blur-sm"
               style={flagOutline(theme.secondary)}
             >
             <select
@@ -867,7 +866,7 @@ export function TranslatorView() {
                   recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                 }
               }}
-              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[13px] text-white/85 outline-none ring-0"
+              className="select-centered w-full cursor-pointer border-0 bg-transparent !px-9 py-2 text-center text-[13px] text-white/85 outline-none ring-0"
             >
               <optgroup label="City slang" className="bg-zinc-900 text-white">
                 {OUTPUT_PREMIUM_OPTIONS.map((o) => (
@@ -903,7 +902,7 @@ export function TranslatorView() {
                     recordInteractionSignal({ type: "dialect_select", dialectId: v, timestampMs: Date.now() });
                   }
                 }}
-                className={`${GLASS_SELECT} px-3 py-2.5 text-center text-[13px] font-medium leading-snug text-white/90`}
+                className={`${GLASS_SELECT} select-centered !px-9 py-2.5 text-center text-[13px] font-medium leading-snug text-white/90`}
                 style={flagOutline(theme.secondary)}
               >
                 <optgroup label="City slang" className="bg-zinc-900 text-white">
@@ -1090,7 +1089,7 @@ export function TranslatorView() {
               type="button"
               onClick={handleFlipIt}
               disabled={loading || !inputDisplayValue.trim()}
-              className="relative w-full overflow-hidden rounded-2xl border border-white/5 bg-white/5 py-3.5 font-bold text-white shadow-none backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
+              className="relative flex h-14 w-full items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-white/5 font-bold text-white shadow-none backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
               style={{
                 fontFamily: "'Permanent Marker', cursive",
                 fontSize: "1.05rem",
@@ -1114,17 +1113,17 @@ export function TranslatorView() {
                 className="absolute inset-0"
                 style={{ background: `linear-gradient(135deg, ${theme.primary}28 0%, rgba(0,0,0,0.55) 100%)` }}
               />
-              <span className="relative z-10 flex w-full justify-center drop-shadow-lg">
+              <span className="relative z-10 flex w-full items-center justify-center text-center leading-none drop-shadow-lg">
                 {loading ? (
                   <FlipButtonSkeleton />
                 ) : appMode === "reply" ? (
-                  "Get replies 💬"
+                  "Get replies"
                 ) : appMode === "compare" ? (
-                  "Hear it 3 ways 🎭"
+                  "Hear it 3 ways"
                 ) : appMode === "check" ? (
-                  "Check it 🕵️"
+                  "Check it"
                 ) : (
-                  "Flip it 🔥"
+                  "Flip it"
                 )}
               </span>
             </button>
@@ -1153,7 +1152,7 @@ export function TranslatorView() {
           </label>
           {isIdle ? (
             <div
-              className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 px-3 py-0.5 backdrop-blur-sm"
+              className="mx-auto w-full rounded-xl border border-white/[0.05] bg-black/18 py-0.5 backdrop-blur-sm"
               style={flagOutline(theme.secondary)}
             >
             <select
@@ -1175,7 +1174,7 @@ export function TranslatorView() {
                   });
                 }
               }}
-              className="w-full cursor-pointer border-0 bg-transparent py-2 text-center text-[13px] text-white/85 outline-none ring-0"
+              className="select-centered w-full cursor-pointer border-0 bg-transparent !px-9 py-2 text-center text-[13px] text-white/85 outline-none ring-0"
             >
               {INPUT_LANGUAGES.map((opt) => (
                 <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
@@ -1205,7 +1204,7 @@ export function TranslatorView() {
                     });
                   }
                 }}
-                className={`${GLASS_SELECT_COMPACT} px-2.5 py-1.5 text-center text-[12px] font-medium leading-tight text-white/90`}
+                className={`${GLASS_SELECT_COMPACT} select-centered !px-9 py-1.5 text-center text-[12px] font-medium leading-tight text-white/90`}
                 style={flagOutline(theme.secondary)}
               >
                 {INPUT_LANGUAGES.map((opt) => (
@@ -1338,7 +1337,7 @@ export function TranslatorView() {
                         aria-busy={r.status === "pending"}
                       >
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: resolveTheme(r.dialect).primary }}>
-                          {resolveTheme(r.dialect).flag} {resolveTheme(r.dialect).city}
+                          {resolveTheme(r.dialect).city}
                         </p>
                         {r.status === "pending" ? (
                           <p role="status" className="text-sm text-white/50">Translating…</p>
@@ -1559,7 +1558,7 @@ export function TranslatorView() {
                   translatedText.trim() ? (
                     <div className="mt-3 flex flex-col gap-1">
                       <p className="text-xs text-white/60" dir="auto">
-                        {resultTheme.flag} {resultTheme.city}
+                        {resultTheme.city}
                       </p>
                       <div className="flex gap-2">
                         <button
