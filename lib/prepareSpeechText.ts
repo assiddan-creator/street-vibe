@@ -19,6 +19,8 @@
  */
 
 import { resolveSpeechLanguage } from "@/lib/speechPunctuation";
+import { applyPronunciationAliases } from "@/lib/pronunciationDictionary";
+import { speakNumbers } from "@/lib/speechNumbers";
 
 /** Language for filler rules. speechPunctuation deliberately omits ja / Kingston. */
 function fillerLanguage(dialect: string | undefined): string | undefined {
@@ -112,5 +114,9 @@ export function prepareSpeechText(text: string, dialect?: string): string {
 
   // Nothing speakable left (e.g. the message was only emoji): return "" so the
   // caller can skip TTS instead of reading emoji names aloud.
-  return new RegExp(L, "u").test(s) ? s : "";
+  if (!new RegExp(L, "u").test(s)) return "";
+
+  // Per-city spoken spellings (empty until a word is heard wrong), then numbers as said.
+  s = applyPronunciationAliases(s, dialect);
+  return speakNumbers(s, fillerLanguage(dialect), dialect);
 }

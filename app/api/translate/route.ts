@@ -7,6 +7,7 @@ import {
   splitTranslationAndDictionary,
 } from "@/lib/streetVibeTheme";
 import { isKnownPremiumDialect, usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
+import { CHAT_AUTHENTICITY_RULE, SLANG_LOCK_RULE, SPOKEN_STYLE_RULE, STANDARD_PUNCTUATION_RULE } from "@/lib/spokenStyleRules";
 import {
   containsLatinLeak,
   countLatinTokens,
@@ -218,8 +219,7 @@ function buildPrompt({
       ? "Dialect-specific voice, SCRIPT LOCK, and research cues above take priority — compress within that voice; never flatten to generic English."
       : "");
 
-  const noAIRule =
-    "AUTHENTICITY RULE: Write exactly like a real person texting a friend. NO commas unless absolutely necessary. Use short punchy phrases separated by spaces or line breaks — not commas. No full sentences if the original was casual. Raw, fast, human. Think WhatsApp message not a novel.";
+  const noAIRule = CHAT_AUTHENTICITY_RULE;
 
   /** Russian Street: do not apply English-style anti-comma / line-break pressure to Russian (see CRITICAL RULES FOR RUSSIAN). */
   const slangAuthenticityRule =
@@ -246,7 +246,7 @@ function buildPrompt({
       ? `
 
 OUTPUT FORMAT — Spanish Madrid (strict):
-- Before |||: one sendable WhatsApp-style block only — Spanish, the line(s) you would actually send. No labels, no meta, no tutorial tone, no English in this block. No emoji unless the source already contains emoji.
+- Before |||: one sendable WhatsApp-style block only — Spanish, the line(s) you would actually send. No labels, no meta, no tutorial tone, no English in this block. No emoji.
 - After |||: at most 2 lines. Each line: "término — aclaración breve en español" (short gloss only, ≤8 words after the dash). Spanish only — no English at all in gloss lines (not even one word). No heading word "dictionary", no etymology, no example sentences, no "Option A/B", no bullets of alternatives. If nothing needs glossing, output exactly one line: —
 - Do not prepend or append any other commentary.`
       : formattingRuleBase;
@@ -260,6 +260,7 @@ OUTPUT FORMAT — Spanish Madrid (strict):
         `Translate the following into natural, accurate standard ${primaryLanguage} matched to the source register (target dialect id: ${dialectId}).\n` +
         `${scriptLockBlock}\n` +
         `${standardNaturalnessRule}\n` +
+        `${STANDARD_PUNCTUATION_RULE}\n` +
         `Return ONLY the translated text. No explanations.\n` +
         `${antiLeakageRule}\n` +
         `${lengthRule}\n` +
@@ -372,6 +373,7 @@ ISRAELI STREET — Hebrew WhatsApp (not a slang showcase):
 - Avoid influencer-flavoured standalone hype for an experience ("היה לי אש", "שריפה", "וואלה חוויה"); enthusiasm comes from the phrasing ("היה ממש כיף", "נהניתי בטירוף", "תענוג"), not one trend word.
 - FLIRT: warmer register, still complete sentences; charm from tone, not from stacked slang.
 - Never trail off mid-word or mid-sentence before |||; finish the thought.
+- Closing tags: a source tag like "or not?" / "or what?" becomes the natural Hebrew chat tag ("או מה?"), not a literal "או לא?".
 `
       : "";
 
@@ -499,7 +501,8 @@ RULE PROFILE above applies to tone/word choice only; it must not change this out
       `${antiLeakageRule}\n` +
       `${lengthRule}\n` +
       `${conversationalCompressionRule}\n` +
-      `${slangAuthenticityRule}` +
+      `${slangAuthenticityRule}\n\n` +
+      `${SPOKEN_STYLE_RULE}` +
       `${personalizationBlock}` +
       `${slangControlBlock}` +
       `${dialectPackBlock}` +
@@ -516,6 +519,7 @@ RULE PROFILE above applies to tone/word choice only; it must not change this out
       `${arabicEgyptianVoiceBlock}` +
       `${russianRule}` +
       `${russianStreetStabilizationBlock}` +
+      `${SLANG_LOCK_RULE}\n\n` +
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +
       `${formattingRule}`,
