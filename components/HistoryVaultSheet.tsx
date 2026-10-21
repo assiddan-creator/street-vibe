@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import type { HistoryVaultEntry } from "@/lib/historyVault";
+import { historyEntryLabel, type HistoryVaultEntry } from "@/lib/historyVault";
 import { MaterialSymbol } from "@/components/ui/MaterialSymbol";
 import { flagOutline } from "@/lib/themeUiClasses";
 
@@ -99,7 +99,7 @@ export function HistoryVaultSheet({
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-6 pt-2">
           {entries.length === 0 ? (
-            <p className="py-10 text-center text-sm text-white/55">No saved translations yet.</p>
+            <p className="py-10 text-center text-sm text-white/55">Nothing saved yet — translations, replies, comparisons and checks all land here.</p>
           ) : (
             <ul className="flex flex-col gap-2.5">
               {entries.map((e) => (
@@ -110,18 +110,14 @@ export function HistoryVaultSheet({
                       boxShadow: `inset 0 1px 0 ${glow}12`,
                     }}
                   >
-                    <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] uppercase tracking-wider text-white/50">
-                      <span className="truncate font-medium text-white/60">{e.dialect}</span>
-                      <span className="text-white/35">·</span>
-                      <span>{e.vibe}</span>
-                      <span className="text-white/35">·</span>
-                      <span>L{e.slangLevel}</span>
+                    <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] tracking-wide text-white/50">
+                      <span className="truncate font-medium text-white/65">{historyEntryLabel(e)}</span>
                       <span className="ml-auto shrink-0 text-white/40">{formatTime(e.createdAtMs)}</span>
                     </div>
                     <p className="mb-1.5 line-clamp-2 text-start text-[13px] leading-snug text-white/60" dir="auto">
                       {e.sourceText}
                     </p>
-                    <p className="mb-2 text-start text-[15px] font-semibold leading-snug text-white/90" dir="auto" style={{ color: accent }}>
+                    <p className="mb-2 whitespace-pre-line text-start text-[15px] font-semibold leading-snug text-white/90" dir="auto" style={{ color: accent }}>
                       {e.translatedSlang}
                     </p>
                     {e.nativeTransliteration?.trim() ? (

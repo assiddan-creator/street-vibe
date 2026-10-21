@@ -58,13 +58,18 @@ import {
   type HistoryVaultEntry,
 } from "@/lib/historyVault";
 import { usesPremiumStreetIntensityControls } from "@/lib/dialectRegistry";
-import { shouldOfferHebrewTransliteration } from "@/lib/transliterationPolicy";
 import { TOP_HELPER_LABEL_CLASS } from "@/lib/topSectionUi";
 import { textDirection } from "@/lib/textDirection";
 import { AudioShareButton } from "@/components/AudioShareButton";
 import { fetchTtsAudioUrl, type TtsClientEngine } from "@/lib/ttsClient";
 import { canOfferBasicVoice, ttsFailureMessage } from "@/lib/ttsErrors";
-import { createComparisonController, requestCompareCity, type CompareRow } from "@/lib/compareTranslations";
+import {
+  comparisonDialects,
+  createComparisonController,
+  DEFAULT_COMPARE_CITIES,
+  requestCompareCity,
+  type CompareRow,
+} from "@/lib/compareTranslations";
 import { type TtsVoiceGender, getStoredTtsGender, setStoredTtsGender } from "@/lib/ttsVoiceGender";
 
 export function TranslatorView() {
@@ -113,6 +118,18 @@ export function TranslatorView() {
   const [sharing, setSharing] = useState(false);
   const [appMode, setAppMode] = useState<"translate" | "reply" | "compare" | "check">("translate");
   const [replies, setReplies] = useState<string[]>([]);
+  /** Reply mode: what the received message and each reply mean, in the reader's language. */
+  const [replyMeanings, setReplyMeanings] = useState<string[]>([]);
+  const [incomingMeaning, setIncomingMeaning] = useState("");
+  const [replyTranslits, setReplyTranslits] = useState<string[]>([]);
+  /** Compare mode: the two cities shown next to the main one. */
+  const [comparePicks, setComparePicks] = useState<string[]>(DEFAULT_COMPARE_CITIES.slice(0, 2));
+  /** Read-aloud for a single reply / compare line (the main result has its own player). */
+  const [linePlay, setLinePlay] = useState<{ key: string; state: "loading" | "playing" } | null>(null);
+  const resultColumnRef = useRef<HTMLDivElement>(null);
+  /** The two cities actually compared next to the main one (picks, deduped against it). */
+  const compareCities = comparisonDialects(outputLang, comparePicks).slice(1);
+  const savedCompareKeyRef = useRef("");
   const [compareResults, setCompareResults] = useState<CompareRow[]>([]);
   const [checkResult, setCheckResult] = useState<
     { score: number; verdict: string; fixed: string; tells: string[] } | null
@@ -270,6 +287,29 @@ export function TranslatorView() {
       setDictionaryPills([]);
       setError(null);
       setDialect(entry.dialect);
+      // Reply / compare / check entries reopen in their own mode with their own result.
+      const kind = entry.kind ?? "translate";
+      if (kind !== "translate") {
+        setAppMode(kind);
+        setInputText("");
+        setTranslatedText("");
+        setResultContext(null);
+        setNativeTransliteration(null);
+        setReplies(kind === "reply" ? (entry.items ?? []).map((i) => i.text) : []);
+        setReplyMeanings(kind === "reply" ? (entry.items ?? []).map((i) => i.note ?? "") : []);
+        setIncomingMeaning(kind === "reply" ? entry.nativeTransliteration ?? "" : "");
+        setReplyTranslits([]);
+        setCompareResults(
+          kind === "compare"
+            ? (entry.items ?? []).map((i) => ({ dialect: i.dialect ?? entry.dialect, status: "success" as const, text: i.text }))
+            : []
+        );
+        setCheckResult(kind === "check" ? entry.check ?? null : null);
+      } else {
+        setReplies([]);
+        setCompareResults([]);
+        setCheckResult(null);
+      }
     },
     [setDialect]
   );
@@ -281,6 +321,37 @@ export function TranslatorView() {
   useEffect(() => {
     ttsPlayAttemptForCurrentTranslationRef.current = 0;
   }, [translatedText]);
+
+  // A comparison lands in history once every city has answered (once per run).
+  useEffect(() => {
+    if (appMode !== "compare" || compareResults.length === 0) return;
+    if (compareResults.some((r) => r.status === "pending")) return;
+    const done = compareResults.filter((r) => r.status === "success");
+    if (!done.length) return;
+    const key = `${originalText}|${done.map((r) => `${r.dialect}:${r.text}`).join("|")}`;
+    if (savedCompareKeyRef.current === key) return;
+    savedCompareKeyRef.current = key;
+    appendHistoryVaultEntry({
+      kind: "compare",
+      sourceText: originalText,
+      translatedSlang: done.map((r) => `${resolveTheme(r.dialect).city}: ${r.text}`).join("\n"),
+      nativeTransliteration: null,
+      items: done.map((r) => ({ text: r.text, dialect: r.dialect })),
+      dialect: done[0].dialect,
+      vibe: context,
+      slangLevel,
+      inputLanguage: selectedInputLang,
+    });
+    setHistoryEntries(loadHistoryVault());
+  }, [appMode, compareResults, originalText, context, slangLevel, selectedInputLang]);
+
+  // On phones the result sits below the composer: bring it into view when it lands.
+  const resultReady = Boolean(translatedText || replies.length || checkResult || compareResults.length);
+  useEffect(() => {
+    if (!resultReady || loading) return;
+    if (typeof window === "undefined" || window.innerWidth >= 1024) return;
+    resultColumnRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [resultReady, loading]);
 
   useEffect(() => {
     // A late voice response must not play after a different result/voice is selected.
@@ -457,6 +528,9 @@ export function TranslatorView() {
     setError(null);
     setOriginalText(trimmed);
     setReplies([]);
+    setReplyMeanings([]);
+    setIncomingMeaning("");
+    setReplyTranslits([]);
     try {
       const res = await fetch("/api/translate", {
         method: "POST",
@@ -467,11 +541,52 @@ export function TranslatorView() {
           currentLang: dialect,
           context,
           slangLevel,
+          sourceLanguage: selectedInputLang,
+          uiLocale,
         }),
       });
-      const data = (await res.json()) as { replies?: string[]; error?: string };
+      const data = (await res.json()) as {
+        replies?: string[];
+        meanings?: string[];
+        incomingMeaning?: string;
+        usage?: PublicUsage;
+        error?: string;
+      };
+      if (data.usage) setUsage(data.usage);
       if (!res.ok) throw new Error(data.error || "Couldn't get replies");
-      setReplies(Array.isArray(data.replies) ? data.replies : []);
+      const list = Array.isArray(data.replies) ? data.replies : [];
+      const meanings = Array.isArray(data.meanings) ? data.meanings : [];
+      setReplies(list);
+      setReplyMeanings(meanings);
+      setIncomingMeaning(data.incomingMeaning?.trim() || "");
+      // Read-aloud phonetics per reply, in the reader's script; best-effort, never blocks.
+      list.forEach((line, i) => {
+        void fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "transliterate", line, sourceLanguage: selectedInputLang, uiLocale }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d: { nativeTransliteration?: string } | null) => {
+            const t = d?.nativeTransliteration?.trim();
+            if (t) setReplyTranslits((prev) => Object.assign([...prev], { [i]: t }));
+          })
+          .catch(() => {});
+      });
+      if (list.length) {
+        appendHistoryVaultEntry({
+          kind: "reply",
+          sourceText: trimmed,
+          translatedSlang: list.join("\n"),
+          nativeTransliteration: data.incomingMeaning?.trim() || null,
+          items: list.map((text, i) => ({ text, note: meanings[i] || undefined })),
+          dialect,
+          vibe: context,
+          slangLevel,
+          inputLanguage: selectedInputLang,
+        });
+        setHistoryEntries(loadHistoryVault());
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't get replies");
       setReplies([]);
@@ -487,7 +602,7 @@ export function TranslatorView() {
     setOriginalText(trimmed);
     await comparisonRef.current?.start({
       text: trimmed, slangLevel, context, sourceLanguage: selectedInputLang, uiLocale,
-    }, primary);
+    }, primary, compareCities);
   };
 
   const getNaturalnessCheck = async (draft: string, dialect: string) => {
@@ -506,6 +621,7 @@ export function TranslatorView() {
           text: trimmed,
           currentLang: dialect,
           context,
+          sourceLanguage: selectedInputLang,
           uiLocale,
         }),
       });
@@ -517,6 +633,18 @@ export function TranslatorView() {
       if (data.usage) setUsage(data.usage);
       if (!res.ok || !data.naturalness) throw new Error(data.error || "Couldn't check that");
       setCheckResult(data.naturalness);
+      appendHistoryVaultEntry({
+        kind: "check",
+        sourceText: trimmed,
+        translatedSlang: data.naturalness.fixed,
+        nativeTransliteration: null,
+        check: data.naturalness,
+        dialect,
+        vibe: context,
+        slangLevel,
+        inputLanguage: selectedInputLang,
+      });
+      setHistoryEntries(loadHistoryVault());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't check that");
       setCheckResult(null);
@@ -541,6 +669,10 @@ export function TranslatorView() {
     setInputText("");
     setOriginalText("");
     setReplies([]);
+    setReplyMeanings([]);
+    setIncomingMeaning("");
+    setReplyTranslits([]);
+    stopPlayback();
     setCompareResults([]);
     setCheckResult(null);
     setTranslatedText("");
@@ -613,6 +745,7 @@ export function TranslatorView() {
     window.speechSynthesis?.cancel();
     setTtsPlaying(false);
     setTtsLoading(false);
+    setLinePlay(null);
   };
 
   const handlePlayTranslation = async (useBasicVoice = false) => {
@@ -680,6 +813,84 @@ export function TranslatorView() {
     }
   };
 
+  /** Read one reply / compare line aloud. Shares the main player's cache and stop logic. */
+  const playLine = async (key: string, text: string, dialect: string) => {
+    const line = text.trim();
+    if (!line) return;
+    if (linePlay?.key === key) {
+      stopPlayback();
+      return;
+    }
+    stopPlayback();
+    const requestId = ++ttsRequestIdRef.current;
+    const cacheKey = `${ttsEngine}|${dialect}|${ttsGender}|${context}|${line}|`;
+    let url = ttsAudioCacheRef.current.get(cacheKey) ?? null;
+    try {
+      if (!url) {
+        setLinePlay({ key, state: "loading" });
+        const extras = getImplicitSoftExtrasForRequests(getLearnsYouEnabled(), false, undefined);
+        url = await fetchTtsAudioUrl(line, dialect, ttsEngine, context, extras);
+        if (requestId !== ttsRequestIdRef.current) return;
+        if (!url) {
+          setLinePlay(null);
+          return;
+        }
+        ttsAudioCacheRef.current.set(cacheKey, url);
+      }
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => {
+        if (requestId === ttsRequestIdRef.current) setLinePlay(null);
+      };
+      audio.onerror = () => {
+        if (requestId !== ttsRequestIdRef.current) return;
+        ttsAudioCacheRef.current.delete(cacheKey);
+        setLinePlay(null);
+        setToast("Couldn't play the audio — tap to try again");
+      };
+      setLinePlay({ key, state: "playing" });
+      await audio.play();
+    } catch (e) {
+      if (requestId !== ttsRequestIdRef.current) return;
+      if (url) ttsAudioCacheRef.current.delete(cacheKey);
+      setLinePlay(null);
+      setToast(ttsFailureMessage(e));
+    }
+  };
+
+  /** Play + copy buttons for a single line (replies, compare cards). */
+  const lineActions = (key: string, text: string, dialect: string, cityLabel?: string) => {
+    const state = linePlay?.key === key ? linePlay.state : null;
+    return (
+      <div className="flex shrink-0 gap-1.5">
+        <button
+          type="button"
+          onClick={() => void playLine(key, text, dialect)}
+          disabled={state === "loading"}
+          aria-label={state === "playing" ? "Stop" : `Read aloud${cityLabel ? ` (${cityLabel})` : ""}`}
+          title={state === "playing" ? "Stop" : "Read aloud"}
+          className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:brightness-125 disabled:opacity-50"
+          style={subtleButtonStyle(theme)}
+        >
+          <MaterialSymbol
+            name={state === "loading" ? "hourglass_empty" : state === "playing" ? "stop" : "volume_up"}
+            className="text-[18px]"
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => void copyReply(text)}
+          aria-label={`Copy${cityLabel ? ` ${cityLabel}` : ""}`}
+          title="Copy"
+          className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:brightness-125"
+          style={subtleButtonStyle(theme)}
+        >
+          <MaterialSymbol name="content_copy" className="text-[17px]" />
+        </button>
+      </div>
+    );
+  };
+
   const handleWordClick = async (word: string, e: MouseEvent<HTMLElement>) => {
     e.stopPropagation();
     if (!resultContext) return;
@@ -730,7 +941,6 @@ export function TranslatorView() {
   const micBall = cityTheme.micBall ?? null;
   const isActive = inputText.trim().length > 0 || originalText.trim().length > 0;
   const isIdle = !isActive;
-  const hebrewContext = shouldOfferHebrewTransliteration(selectedInputLang, uiLocale);
   const hasAnyResult = Boolean(
     translatedText || replies.length || compareResults.length || checkResult || loading || error
   );
@@ -853,7 +1063,13 @@ export function TranslatorView() {
         <div className="flex min-w-0 flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="output-lang" className={TOP_HELPER_LABEL_CLASS}>
-            Translate to
+            {appMode === "reply"
+              ? "They speak"
+              : appMode === "check"
+                ? "Should sound like"
+                : appMode === "compare"
+                  ? "Main city"
+                  : "Translate to"}
           </label>
           {isIdle ? (
             <div
@@ -934,6 +1150,61 @@ export function TranslatorView() {
           )}
         </div>
 
+          <div className="flex flex-col gap-2">
+            <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
+              <MaterialSymbol name="person" className="text-[13px]" />
+              Who&apos;s it for?
+            </p>
+            <div
+              className="mx-auto grid w-full grid-cols-2 gap-1.5 rounded-2xl border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl transition-opacity"
+              role="group"
+              aria-label="Who is the message for"
+            >
+              {VIBE_SEGMENTS.map(({ value, text, icon }) => {
+                const on = context === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setContext(value);
+                      saveLastAudience(value);
+                      if (value === "new" && slangLevel > 1) setSlangLevel(1);
+                      trackAnalyticsEvent({
+                        name: ANALYTICS_EVENT_NAMES.VIBE_SELECTED,
+                        vibe: value,
+                        mode: ANALYTICS_MODE.TEXT,
+                      });
+                      if (getLearnsYouEnabled()) {
+                        recordInteractionSignal({
+                          type: "context_select",
+                          context: value,
+                          timestampMs: Date.now(),
+                        });
+                      }
+                    }}
+                    className={`flex h-11 w-full min-w-0 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-semibold transition-all duration-300 ${
+                      on ? "" : "bg-transparent text-white/60 hover:text-white/80"
+                    }`}
+                    style={
+                      on
+                        ? {
+                            ...flagOutline(outlineAccent, true),
+                            color: theme.primary,
+                            backgroundColor: `${theme.primary}24`,
+                            boxShadow: `0 0 24px -8px ${theme.tertiary}aa, inset 0 1px 0 ${theme.primary}44`,
+                          }
+                        : flagOutline(outlineAccent)
+                    }
+                  >
+                    <MaterialSymbol name={icon} className="text-[15px]" />
+                    {text}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
         <div className="relative w-full" style={{ "--accent": theme.primary } as CSSProperties}>
           <textarea
             ref={inputRef}
@@ -957,7 +1228,7 @@ export function TranslatorView() {
                     : "Type or say it plain…"
             }
             dir="auto"
-            className={`${GLASS_INPUT} resize-none bg-white/3 !px-9 text-start leading-relaxed`}
+            className={`${GLASS_INPUT} resize-none bg-white/3 !px-9 text-start leading-relaxed [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
             style={flagOutline(theme.secondary)}
           />
           {inputDisplayValue.trim() ? (
@@ -1040,60 +1311,6 @@ export function TranslatorView() {
           {micError ? <p className="mt-1 text-center text-[12px] text-red-400">{micError}</p> : null}
         </div>
 
-          <div className="flex flex-col gap-2">
-            <p className="font-label mb-0 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium uppercase tracking-widest text-white/60">
-              <MaterialSymbol name="person" className="text-[13px]" />
-              Who&apos;s it for?
-            </p>
-            <div
-              className="mx-auto grid w-full grid-cols-2 gap-1.5 rounded-2xl border border-white/5 bg-white/5 p-1.5 shadow-none backdrop-blur-xl transition-opacity"
-              role="group"
-              aria-label="Who is the message for"
-            >
-              {VIBE_SEGMENTS.map(({ value, text, icon }) => {
-                const on = context === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => {
-                      setContext(value);
-                      saveLastAudience(value);
-                      trackAnalyticsEvent({
-                        name: ANALYTICS_EVENT_NAMES.VIBE_SELECTED,
-                        vibe: value,
-                        mode: ANALYTICS_MODE.TEXT,
-                      });
-                      if (getLearnsYouEnabled()) {
-                        recordInteractionSignal({
-                          type: "context_select",
-                          context: value,
-                          timestampMs: Date.now(),
-                        });
-                      }
-                    }}
-                    className={`flex h-11 w-full min-w-0 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-semibold transition-all duration-300 ${
-                      on ? "" : "bg-transparent text-white/60 hover:text-white/80"
-                    }`}
-                    style={
-                      on
-                        ? {
-                            ...flagOutline(outlineAccent, true),
-                            color: theme.primary,
-                            backgroundColor: `${theme.primary}24`,
-                            boxShadow: `0 0 24px -8px ${theme.tertiary}aa, inset 0 1px 0 ${theme.primary}44`,
-                          }
-                        : flagOutline(outlineAccent)
-                    }
-                  >
-                    <MaterialSymbol name={icon} className="text-[15px]" />
-                    {text}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           <div className="flex w-full items-center">
             <button
               type="button"
@@ -1138,6 +1355,34 @@ export function TranslatorView() {
               </span>
             </button>
           </div>
+          {appMode === "compare" ? (
+            <div className="flex flex-col gap-1.5">
+              <p className={TOP_HELPER_LABEL_CLASS}>Compare with</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[0, 1].map((slot) => (
+                  <select
+                    key={slot}
+                    aria-label={`Compare city ${slot + 1}`}
+                    value={compareCities[slot] ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setComparePicks(Object.assign([...compareCities], { [slot]: v }));
+                    }}
+                    className={`${GLASS_SELECT_COMPACT} select-centered py-1.5 text-center text-[12px] font-medium text-white/90`}
+                    style={flagOutline(theme.secondary)}
+                  >
+                    {OUTPUT_PREMIUM_OPTIONS.filter(
+                      (o) => o.value !== outputLang && (o.value === compareCities[slot] || !compareCities.includes(o.value))
+                    ).map((o) => (
+                      <option key={o.value} value={o.value} className="bg-zinc-900 text-white">
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {appMode === "compare" ? (
             <p className="text-center text-xs text-white/60">
               Comparing 3 cities uses 3 translations when daily limits apply.
@@ -1304,14 +1549,14 @@ export function TranslatorView() {
             </div>
           ) : null}
         <div className="mx-auto mt-2 flex w-full max-w-[min(100%,280px)] flex-col items-stretch gap-2 px-3 pb-1 sm:px-4">
-          <LearnsYouControls accent={outlineAccent} idle={isIdle} belowHero onHistoryClick={openHistory} />
+          <LearnsYouControls accent={outlineAccent} idle={isIdle} belowHero />
         </div>
             </div>
           </details>
         </div>
 
         {/* Result column — beside the composer on desktop, below it on phones. */}
-        <div className="mt-6 min-w-0 lg:sticky lg:top-6 lg:mt-0">
+        <div ref={resultColumnRef} className="mt-6 min-w-0 scroll-mt-4 lg:sticky lg:top-6 lg:mt-0">
           {!hasAnyResult ? (
             <div className="hidden min-h-[240px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 p-8 text-center lg:flex">
               <MaterialSymbol name="chat_bubble" className="text-[28px] text-white/25" />
@@ -1364,15 +1609,15 @@ export function TranslatorView() {
                             </button>
                           </>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => void copyReply(r.text)}
-                            aria-label={`Copy ${resolveTheme(r.dialect).city} translation`}
-                            className="whitespace-pre-wrap break-words text-start text-[16px] leading-snug text-white/90 hover:text-white"
-                            dir="auto"
-                          >
-                            {r.text}
-                          </button>
+                          <div className="flex items-start gap-2">
+                            <p
+                              className="flex-1 whitespace-pre-wrap break-words text-start text-[16px] leading-snug text-white/90"
+                              dir="auto"
+                            >
+                              {r.text}
+                            </p>
+                            {lineActions(`compare:${r.dialect}`, r.text, r.dialect, resolveTheme(r.dialect).city)}
+                          </div>
                         )}
                       </div>
                     ))}
@@ -1389,6 +1634,12 @@ export function TranslatorView() {
                   >
                     {originalText.trim() || "—"}
                   </p>
+                  {incomingMeaning ? (
+                    <p className="text-[13px] leading-snug text-white/60" dir="auto">
+                      <span className="me-1 text-[11px] font-medium uppercase tracking-[0.2em] text-white/45">Means</span>
+                      {incomingMeaning}
+                    </p>
+                  ) : null}
                   <div className="mt-1 border-t border-white/5 pt-3">
                     <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">
                       Send back
@@ -1400,35 +1651,32 @@ export function TranslatorView() {
                     ) : (
                       <div className="flex flex-col gap-2">
                         {replies.map((r, i) => (
-                          <button
+                          <div
                             key={`${i}-${r.slice(0, 12)}`}
-                            type="button"
-                            onClick={() => void copyReply(r)}
-                            className="group flex items-start gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5 text-start transition-colors hover:bg-white/[0.07]"
+                            className="flex items-start gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5"
                             style={flagOutline(outlineAccent)}
                           >
-                            <span
-                              className="flex-1 whitespace-pre-wrap break-words text-[15px] leading-snug"
-                              style={{ color: theme.primary }}
-                              dir="auto"
-                            >
-                              {r}
-                            </span>
-                            <svg
-                              className="mt-0.5 h-4 w-4 shrink-0 text-white/30 transition-colors group-hover:text-white/70"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              aria-hidden
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </button>
+                            <div className="flex min-w-0 flex-1 flex-col gap-1">
+                              <span
+                                className="whitespace-pre-wrap break-words text-[15px] leading-snug"
+                                style={{ color: theme.primary }}
+                                dir="auto"
+                              >
+                                {r}
+                              </span>
+                              {replyMeanings[i] ? (
+                                <span className="text-[13px] leading-snug text-white/65" dir="auto">
+                                  {replyMeanings[i]}
+                                </span>
+                              ) : null}
+                              {replyTranslits[i] ? (
+                                <span className="text-[12px] leading-snug text-white/45" dir="auto">
+                                  {replyTranslits[i]}
+                                </span>
+                              ) : null}
+                            </div>
+                            {lineActions(`reply:${i}`, r, outputLang)}
+                          </div>
                         ))}
                         {replies.length > 0 ? (
                           <button
@@ -1562,7 +1810,6 @@ export function TranslatorView() {
                 dictionaryPills={dictionaryPills}
                 loading={loading}
                 error={error}
-                hebrewContext={hebrewContext}
                 onWordClick={(token, e) => void handleWordClick(token, e)}
                 afterTranslation={
                   translatedText.trim() ? (

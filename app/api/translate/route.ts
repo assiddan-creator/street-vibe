@@ -54,6 +54,8 @@ import { generateGeminiText, GEMINI_TEXT_MODEL } from "@/lib/geminiText";
 import { guardApiRequest } from "@/lib/apiRequestGuard";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
 import { checkAndConsumeUsage, publicUsage } from "@/lib/usage";
+import { cleanReplySuggestions, parseReplyJson } from "@/lib/replySuggestions";
+import { effectiveSlangLevel, readerNoteLanguage } from "@/lib/readerLanguage";
 
 const MAX_TRANSLATE_INPUT_CHARS = 4000;
 
@@ -125,6 +127,22 @@ PREMIUM GLOBAL — anti-overcooking (all premium dialects):
   return lines;
 }
 
+/** Who the message is for ("Who's it for?") -> tone instructions, shared by translate and reply. */
+const CONTEXT_INSTRUCTIONS: Record<string, string> = {
+  dm: "This is a private DM between close friends — blunt, casual, low polish. Shortest honest way to say it; skip softening you'd use in flirt. Friend energy: real and direct, not smooth and not a caption.",
+  post: "This is a social media post meant to be public and punchy.",
+  reply: "This is a reply in an argument or comeback situation — keep it sharp.",
+  hype: "This is a hype message — energetic, loud, encouraging.",
+  flirt:
+    "This is a one-on-one flirty message — warmer, a bit softer, genuinely interested (curiosity, a real compliment). When it fits the input, one specific detail beats a generic opener. Charming and human, not aggressive, not a pickup-line slogan.",
+  angry: "This is an angry message — direct, aggressive, no filter, street attitude.",
+  stoned: "This is a relaxed chill message — slow energy, hazy, mellow, like texting after smoking.",
+  group:
+    "This is a message to a group chat of friends — casual, easy to read at a glance, addressed to several people at once (no one-on-one intimacy, no pet names), light and upbeat.",
+  new: "This is a message to someone the user has only just met or barely knows (a new acquaintance, neighbour, colleague, or someone they just started chatting with) — relaxed and friendly but respectful: sound local and natural, keep slang light, no insults, no crude words, no over-familiar nicknames.",
+  default: "This is a casual message between friends.",
+};
+
 function buildPrompt({
   text,
   currentLang,
@@ -137,6 +155,7 @@ function buildPrompt({
   personalizationHints,
   devRuleProfile,
   intentCategory,
+  noteLanguage = "English",
 }: {
   text: string;
   currentLang: string;
@@ -151,6 +170,8 @@ function buildPrompt({
   devRuleProfile?: DevRuleProfileId;
   /** Optional — when set, tunes interpersonal naturalness hints. */
   intentCategory?: RoutingIntentCategory;
+  /** Language the slang meanings after ||| are written in (the reader's language). */
+  noteLanguage?: string;
 }) {
   const INTENSITY_INSTRUCTIONS: Record<number, string> = {
     1: "Sound like a local casually wrote it: native word order, idiom, and phrasing for this place — but keep slang minimal or absent (0-2 very mild markers at most). The goal is \"doesn't read like a foreigner/tourist\", not \"heavy accent\". Fully readable.",
@@ -158,20 +179,6 @@ function buildPrompt({
     3: "Heavy thick street slang. Deep local terminology, authentic street grammar, full immersion.",
   };
 
-  const CONTEXT_INSTRUCTIONS: Record<string, string> = {
-    dm: "This is a private DM between close friends — blunt, casual, low polish. Shortest honest way to say it; skip softening you'd use in flirt. Friend energy: real and direct, not smooth and not a caption.",
-    post: "This is a social media post meant to be public and punchy.",
-    reply: "This is a reply in an argument or comeback situation — keep it sharp.",
-    hype: "This is a hype message — energetic, loud, encouraging.",
-    flirt:
-      "This is a one-on-one flirty message — warmer, a bit softer, genuinely interested (curiosity, a real compliment). When it fits the input, one specific detail beats a generic opener. Charming and human, not aggressive, not a pickup-line slogan.",
-    angry: "This is an angry message — direct, aggressive, no filter, street attitude.",
-    stoned: "This is a relaxed chill message — slow energy, hazy, mellow, like texting after smoking.",
-    group:
-      "This is a message to a group chat of friends — casual, easy to read at a glance, addressed to several people at once (no one-on-one intimacy, no pet names), light and upbeat.",
-    new: "This is a message to someone the user has only just met or barely knows (a new acquaintance, neighbour, colleague, or someone they just started chatting with) — relaxed and friendly but respectful: sound local and natural, keep slang light, no insults, no crude words, no over-familiar nicknames.",
-    default: "This is a casual message between friends.",
-  };
 
   const dialectId = String(currentLang);
   const primaryLanguage = getDialectPrimaryLanguage(dialectId);
@@ -251,6 +258,13 @@ OUTPUT FORMAT — Spanish Madrid (strict):
 - After |||: at most 2 lines. Each line: "término — aclaración breve en español" (short gloss only, ≤8 words after the dash). Spanish only — no English at all in gloss lines (not even one word). No heading word "dictionary", no etymology, no example sentences, no "Option A/B", no bullets of alternatives. If nothing needs glossing, output exactly one line: —
 - Do not prepend or append any other commentary.`
       : formattingRuleBase;
+
+  // Meanings after ||| follow the reader's language; this deliberately overrides the
+  // per-dialect gloss-language lines above (e.g. Spanish-only / Cyrillic-only glosses).
+  const noteLanguageRule =
+    noteLanguage !== "English"
+      ? `\nNOTES LANGUAGE: write every Meaning after ||| in ${noteLanguage} (the reader's language), keeping the slang word itself as written. This overrides any other rule about the gloss language.`
+      : "";
 
   const personalizationBlock = formatPersonalizationBlockForTranslate(personalizationHints ?? []);
 
@@ -524,6 +538,7 @@ RULE PROFILE above applies to tone/word choice only; it must not change this out
       `Rewrite the following text the way YOU would actually send it (in ${primaryLanguage}, script per SCRIPT LOCK above):\n` +
       `'''${text}'''` +
       `${formattingRule}` +
+      `${noteLanguageRule}` +
       `${speechTextPromptBlock(dialectId)}`,
     slangRequested: true,
   };
@@ -814,39 +829,48 @@ export async function POST(req: NextRequest) {
   if (body.mode === "reply") {
     const dialectId = String(currentLang);
     const primaryLanguage = getDialectPrimaryLanguage(dialectId);
-    const vibe = typeof context === "string" && context.trim() ? context.trim() : "friend";
-    const level = parseInt(String(slangLevel), 10) || 2;
+    const audience = typeof context === "string" && context.trim() ? context.trim() : "dm";
+    const audienceRule = CONTEXT_INSTRUCTIONS[audience] || CONTEXT_INSTRUCTIONS.default;
+    const level = effectiveSlangLevel(parseInt(String(slangLevel), 10) || 2, audience);
+    const noteLanguage = readerNoteLanguage(sourceLanguage, uiLocale);
     const replyPrompt =
-      `A friend just sent you this message:\n'''${rawInput}'''\n\n` +
-      `Write 3 different replies you could send back, in natural ${primaryLanguage} the way it's spoken in "${dialectId}".\n` +
+      `Someone sent the user this message:\n'''${rawInput}'''\n\n` +
+      `Who sent it / the relationship: ${audienceRule}\n` +
+      `Write 3 different replies the user could send back, in natural ${primaryLanguage} the way it's spoken in "${dialectId}".\n` +
       `SCRIPT LOCK: ${SCRIPT_OUTPUT_UNIVERSAL_RULE}\n${getDialectScriptLock(dialectId)}\n` +
-      `Vibe: ${vibe}. Slang intensity ${level}/3 (1 = mostly standard, 3 = heavy local slang).\n` +
+      `Slang intensity ${level}/3 (1 = mostly standard, 3 = heavy local slang).\n` +
       `Rules:\n` +
-      `- Exactly 3 replies, each on its own line. No numbering, no bullets, no quotes, no labels, no commentary before or after.\n` +
       `- Each reply is one short, sendable chat message. Match the length and energy of the incoming message.\n` +
-      `- Vary the angle across the three (e.g. agree / tease / deflect) but all fit the vibe.\n` +
-      `- Same language and script as the SCRIPT LOCK above; never explain the slang.`;
+      `- Vary the angle across the three (e.g. agree / ask back / suggest), but every one must fit the relationship above — never rude, mocking or passive-aggressive unless the incoming message is.\n` +
+      `- The replies use ONLY the language and script from the SCRIPT LOCK above — not a single ${noteLanguage} word inside "text".\n` +
+      `- Every reply must be sendable as-is: no placeholders, brackets or blanks to fill in (no "[your city]"). If a reply would need facts the user didn't give, phrase it so it doesn't.\n` +
+      `- The user does not speak ${primaryLanguage}: explain plainly in ${noteLanguage} what the incoming message says and what each reply says.\n` +
+      `Reply with ONLY a JSON object — no code fence, no text around it:\n` +
+      `{"incoming_meaning": "<what they wrote, in ${noteLanguage}>", "replies": [{"text": "<reply>", "meaning": "<what it says, in ${noteLanguage}>"}, ...exactly 3 items]}`;
     try {
       const out = await generateTranslationText({
         geminiKey,
         replicateToken: apiKey,
         prompt: replyPrompt,
         creative: true,
-        maxOutputTokens: 512,
+        maxOutputTokens: 900,
       });
-      const replies = out.text
-        .split(/\r?\n+/)
-        .map((l) => l.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, "").replace(/^["'“”]+|["'“”]+$/g, "").trim())
-        .filter(Boolean)
-        .slice(0, 3);
-      if (replies.length === 0) {
+      const parsed = cleanReplySuggestions(parseReplyJson(out.text), noteLanguage, primaryLanguage);
+      if (!parsed) {
+        console.warn("[translate][reply] unparseable model reply", { preview: out.text.slice(0, 160) });
         return NextResponse.json(
           { error: friendlyTranslateError("no text") },
           { status: 502, headers: corsHeaders }
         );
       }
       return NextResponse.json(
-        { replies, engine: out.engine, usage: usagePublic },
+        {
+          replies: parsed.replies.map((r) => r.text),
+          meanings: parsed.replies.map((r) => r.meaning),
+          incomingMeaning: parsed.incomingMeaning,
+          engine: out.engine,
+          usage: usagePublic,
+        },
         { status: 200, headers: corsHeaders }
       );
     } catch (e: unknown) {
@@ -866,7 +890,7 @@ export async function POST(req: NextRequest) {
     const dialectId = String(currentLang);
     const primaryLanguage = getDialectPrimaryLanguage(dialectId);
     const vibe = typeof context === "string" && context.trim() ? context.trim() : "dm";
-    const noteLang = typeof uiLocale === "string" && uiLocale === "he" ? "Hebrew" : "English";
+    const noteLang = readerNoteLanguage(sourceLanguage, uiLocale);
     const checkPrompt =
       `A non-native speaker wrote this message in ${primaryLanguage} (target voice: "${dialectId}") to send in a "${vibe}" chat:\n` +
       `'''${rawInput}'''\n\n` +
@@ -878,7 +902,7 @@ export async function POST(req: NextRequest) {
       `"fixed": "<the message rewritten to sound natural and local, same language and script, sendable as-is, no surrounding quotes>", ` +
       `"tells": ["<short phrase naming one thing that gave them away>", "<another>", "<optional third>"]}\n` +
       `If it already sounds native, keep "fixed" close to the original and return an empty "tells" array.\n` +
-      `Write "verdict" and each "tells" entry in ${noteLang}. "fixed" must be ${primaryLanguage} only, in the script from SCRIPT LOCK.`;
+      `Write "verdict" and each "tells" entry in ${noteLang}, as short grammatical phrases (no doubled words like "very too"). "fixed" must be ${primaryLanguage} only, in the script from SCRIPT LOCK.`;
     try {
       const out = await generateTranslationText({
         geminiKey,
@@ -933,13 +957,14 @@ export async function POST(req: NextRequest) {
     currentLang: String(currentLang),
     translationMode: translationMode === "slang" ? "slang" : "standard",
     slangLocation: slangLocation as string | undefined,
-    slangLevel: parseInt(String(slangLevel), 10) || 2,
+    slangLevel: effectiveSlangLevel(parseInt(String(slangLevel), 10) || 2, context),
     isPremiumSelected: !!isPremiumSelected,
     context: (context as string) || "default",
     previousMessage: previousMessage ? String(previousMessage) : null,
     personalizationHints,
     devRuleProfile,
     intentCategory,
+    noteLanguage: readerNoteLanguage(sourceLanguage, uiLocale),
   });
 
   try {
