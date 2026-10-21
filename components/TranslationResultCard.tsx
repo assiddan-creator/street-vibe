@@ -20,8 +20,6 @@ type TranslationResultCardProps = {
   dictionaryPills: string[];
   loading: boolean;
   error: string | null;
-  /** Hebrew UI or Hebrew input — controls מקור / תרגום labels and source direction */
-  hebrewContext: boolean;
   onWordClick?: (token: string, e: MouseEvent<HTMLElement>) => void;
   /** Extra content after translation block (e.g. TTS on speak page) */
   afterTranslation?: ReactNode;
@@ -35,7 +33,6 @@ export function TranslationResultCard({
   dictionaryPills,
   loading,
   error,
-  hebrewContext,
   onWordClick,
   afterTranslation,
 }: TranslationResultCardProps) {
@@ -71,9 +68,8 @@ export function TranslationResultCard({
   }, [translatedText, loading, error]);
   const shown = revealed || translatedText;
 
-  const labels: ResultLabels = hebrewContext
-    ? { source: "מקור", translation: "תרגום" }
-    : { source: "Original", translation: "Street" };
+  // Always English, like the rest of the UI (Hebrew labels here mixed languages on one screen).
+  const labels: ResultLabels = { source: "Original", translation: "Local version" };
 
   return (
     <div
@@ -90,7 +86,8 @@ export function TranslationResultCard({
         Scroll only source + translation here. When overflow-y is auto on the same node as transliteration,
         CSS forces overflow-x to compute to auto and clips RTL lines. Transliteration sits outside that scrollport.
       */}
-      <div className="output-card-scroll max-h-[min(70vh,560px)] min-h-0 w-full min-w-0 overflow-y-auto overflow-x-visible">
+      {/* No inner scroll: the page scrolls, the card grows (scroll-inside-scroll was confusing on phones). */}
+      <div className="w-full min-w-0">
         <div className="w-full min-w-0 space-y-5">
           <section className="min-w-0 rounded-2xl border border-white/5 bg-white/[0.04] p-4 backdrop-blur-xl">
             <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">{labels.source}</p>

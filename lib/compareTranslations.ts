@@ -18,8 +18,12 @@ export type CompareRow = {
 type CompareResponse = { text: string; usage?: PublicUsage };
 export type CompareRequest = (settings: CompareSettings, dialect: string) => Promise<CompareResponse>;
 
-export function comparisonDialects(primary: string): string[] {
-  return [...new Set([primary, "London Roadman", "Jamaican Patois", "Israeli Street"])].slice(0, 3);
+/** Fallback cities, in order, when the user's picks are missing or repeat the main city. */
+export const DEFAULT_COMPARE_CITIES = ["London Roadman", "Jamaican Patois", "Israeli Street"] as const;
+
+/** Main city first, then the user's picks, topped up from the defaults — always 3 distinct cities. */
+export function comparisonDialects(primary: string, picks: readonly string[] = []): string[] {
+  return [...new Set([primary, ...picks, ...DEFAULT_COMPARE_CITIES])].slice(0, 3);
 }
 
 export const requestCompareCity: CompareRequest = async (settings, dialect) => {
@@ -75,12 +79,12 @@ export function createComparisonController(
   }
 
   return {
-    start(input: CompareSettings, primary: string) {
+    start(input: CompareSettings, primary: string, picks: readonly string[] = []) {
       const id = ++generation;
       const snapshot = Object.freeze({ ...input });
       settings = snapshot;
       highestUsed = -1;
-      rows = comparisonDialects(primary).map(dialect => ({ dialect, status: "pending", text: "" }));
+      rows = comparisonDialects(primary, picks).map(dialect => ({ dialect, status: "pending", text: "" }));
       emit();
       return Promise.all(rows.map(row => run(row.dialect, snapshot, id)));
     },

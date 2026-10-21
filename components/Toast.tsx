@@ -8,7 +8,7 @@ type ToastProps = {
   accent: string;
 };
 
-/** Fixed bottom-center glass pill; fades in/out when message toggles. */
+/** Fixed top-center glass pill (clear of the result buttons); fades in/out when message toggles. */
 export function Toast({ message, accent }: ToastProps) {
   const [latched, setLatched] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -32,8 +32,8 @@ export function Toast({ message, accent }: ToastProps) {
 
   return (
     <div
-      className={`pointer-events-none fixed bottom-6 left-1/2 z-[100] max-w-[min(90vw,340px)] -translate-x-1/2 rounded-2xl border border-white/10 bg-white/[0.08] px-5 py-3 text-center text-xs font-medium text-white shadow-lg backdrop-blur-xl transition-all duration-300 ease-out ${
-        open ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+      className={`pointer-events-none fixed top-4 left-1/2 z-[100] max-w-[min(90vw,340px)] -translate-x-1/2 rounded-2xl border border-white/10 bg-white/[0.08] px-5 py-3 text-center text-xs font-medium text-white shadow-lg backdrop-blur-xl transition-all duration-300 ease-out ${
+        open ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
       }`}
       style={
         {

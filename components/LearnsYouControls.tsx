@@ -15,14 +15,12 @@ type Props = {
   idle?: boolean;
   /** Placed below poster/mic: utility row with glass pill. */
   belowHero?: boolean;
-  /** Opens translation history (bottom sheet). */
-  onHistoryClick?: () => void;
 };
 
 /**
- * Optional local-learning toggle + optional History trigger in a calm utility row.
+ * Optional local-learning toggle (history lives in the header).
  */
-export function LearnsYouControls({ accent, idle = false, belowHero = false, onHistoryClick }: Props) {
+export function LearnsYouControls({ accent, idle = false, belowHero = false }: Props) {
   const [on, setOn] = useState(false);
 
   useEffect(() => {
@@ -52,60 +50,40 @@ export function LearnsYouControls({ accent, idle = false, belowHero = false, onH
     : "flex flex-col items-center gap-0.5";
 
   if (belowHero) {
+    // Lives in "More options": a full-size switch plus one plain sentence on what it does.
     return (
-      <div
-        className={`${wrapClass} rounded-lg border border-white/[0.06] bg-white/[0.05] px-2 py-1 shadow-none backdrop-blur-xl transition-opacity duration-300 sm:px-2.5 ${
-          idle ? "opacity-[0.92]" : ""
-        }`}
-      >
-        <div className="flex w-full items-center justify-between">
-          <div className="min-w-0 flex-1 pr-1.5">
-            <div className="flex items-center gap-1.5">
-              <span className={`${labelClass} shrink-0`}>Learns You</span>
-              <button
-                type="button"
-                role="switch"
-                aria-label="Learns You mode"
-                aria-checked={on}
-                onClick={toggle}
-                className="relative h-2 w-4 shrink-0 cursor-pointer rounded-full bg-white/10 transition-colors"
-              >
-                <span
-                  aria-hidden
-                  className={`pointer-events-none absolute left-0.5 top-px h-1.5 w-1.5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
-                    on ? "translate-x-1.5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={reset}
-              title="Reset learned preferences"
-              className="mt-0.5 text-left text-[10px] leading-none text-white/50 transition-colors hover:text-white/70"
-            >
-              Reset
-            </button>
-          </div>
-          {onHistoryClick ? (
-            <button
-              type="button"
-              onClick={onHistoryClick}
-              className="flex h-3.5 min-h-0 shrink-0 items-center justify-center rounded-full border border-white/10 bg-transparent px-1.5 py-0.5 text-on-surface-variant transition-colors hover:bg-white/5"
-              aria-label="History"
-              title="History"
-            >
-              <svg
-                className="h-2 w-2 text-current opacity-80"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden
-              >
-                <path d="M13 3a9 9 0 00-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0013 21a9 9 0 000-18zm-1 5v5l4.25 2.52.75-1.23-3.5-2.08V8H12z" />
-              </svg>
-            </button>
-          ) : null}
+      <div className="flex w-full flex-col gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.04] px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[13px] font-medium text-white/80">Learn my style</span>
+          <button
+            type="button"
+            role="switch"
+            aria-label="Learn my style"
+            aria-checked={on}
+            onClick={toggle}
+            className="relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors"
+            style={{ backgroundColor: on ? `${accent}aa` : "rgba(255,255,255,0.15)" }}
+          >
+            <span
+              aria-hidden
+              className={`pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
+                on ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
         </div>
+        <p className="text-[11px] leading-snug text-white/50">
+          Remembers the cities, recipients and tone you pick — on this device only — and leans future results that way.
+        </p>
+        {on ? (
+          <button
+            type="button"
+            onClick={reset}
+            className="self-start text-[11px] text-white/50 underline-offset-2 transition-colors hover:text-white/75 hover:underline"
+          >
+            Forget what it learned
+          </button>
+        ) : null}
       </div>
     );
   }
