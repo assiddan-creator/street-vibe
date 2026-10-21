@@ -20,19 +20,18 @@ export type VoiceGender = "male" | "female";
  * TTS model per city. Default for every city: eleven_v4_turbo, picked from the
  * 2026-10 blind A/B (v3_conversational vs v4_turbo vs v4) plus a Speech-to-Text
  * check (v4/v4_turbo kept every slang word; v3_conversational softened Rio
- * "coé" and Cairo "بقولك"). Brooklyn stays on v3_conversational — preferred by ear.
- * Kingston was moved to v4_turbo and then reverted to v3_conversational (owner's
- * call after listening in production).
+ * "coé" and Cairo "بقولك"). Brooklyn and Kingston were held on v3_conversational
+ * for a while and joined v4_turbo on 2026-10-21.
  *
  * Applies to both genders (presets and the Will/Jessica fallback). Only the
  * model changes here; voices and voice settings are untouched.
  * `ELEVENLABS_MODEL_OVERRIDE` (see lib/elevenLabsTts.ts) beats all of this.
  */
 export const ELEVENLABS_DEFAULT_CITY_MODEL_ID = "eleven_v4_turbo";
-export const ELEVENLABS_CITY_MODEL_EXCEPTIONS: Readonly<Record<string, string>> = {
-  "New York Brooklyn": "eleven_v3_conversational",
-  "Jamaican Patois": "eleven_v3_conversational",
-};
+// 2026-10-21: Kingston and Brooklyn moved to v4_turbo too (owner's call after the
+// engine A/B), so every city now gets the per-recipient directions. Add a city
+// here to pin it to another model.
+export const ELEVENLABS_CITY_MODEL_EXCEPTIONS: Readonly<Record<string, string>> = {};
 
 export function modelForDialect(dialect: string | undefined): string {
   return (dialect && ELEVENLABS_CITY_MODEL_EXCEPTIONS[dialect]) || ELEVENLABS_DEFAULT_CITY_MODEL_ID;
@@ -159,10 +158,9 @@ export const ELEVENLABS_VOICE_PRESETS: Record<
       dialect: "Jamaican Patois",
       gender: "male",
       voiceId: "JNakJx0PcoBLBnZ9Rvm2",
-      // Manual listening test (v2 vs v3 vs v3-conversational) found v3
-      // conversational clearly more natural than multilingual v2. A later move
-      // to v4_turbo was reverted: Kingston stays on v3 conversational.
-      // Voice ID and every other setting are unchanged from approval.
+      // Cloned voice. On v4_turbo since 2026-10-21 (owner preferred it in the
+      // engine A/B); v4 only takes stability/similarity, so style/speed below
+      // apply only if the city is ever pinned back to a v3 model.
       modelId: modelForDialect("Jamaican Patois"),
       settings: {
         stability: 0.5,

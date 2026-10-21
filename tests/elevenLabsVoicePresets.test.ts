@@ -29,11 +29,10 @@ describe("Kingston Male preset resolution", () => {
     assert.equal(getVoicePreset(KINGSTON, "male")?.voiceId, "JNakJx0PcoBLBnZ9Rvm2");
   });
 
-  test("model is eleven_v3_conversational (v4_turbo was tried and reverted)", () => {
-    // v2 -> v3 conversational (manual listening test) -> v4 turbo (blind A/B,
-    // picked by ear for Kingston). Voice and settings are unchanged.
+  test("model is eleven_v4_turbo (owner's pick in the 2026-10-21 engine A/B)", () => {
+    // v2 -> v3 conversational -> v4 turbo -> reverted to v3 -> v4 turbo again.
     const preset = getVoicePreset(KINGSTON, "male")!;
-    assert.equal(preset.modelId, V3C);
+    assert.equal(preset.modelId, V4_TURBO);
     assert.notEqual(preset.modelId, "eleven_multilingual_v2");
   });
 
@@ -59,14 +58,9 @@ describe("preset is final — vibe never overwrites it", () => {
       const r = resolveElevenLabsVoiceSelection("male", KINGSTON, vibe);
       assert.equal(r.presetId, "kingston-male-assi-rasta");
       assert.equal(r.voiceId, "JNakJx0PcoBLBnZ9Rvm2");
-      assert.equal(r.modelId, V3C);
-      assert.deepEqual(r.settings, {
-        stability: 0.5,
-        similarity_boost: 0.75,
-        style: 0,
-        speed: 0.8,
-        use_speaker_boost: true,
-      });
+      assert.equal(r.modelId, V4_TURBO);
+      // v4 takes only stability + similarity_boost from the approved settings.
+      assert.deepEqual(r.settings, { stability: 0.5, similarity_boost: 0.75 });
       assert.equal(r.seed, 12345);
     });
   }
@@ -77,13 +71,13 @@ describe("preset is final — vibe never overwrites it", () => {
 });
 
 describe("fallback (no preset) keeps Will/Jessica", () => {
-  test("Jamaican Patois + female has no preset (stays Jessica, v3 conversational, vibe settings)", () => {
+  test("Jamaican Patois + female has no preset (stays Jessica, v4 turbo, vibe stability)", () => {
     assert.equal(getVoicePreset(KINGSTON, "female"), undefined);
     const r = resolveElevenLabsVoiceSelection("female", KINGSTON, "dm");
     assert.equal(r.presetId, undefined);
     assert.equal(r.voiceId, "cgSgspJ2msm6clMCkdW9"); // Jessica
-    assert.equal(r.modelId, V3C);
-    assert.deepEqual(r.settings, { similarity_boost: 0.8, use_speaker_boost: true, speed: 1, stability: 0.42, style: 0.28 });
+    assert.equal(r.modelId, V4_TURBO);
+    assert.deepEqual(r.settings, { stability: 0.42, similarity_boost: 0.8 });
   });
 
   test("standard languages keep Will/Jessica", () => {
@@ -157,21 +151,15 @@ describe('collection "asssi" voices (2026-10)', () => {
         assert.equal(r.languageCode, lang);
         assert.ok(r.presetId);
         assert.equal(r.seed, undefined);
-        if (dialect === "New York Brooklyn") {
-          // v3 conversational: Brooklyn keeps its vibe-driven settings exactly as before.
-          assert.equal(r.modelId, V3C);
-          assert.deepEqual(r.settings, { similarity_boost: 0.8, use_speaker_boost: true, speed: 1, stability: 0.3, style: 0.45 });
-        } else {
-          // v4: fixed start settings, only the two supported fields, vibe ignored.
-          assert.equal(r.modelId, V4_TURBO);
-          assert.deepEqual(r.settings, { stability: 0.5, similarity_boost: 0.75 });
-        }
+        // v4: fixed start settings, only the two supported fields, vibe ignored.
+        assert.equal(r.modelId, V4_TURBO);
+        assert.deepEqual(r.settings, { stability: 0.5, similarity_boost: 0.75 });
       });
     }
   }
 });
 
-describe("per-city model: eleven_v4_turbo everywhere, Brooklyn and Kingston eleven_v3_conversational", () => {
+describe("per-city model: eleven_v4_turbo everywhere (Brooklyn and Kingston since 2026-10-21)", () => {
   const ALL_CITIES = [
     KINGSTON,
     "London Roadman",
@@ -186,9 +174,9 @@ describe("per-city model: eleven_v4_turbo everywhere, Brooklyn and Kingston elev
     "Spanish Madrid",
   ];
 
-  test("every city and gender gets its model; only Brooklyn and Kingston stay on v3 conversational", () => {
+  test("every city and gender is on eleven_v4_turbo", () => {
     for (const dialect of ALL_CITIES) {
-      const want = dialect === "New York Brooklyn" || dialect === KINGSTON ? V3C : V4_TURBO;
+      const want = V4_TURBO;
       assert.equal(modelForDialect(dialect), want, dialect);
       for (const gender of ["male", "female"] as const) {
         assert.equal(resolveElevenLabsVoiceSelection(gender, dialect, "dm").modelId, want, `${dialect} ${gender}`);
@@ -236,12 +224,16 @@ describe("ELEVENLABS_MODEL_OVERRIDE kill switch", () => {
     });
   });
 
-  test("override changes only the model, never the voice, settings or seed", () => {
+  test("override changes only the model, never the voice or seed; settings follow the model", () => {
     const base = resolveElevenLabsVoiceSelection("male", KINGSTON, "dm");
-    withOverride("eleven_multilingual_v2", () => {
+    withOverride(V3C, () => {
       const r = resolveElevenLabsVoiceSelection("male", KINGSTON, "dm");
-      assert.equal(r.modelId, "eleven_multilingual_v2");
-      assert.deepEqual({ ...r, modelId: base.modelId }, base);
+      assert.equal(r.modelId, V3C);
+      assert.equal(r.voiceId, base.voiceId);
+      assert.equal(r.seed, base.seed);
+      assert.equal(r.presetId, base.presetId);
+      // Pinned back to v3, Kingston gets its full approved settings again.
+      assert.deepEqual(r.settings, { stability: 0.5, similarity_boost: 0.75, style: 0, speed: 0.8, use_speaker_boost: true });
     });
   });
 
@@ -251,13 +243,13 @@ describe("ELEVENLABS_MODEL_OVERRIDE kill switch", () => {
   });
 });
 
-describe("Kingston revert: exactly the pre-v4 request", () => {
-  test("male: assi rasta voice, v3 conversational, approved settings and seed 12345", () => {
+describe("Kingston on v4 turbo: exact request", () => {
+  test("male: assi rasta voice, v4 turbo, approved stability/similarity and seed 12345", () => {
     const r = resolveElevenLabsVoiceSelection("male", KINGSTON, "dm");
     assert.deepEqual(r, {
       voiceId: "JNakJx0PcoBLBnZ9Rvm2",
-      modelId: V3C,
-      settings: { stability: 0.5, similarity_boost: 0.75, style: 0, speed: 0.8, use_speaker_boost: true },
+      modelId: V4_TURBO,
+      settings: { stability: 0.5, similarity_boost: 0.75 },
       languageCode: undefined,
       seed: 12345,
       presetId: "kingston-male-assi-rasta",
