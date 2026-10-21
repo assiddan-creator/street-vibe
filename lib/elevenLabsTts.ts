@@ -13,6 +13,7 @@ import {
   type VoiceGender,
 } from "@/lib/elevenLabsVoicePresets";
 import { pronunciationLocatorsFor } from "@/lib/pronunciationDictionary";
+import { withDirection } from "@/lib/voiceDirections";
 
 /**
  * Optional model for the GLOBAL Will/Jessica fallback only (no preset). When
@@ -153,7 +154,8 @@ export async function synthesizeElevenLabs(opts: {
           Accept: "audio/mpeg",
         },
         body: JSON.stringify({
-          text: text.trim(),
+          // v4 cities get a gentle per-recipient acting direction (lib/voiceDirections.ts).
+          text: withDirection(text, vibe, modelId),
           model_id: modelId,
           voice_settings: settings,
           ...(languageCode ? { language_code: languageCode } : {}),
