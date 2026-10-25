@@ -180,6 +180,8 @@ export const ELEVENLABS_VOICE_PRESETS: Record<
   "New York Brooklyn": pair("Brooklyn", "New York Brooklyn", "en", ["Tyler", "rPMkKgdwgIwqv4fXgR6N"], ["Malia", "klHXweKCxxmBYweAPtk4"]),
   "Paris Banlieue": pair("Paris", "Paris Banlieue", "fr", ["Jonathan", "M4DbUhGmKgKUc1GsJEHY"], ["Anna", "nVPCtAFzgyMX3FZKNzH0"]),
   "Spanish Madrid": pair("Madrid", "Spanish Madrid", "es", ["Carlos", "U1qYNY0pKaPbq2VSGpif"], ["Sofia", "eZxqQzb5CuYo3Kl6EXfZ"]),
+  // Shared library voices picked by the owner 2026-10-25 (accent "scottish"; Alba Mac is Edinburgh).
+  "Edinburgh Scots": pair("Edinburgh", "Edinburgh Scots", "en", ["Hamish", "MAy1fRIg5hTqbhiwOUyh"], ["Alba Mac", "eh9GHWIaYsZB3Alk8wrY"]),
   // Female: the collection's only Latin American female (verified locale es-AR, not es-MX).
   "Mexico City Barrio": pair("CDMX", "Mexico City Barrio", "es", ["Dante Iván", "htEyPDatXgnV0Xo4jMFF"], ["Cristina Campos", "nTkjq09AuYgsNR8E4sDe"]),
   "Russian Street": pair("Moscow", "Russian Street", "ru", ["Valery", "gXMhWmiqsFkrcssqVb5k"], ["Alisa", "t6lBrEl93uCiLR1Lgm8v"]),

@@ -110,6 +110,7 @@ const DIALECT_LANGUAGE: Record<string, string> = {
   "Israeli Street": "he",
   "Arabic Egyptian": "ar",
   "Spanish Madrid": "es",
+  "Edinburgh Scots": "en",
   "English (Standard)": "en",
   Spanish: "es",
   French: "fr",

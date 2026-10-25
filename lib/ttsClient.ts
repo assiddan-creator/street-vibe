@@ -33,6 +33,7 @@ export function getDialectLocaleForTts(outputLang: string): string {
     "Rio Favela": "pt-BR",
     "Arabic Egyptian": "ar-EG",
     "Spanish Madrid": "es-ES",
+    "Edinburgh Scots": "en-GB",
     "English (Standard)": "en-US",
     Spanish: "es-ES",
     French: "fr-FR",
