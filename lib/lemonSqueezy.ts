@@ -1,4 +1,17 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import type { Plan } from "@/lib/usage";
+
+/**
+ * Lemon Squeezy subscription statuses that entitle a user to Pro. "cancelled"
+ * is a grace period: access runs to the period end, and `subscription_expired`
+ * (status "expired") is what actually ends it. Cancelling also fires
+ * `subscription_updated`, so without "cancelled" here Pro would end at once.
+ */
+const PRO_STATUSES = new Set(["active", "on_trial", "past_due", "cancelled"]);
+
+export function planForStatus(status: unknown): Plan {
+  return typeof status === "string" && PRO_STATUSES.has(status) ? "pro" : "free";
+}
 
 /**
  * Lemon Squeezy via its no-code "buy link" — no API key needed for checkout.
