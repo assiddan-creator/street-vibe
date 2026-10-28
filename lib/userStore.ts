@@ -20,7 +20,10 @@ export async function getUserById(userId: string): Promise<UserRow | null> {
   return (data as UserRow | null) ?? null;
 }
 
-/** Create or update a user row (service-role, bypasses RLS). */
+/**
+ * Create or update a user row (service-role, bypasses RLS). Throws on a DB
+ * error so the billing webhook answers 500 and Lemon Squeezy retries it.
+ */
 export async function upsertUser(row: {
   id: string;
   email?: string | null;
@@ -29,7 +32,7 @@ export async function upsertUser(row: {
 }): Promise<void> {
   const db = getSupabaseAdmin();
   if (!db) return;
-  await db.from("users").upsert(
+  const { error } = await db.from("users").upsert(
     {
       id: row.id,
       ...(row.email !== undefined ? { email: row.email } : {}),
@@ -39,14 +42,16 @@ export async function upsertUser(row: {
     },
     { onConflict: "id" }
   );
+  if (error) throw new Error(`users upsert failed: ${error.message}`);
 }
 
-/** Flip a plan for whichever user owns this Lemon Squeezy customer. */
+/** Flip a plan for whichever user owns this Lemon Squeezy customer. Throws on a DB error. */
 export async function setPlanByLemonCustomer(
   lemonCustomerId: string,
   plan: Plan
 ): Promise<void> {
   const db = getSupabaseAdmin();
   if (!db) return;
-  await db.from("users").update({ plan }).eq("ls_customer_id", lemonCustomerId);
+  const { error } = await db.from("users").update({ plan }).eq("ls_customer_id", lemonCustomerId);
+  if (error) throw new Error(`users plan update failed: ${error.message}`);
 }

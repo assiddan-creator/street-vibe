@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Plan } from "@/lib/usage";
-import { verifyWebhookSignature } from "@/lib/lemonSqueezy";
+import { planForStatus, verifyWebhookSignature } from "@/lib/lemonSqueezy";
 import { setPlanByLemonCustomer, upsertUser } from "@/lib/userStore";
 
 export const maxDuration = 30;
-
-/** Lemon Squeezy subscription statuses that entitle a user to Pro. */
-const PRO_STATUSES = new Set(["active", "on_trial", "past_due"]);
-
-function planForStatus(status: unknown): Plan {
-  return typeof status === "string" && PRO_STATUSES.has(status) ? "pro" : "free";
-}
 
 /**
  * Lemon Squeezy webhook. The `X-Signature` HMAC is the authentication, so there
@@ -60,7 +52,8 @@ export async function POST(req: NextRequest) {
         break;
       }
       // `subscription_cancelled` keeps status "cancelled" but access runs to the
-      // period end — only `_expired` truly ends it.
+      // period end — only `_expired` truly ends it. The `subscription_updated`
+      // that follows a cancel maps "cancelled" to Pro for the same reason.
       case "subscription_expired": {
         if (customerId) await setPlanByLemonCustomer(customerId, "free");
         break;
