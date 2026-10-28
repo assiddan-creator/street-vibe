@@ -376,6 +376,20 @@ LONDON ROADMAN — lived-in MLE, not a drill:
 `
       : "";
 
+  /** Tuning: Edinburgh Scots — Scottish chat with a light Scots touch, not a Burns poem. */
+  const edinburghScotsAntiOvercookBlock =
+    dialectId === "Edinburgh Scots" && slangRequested
+      ? `
+
+EDINBURGH SCOTS — a young Edinburgh local texting a mate:
+- Scottish English in normal sentences, with a few natural Scots words where a local would use them (aye, ken, wee, cannae, dinnae, pal, braw, mental, scran). Readable for a visitor; not phonetic spelling of every word, not a Burns poem, not a tartan-shortbread cartoon.
+- Scottish, not London or American: never bruv, mandem, innit, gotta, dude.
+- Dry, cheeky, deadpan warmth; a light tease lands better than a pile of slang.
+- FLIRT context: if the source is not romantic or flirty, keep the same tone as DM — no pet names or pickup vibes.
+- Short source → short reply.
+`
+      : "";
+
   /** Tuning: Israeli Street — natural WhatsApp Hebrew over slang performance (esp. heavy / flirt). */
   const israeliStreetAntiOvercookBlock =
     dialectId === "Israeli Street" && slangRequested
@@ -526,6 +540,7 @@ RULE PROFILE above applies to tone/word choice only; it must not change this out
       `${englishStandardVoiceBlock}` +
       `${newYorkBrooklynVoiceBlock}` +
       `${londonRoadmanAntiOvercookBlock}` +
+      `${edinburghScotsAntiOvercookBlock}` +
       `${israeliStreetAntiOvercookBlock}` +
       `${jamaicanPatoisVoiceBlock}` +
       `${mexicoCityBarrioVoiceBlock}` +

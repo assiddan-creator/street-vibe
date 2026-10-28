@@ -129,9 +129,10 @@ describe('collection "asssi" voices (2026-10)', () => {
     ["Rio Favela", "pt", "r3KkFedJ4n8aabIZ0RFQ", "x8FWrDHAK5xiFTJLpnHq"], // Will (pt-BR) / Carla
     ["Israeli Street", "he", "JIxTgeeS5w0UQyBxEnrl", "UZzDIQRRTW2Id7YBcbgC"], // Itai / Maya
     ["Arabic Egyptian", "ar", "QvNF0qyyt1Tuy1YAmnzH", "xPcC3nehhziQaOrIeAwv"], // Mostafa / Ghozlan
+    ["Edinburgh Scots", "en", "MAy1fRIg5hTqbhiwOUyh", "eh9GHWIaYsZB3Alk8wrY"], // Hamish / Alba Mac (shared library)
   ];
 
-  test("presets exist for Kingston (male) plus a male + female for the 10 other cities", () => {
+  test("presets exist for Kingston (male) plus a male + female for the 11 other cities", () => {
     assert.deepEqual(Object.keys(ELEVENLABS_VOICE_PRESETS).sort(), [KINGSTON, ...PICKS.map((p) => p[0])].sort());
   });
 

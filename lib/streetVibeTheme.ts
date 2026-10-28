@@ -77,6 +77,12 @@ export const DIALECT_THEMES: DialectTheme[] = [
     city: "Madrid",
   },
   {
+    id: "Edinburgh Scots",
+    pillLabel: "Edinburgh",
+    bg: "#0a0f1a",
+    city: "Edinburgh",
+  },
+  {
     id: "English (Standard)",
     pillLabel: "English",
     bg: "#0d0d0d",
@@ -166,6 +172,7 @@ export const OUTPUT_PREMIUM_OPTIONS: { value: string; label: string }[] = [
   { value: "Israeli Street", label: "Tel Aviv" },
   { value: "Arabic Egyptian", label: "Cairo" },
   { value: "Spanish Madrid", label: "Madrid" },
+  { value: "Edinburgh Scots", label: "Edinburgh" },
 ];
 
 export const OUTPUT_STANDARD_OPTIONS: { value: string; label: string }[] = [

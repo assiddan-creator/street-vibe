@@ -43,6 +43,7 @@ const IMG = {
   portugal: { wide: "/images/portugal.jpeg", long: "/images/portugal.jpeg" },
   spain: { wide: "/images/spain.jpeg", long: "/images/spain.jpeg" },
   arabic: { wide: "/images/arabic.jpeg", long: "/images/arabic.jpeg" },
+  scotland: { wide: "/images/scotland.jpeg", long: "/images/scotland.jpeg" },
 } as const;
 
 /** Official flag palettes with role assignments. Sources noted per flag. */
@@ -62,6 +63,14 @@ export const FLAG_PALETTES = {
     secondary: "#C8102E",
     secondaryText: "#FFFFFF",
     tertiary: "#012169",
+  },
+  /** Scotland — Saltire, Pantone 300 blue, white. */
+  scotland: {
+    flagColors: ["#005EB8", "#FFFFFF"],
+    primary: "#FFFFFF",
+    secondary: "#005EB8",
+    secondaryText: "#FFFFFF",
+    tertiary: "#005EB8",
   },
   /** United States — Old Glory Red / Old Glory Blue, white. */
   usa: {
@@ -194,6 +203,7 @@ export const CITY_THEME_BY_DIALECT_ID: Record<string, CityThemeTokens> = {
   "Arabic Egyptian": { ...P.egypt, bg: IMG.arabic, micBall: "/images/arabic.jpeg" },
   "Spanish Madrid": { ...P.spain, bg: IMG.spain, micBall: "/images/spain.jpeg" },
   "London Roadman": { ...P.uk, bg: IMG.london, micBall: "/images/england.jpeg" },
+  "Edinburgh Scots": { ...P.scotland, bg: IMG.scotland, micBall: "/images/scotland.jpeg" },
 };
 
 /** Neutral gray palette for unknown output ids (no flag). */

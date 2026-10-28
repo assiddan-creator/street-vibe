@@ -17,7 +17,8 @@ export type StreetVibeDialectId =
   | "Rio Favela"
   | "Israeli Street"
   | "Arabic Egyptian"
-  | "Spanish Madrid";
+  | "Spanish Madrid"
+  | "Edinburgh Scots";
 
 export type StreetVibeDialectRegistryEntry = {
   id: StreetVibeDialectId;
@@ -59,6 +60,26 @@ export const STREETVIBE_DIALECT_REGISTRY: Record<StreetVibeDialectId, StreetVibe
     },
     ui: {
       loadingMessage: "Hold tight bruv, mandem is translating...",
+    },
+  },
+  "Edinburgh Scots": {
+    id: "Edinburgh Scots",
+    primaryLanguage: "English (Scottish / Edinburgh Scots)",
+    scriptLock:
+      "Write ONLY in English using the Latin alphabet (Scots spellings like ken, aye, wee, cannae are fine). No other languages or scripts.",
+    isPremiumSlang: true,
+    google: {
+      languageCode: "en-GB",
+      speakingRate: 0.95,
+      pitch: -1,
+    },
+    minimax: {
+      languageBoost: "English",
+      defaultMaleVoiceId: "Casual_Guy",
+      defaultFemaleVoiceId: "Lively_Girl",
+    },
+    ui: {
+      loadingMessage: "Haud oan a wee minute, pal...",
     },
   },
   "Jamaican Patois": {

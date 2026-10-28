@@ -50,6 +50,16 @@ export const RULE_PROFILE_ROUTING_MATRIX: Record<string, RuleRoutingEntry> = {
       admiration: "anti-overcooked",
     },
   },
+  "Edinburgh Scots": {
+    byIntent: {
+      greeting: "dialect-tuned",
+      flirt: "anti-overcooked",
+      tease: "dialect-tuned",
+      attitude: "anti-overcooked",
+      practical_ask: "safer",
+      admiration: "anti-overcooked",
+    },
+  },
   "Paris Banlieue": {
     byIntent: {
       greeting: "anti-overcooked",
