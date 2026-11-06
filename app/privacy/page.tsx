@@ -70,8 +70,8 @@ export default function PrivacyPage() {
 
       <h2>Contact</h2>
       <p>
-        Privacy questions and deletion requests can be sent to the contact address shown on our
-        Lemon Squeezy checkout page.
+        Privacy questions and deletion requests can be sent to{" "}
+        <a href="mailto:assiddan@gmail.com">assiddan@gmail.com</a>.
       </p>
     </LegalPage>
   );
