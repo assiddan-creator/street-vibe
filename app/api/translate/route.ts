@@ -52,6 +52,7 @@ import {
 import { generateReplicateText, REPLICATE_TEXT_MODEL } from "@/lib/replicateText";
 import { generateGeminiText, GEMINI_TEXT_MODEL } from "@/lib/geminiText";
 import { guardApiRequest } from "@/lib/apiRequestGuard";
+import { TRANSLITERATE_GUARD, lineWithinTransliterateLimit } from "@/lib/transliterateLimits";
 import { corsHeaders as buildCorsHeaders } from "@/lib/corsHeaders";
 import { checkAndConsumeUsage, publicUsage } from "@/lib/usage";
 import { cleanReplySuggestions, parseReplyJson } from "@/lib/replySuggestions";
@@ -752,14 +753,12 @@ export async function POST(req: NextRequest) {
   // Lazy read-aloud step: the client asks for the phonetic line *after* it already
   // has the translation, so the main response is no longer blocked on a second model call.
   if (body.mode === "transliterate") {
-    const translitBlocked = await guardApiRequest(req, "translate-translit", {
-      limit: 60,
-      maxBodyBytes: 16_000,
-    });
+    const translitBlocked = await guardApiRequest(req, "translate-translit", TRANSLITERATE_GUARD);
     if (translitBlocked) return translitBlocked;
 
     const line = typeof body.line === "string" ? body.line.trim() : "";
-    if (!line) {
+    // Not metered by the daily quota, so cost is bounded by length + the guard above.
+    if (!lineWithinTransliterateLimit(line)) {
       return NextResponse.json(
         { nativeTransliteration: "" },
         { status: 200, headers: corsHeaders }
