@@ -196,7 +196,7 @@ export default function Landing() {
               $0<span className="text-[14px] font-medium text-white/40"> / forever</span>
             </p>
             <ul className="mt-4 flex flex-col gap-2 text-[14px] text-white/60">
-              <li>10 rewrites + 5 voice plays a day</li>
+              <li>10 rewrites + 2 voice plays a day</li>
               <li>All 11 dialects</li>
               <li>No sign-up to start</li>
             </ul>

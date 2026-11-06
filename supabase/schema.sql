@@ -78,11 +78,11 @@ begin
     when v_plan = 'pro'  then 1000000
     when v_plan = 'free' and p_kind = 'translate' then 10
     when v_plan = 'free' and p_kind = 'tts'       then
-      case when p_tts_limit_override > 0 then p_tts_limit_override else 5 end
+      case when p_tts_limit_override > 0 then p_tts_limit_override else 2 end
     -- Anonymous visitors get the same free allowance as signed-in free users.
     when v_plan = 'anon' and p_kind = 'translate' then 10
     when v_plan = 'anon' and p_kind = 'tts'       then
-      case when p_tts_limit_override > 0 then p_tts_limit_override else 5 end
+      case when p_tts_limit_override > 0 then p_tts_limit_override else 2 end
     else 4
   end;
 
