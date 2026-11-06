@@ -58,8 +58,8 @@ export default function TermsPage() {
 
       <h2>Contact</h2>
       <p>
-        Questions about these terms can be sent to the contact address shown on our Lemon Squeezy
-        checkout page.
+        Questions about these terms can be sent to{" "}
+        <a href="mailto:assiddan@gmail.com">assiddan@gmail.com</a>.
       </p>
     </LegalPage>
   );
