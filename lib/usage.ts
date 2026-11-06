@@ -15,8 +15,8 @@ const UNLIMITED = 1_000_000;
  * in supabase/schema.sql (the SQL function is the source of truth at runtime).
  */
 export const DAILY_LIMITS: Record<Plan, Record<UsageKind, number>> = {
-  anon: { translate: 10, tts: 5 },
-  free: { translate: 10, tts: 5 },
+  anon: { translate: 10, tts: 2 },
+  free: { translate: 10, tts: 2 },
   pro: { translate: UNLIMITED, tts: UNLIMITED },
 };
 
