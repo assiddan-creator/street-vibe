@@ -129,8 +129,8 @@ describe("invalid override falls back safely", () => {
     test(`"${label}" (${JSON.stringify(value)}) is ignored`, () => {
       const env = value === undefined ? {} : { USAGE_TTS_DAILY_LIMIT_OVERRIDE: value };
       assert.equal(ttsDailyLimitOverride(env), null);
-      assert.equal(dailyLimitFor("anon", "tts", env), 5);
-      assert.equal(dailyLimitFor("free", "tts", env), 5);
+      assert.equal(dailyLimitFor("anon", "tts", env), 2);
+      assert.equal(dailyLimitFor("free", "tts", env), 2);
     });
   }
 
@@ -262,7 +262,7 @@ describe("OWNER_EMAILS allowlist", () => {
 describe("limits per caller: owner / free / Pro / anonymous", () => {
   const PROD = { VERCEL_ENV: "production" };
   const free: UsageState = { plan: "free", kind: "translate", used: 10, limit: 10, remaining: 0, ok: false, metered: true };
-  const freeTts: UsageState = { ...free, kind: "tts", used: 5, limit: 5 };
+  const freeTts: UsageState = { ...free, kind: "tts", used: 2, limit: 2 };
   const anon: UsageState = { plan: "anon", kind: "translate", used: 10, limit: 10, remaining: 0, ok: false, metered: true };
   const pro: UsageState = { plan: "pro", kind: "translate", used: 500, limit: 1_000_000, remaining: 999_500, ok: true, metered: true };
 
