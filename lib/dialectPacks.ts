@@ -74,6 +74,34 @@ export const DIALECT_PACKS: Record<StreetVibeDialectId, DialectPack> = {
     interjectionHints: ["Rare dry (breath) before a punchline clause if natural."],
     rewriteBiasTerms: ["bruv", "mandem", "wagwan", "allow it", "ends"],
   },
+  "Edinburgh Scots": {
+    dialectId: "Edinburgh Scots",
+    displayLabel: "Edinburgh Scots",
+    phraseRhythm: { pattern: "quick, dry, teasing", cadence: "staccato" },
+    preferredSentenceLength: "short",
+    slangDensityBias: "medium",
+    deliveryStyle: {
+      feel: "deadpan Edinburgh banter, warm under the cheek",
+      bluntness: "hard",
+      directness: "high",
+    },
+    scriptPreference: "Latin English with light Scots spelling; Scottish, not generic UK or US.",
+    promptHints: {
+      translate: [
+        "Sound like a young Edinburgh local texting a mate: Scottish English with natural Scots words (aye, ken, wee, cannae, dinnae, pal, braw, mental).",
+        "Light touch: a few Scots words in plain readable English, not a Burns poem or a cartoon accent.",
+        "Never use London/MLE slang (bruv, mandem, innit) or American filler.",
+        "Flirt mode only when the source is actually flirty; otherwise same tone as a friend update.",
+      ],
+      toneNotes: ["Sounds like a pub chat on a Friday in Leith — dry, cheeky, friendly."],
+    },
+    ttsHints: [
+      "Scottish accent, quick and dry; teasing warmth on the last beat.",
+      "Do not over-roll every r; keep it conversational.",
+    ],
+    interjectionHints: ["Rare dry (laughs) after a cheeky clause if natural."],
+    rewriteBiasTerms: ["aye", "ken", "wee", "cannae", "pal", "braw"],
+  },
   "Jamaican Patois": {
     dialectId: "Jamaican Patois",
     displayLabel: "Jamaican Patois",

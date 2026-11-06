@@ -19,6 +19,12 @@ export const VOICE_MAP: Record<string, VoiceTuning> = {
     pitch: -1,
     emotion: "neutral",
   },
+  "Edinburgh Scots": {
+    voice_id: "English_MatureBoss",
+    speed: 0.95,
+    pitch: 0,
+    emotion: "happy",
+  },
   "Jamaican Patois": {
     voice_id: "English_PassionateWarrior",
     speed: 0.9,

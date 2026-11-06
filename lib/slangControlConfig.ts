@@ -47,6 +47,19 @@ export const PREMIUM_SLANG_CONTROL: Record<StreetVibeDialectId, SlangControlConf
     ],
     dictionaryBiasTerms: ["bruv", "mandem", "wagwan", "allow it"],
   },
+  "Edinburgh Scots": {
+    dialectId: "Edinburgh Scots",
+    strictScriptLock: true,
+    allowLatinFallback: true,
+    maxForeignTokens: 4,
+    preserveLocalSlangPriority: ["Scottish English", "Edinburgh banter", "light Scots words"],
+    bannedGenericTerms: ["bruv", "innit", "mandem", "literally", "no cap"],
+    rewriteHints: [
+      "Keep it Scottish (Edinburgh): aye, ken, wee, cannae, pal; never London or American slang.",
+      "A few Scots words in readable English, not phonetic spelling of every word.",
+    ],
+    dictionaryBiasTerms: ["aye", "ken", "wee", "cannae", "pal"],
+  },
   "Jamaican Patois": {
     dialectId: "Jamaican Patois",
     strictScriptLock: true,

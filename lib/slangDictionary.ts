@@ -371,6 +371,18 @@ export const SLANG_DB: SlangDB = {
     { word: "Rollo", meaning: "thing / situation / vibe", example: "Qué rollo con eso." },
     { word: "Flipar", meaning: "to be amazed / freak out", example: "Flipas con esto." },
   ],
+  edinburgh: [
+    { word: "Aye", meaning: "yes", example: "Aye, sound, see you there." },
+    { word: "Ken", meaning: "know / you know", example: "Ken whit I mean?" },
+    { word: "Wee", meaning: "small / a bit", example: "Just a wee drink, honest." },
+    { word: "Cannae", meaning: "can't", example: "I cannae find the place." },
+    { word: "Dinnae", meaning: "don't", example: "Dinnae worry aboot it." },
+    { word: "Pal", meaning: "mate / friend", example: "Cheers, pal." },
+    { word: "Braw", meaning: "great / lovely", example: "That's a braw view." },
+    { word: "Mental", meaning: "crazy / wild", example: "Last night was mental." },
+    { word: "Bairn", meaning: "child / kid", example: "The bairns are asleep." },
+    { word: "Scran", meaning: "food", example: "Fancy some scran?" },
+  ],
 };
 
 const DIALECT_TO_DB_KEY: Record<string, string> = {
@@ -385,6 +397,7 @@ const DIALECT_TO_DB_KEY: Record<string, string> = {
   "Israeli Street": "israeli",
   "Arabic Egyptian": "egyptian",
   "Spanish Madrid": "madrid",
+  "Edinburgh Scots": "edinburgh",
 };
 
 export function lookupSlang(word: string, dialect: string): SlangEntry | null {
