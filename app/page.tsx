@@ -1,50 +1,46 @@
+import type { CSSProperties } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { HeroDive } from "@/components/marketing/HeroDive";
-import { PublicShell } from "@/components/marketing/PublicShell";
+import { Archivo } from "next/font/google";
+import { LandingExperience, type ExperienceStop } from "@/components/landing/LandingExperience";
+import { CITY_STOPS, TOURIST_LINE } from "@/lib/landingCities";
+import "./landing.css";
 
-const ACCENT = "#4ade80";
+/** One family from extra-condensed to expanded: the width axis is the page's motion. */
+const archivo = Archivo({
+  subsets: ["latin", "latin-ext"],
+  axes: ["wdth"],
+  variable: "--font-archivo",
+  display: "swap",
+});
 
-const BEFORE_AFTER: { lang: string; tourist: string; local: string }[] = [
-  {
-    lang: "Spanish",
-    tourist: "¿Podría usted decirme dónde se encuentra la estación, por favor?",
-    local: "oye, sabes por dónde queda la estación?",
-  },
-  {
-    lang: "French",
-    tourist: "Je suis très heureux d'avoir fait votre connaissance ce soir.",
-    local: "franchement, contente de t'avoir rencontré ce soir",
-  },
-  {
-    lang: "Brazilian Portuguese",
-    tourist: "Gostaria muito de poder vê-la novamente em breve.",
-    local: "curti demais, bora marcar de novo?",
-  },
-];
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 const FEATURES: { title: string; body: string }[] = [
   {
-    title: "11 real dialects",
-    body: "Not a generic \"casual\" setting. London, Paris, Cairo, Tel Aviv, Rio, CDMX and more — each tuned by a native voice.",
+    title: "Eleven real dialects",
+    body: "Not a generic casual setting. Kingston, London, Brooklyn, Tokyo, Paris, Moscow, CDMX, Rio, Tel Aviv, Cairo and Madrid, each tuned by a native voice.",
   },
   {
     title: "Hear it out loud",
     body: "An AI voice reads the line back in the accent, so you know how it lands before you hit send.",
   },
   {
-    title: "\"Does this sound local?\"",
-    body: "Paste what you already wrote. Get a native-ness score, a cleaned-up version, and exactly what gave you away.",
+    title: "Does this sound local?",
+    body: "Paste what you already wrote. Get a score, a cleaned up version, and exactly what gave you away.",
   },
   {
     title: "Dial the intensity",
-    body: "From barely-there local colour to full slang. Pick the vibe — DM, flirt, argument, hype — and it matches.",
+    body: "From barely there local color to full slang. Pick the vibe (DM, flirt, argument, hype) and it matches.",
   },
 ];
 
-const STEPS: { n: string; title: string; body: string }[] = [
-  { n: "1", title: "Type it plain", body: "Write what you mean in your own words, any language." },
-  { n: "2", title: "Pick a place & a vibe", body: "Choose the dialect and how strong you want it." },
-  { n: "3", title: "Send it like a local", body: "Copy the line, hear it, or check something you wrote yourself." },
+const STEPS: { title: string; body: string }[] = [
+  { title: "Type it plain", body: "Write what you mean in your own words, in any language." },
+  { title: "Pick a place and a vibe", body: "Choose the dialect and how strong you want it." },
+  { title: "Send it like a local", body: "Copy the line, hear it, or check something you wrote yourself." },
 ];
 
 const FAQ: { q: string; a: string }[] = [
@@ -54,11 +50,11 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Is my text stored?",
-    a: "Your recent phrases are kept only in your own browser, for the history panel. The server processes each message to translate it and does not keep a copy. See the Privacy page.",
+    a: "Your recent phrases are kept only in your own browser, for the history panel. The server processes each message to translate it and does not keep a copy.",
   },
   {
     q: "How accurate is the slang?",
-    a: "Each dialect is shaped by a native-speaker profile rather than a dictionary swap. It is built for everyday chat, not legal or medical text.",
+    a: "Each dialect is shaped by a native speaker profile, not a dictionary swap. It is built for everyday chat, not legal or medical text.",
   },
   {
     q: "Can I cancel Pro anytime?",
@@ -66,192 +62,327 @@ const FAQ: { q: string; a: string }[] = [
   },
 ];
 
-export default function Landing() {
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      name: "Street Vibe",
+      applicationCategory: "LifestyleApplication",
+      operatingSystem: "Web",
+      url: "https://www.getstreetvibe.com/",
+      description:
+        "Rewrites your message the way someone who lives there would send it, in 11 street dialects, with an AI voice to read it aloud.",
+      offers: [
+        { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
+        { "@type": "Offer", name: "Pro monthly", price: "3.99", priceCurrency: "USD" },
+        { "@type": "Offer", name: "Pro yearly", price: "23.99", priceCurrency: "USD" },
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: FAQ.map((item) => ({
+        "@type": "Question",
+        name: item.q,
+        acceptedAnswer: { "@type": "Answer", text: item.a },
+      })),
+    },
+  ],
+};
+
+const EXPERIENCE_STOPS: ExperienceStop[] = CITY_STOPS.map((s) => ({
+  city: s.city,
+  lat: s.lat,
+  lon: s.lon,
+  hello: s.hello,
+  display: s.display,
+  field: s.field,
+  ink: s.ink,
+}));
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** Words as their own boxes, so a line can land one word at a time. Text stays real text. */
+function Words({ text }: { text: string }) {
+  const words = text.split(" ");
   return (
-    <PublicShell overlayHeader>
-      {/* Hero */}
-      <section className="relative isolate flex min-h-[100svh] items-end overflow-hidden sm:items-center">
-        <HeroDive />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.55)_0%,rgba(0,0,0,0.15)_30%,rgba(0,0,0,0.35)_60%,#0b0d0f_100%)]"
-        />
-        <div className="relative mx-auto w-full max-w-5xl px-5 pb-14 pt-24 text-center [text-shadow:0_2px_18px_rgba(0,0,0,0.55)] sm:pt-16">
-          <p
-            className="mx-auto mb-4 w-fit rounded-full border px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.18em]"
-            style={{ borderColor: `${ACCENT}44`, color: ACCENT }}
-          >
-            11 dialects · AI voice
-          </p>
-          <h1 className="font-heading text-4xl font-extrabold leading-[1.05] tracking-tight text-white text-balance sm:text-6xl">
-            Talk like a local,
-            <br />
-            not a tourist.
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-[16px] leading-relaxed text-white/80 sm:text-[18px]">
-            Street Vibe rewrites your message the way someone who actually lives there would send it —
-            for DMs, dating apps, and group chats in a language that isn&apos;t your first.
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              href="/app"
-              className="rounded-full px-6 py-3 text-[15px] font-bold text-black transition-transform hover:scale-[1.03]"
-              style={{ backgroundColor: ACCENT }}
-            >
-              Open Street Vibe — it&apos;s free
-            </Link>
-            <a
-              href="#how"
-              className="rounded-full border border-white/30 bg-black/25 px-6 py-3 text-[15px] font-semibold text-white/90 backdrop-blur-sm transition-colors hover:bg-white/10"
-            >
-              See how it works
-            </a>
-          </div>
-          <p className="mt-3 text-[13px] text-white/60">No sign-up to try · 10 free rewrites a day</p>
-        </div>
-      </section>
+    <>
+      {words.map((word, i) => (
+        <span key={i}>
+          <span className="lv-w" style={{ "--i": i } as CSSProperties}>
+            <span>{word}</span>
+          </span>
+          {i < words.length - 1 ? " " : null}
+        </span>
+      ))}
+    </>
+  );
+}
 
-      {/* Before / after */}
-      <section className="border-y border-white/10 bg-white/[0.02] py-12">
-        <div className="mx-auto max-w-3xl px-5">
-          <h2 className="text-center font-heading text-2xl font-bold text-white">
-            The difference people hear
-          </h2>
-          <div className="mt-8 flex flex-col gap-4">
-            {BEFORE_AFTER.map((row) => (
-              <div
-                key={row.lang}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  {row.lang}
-                </p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-red-400/70">
-                      Tourist
-                    </p>
-                    <p className="mt-1 text-[15px] leading-snug text-white/50" dir="auto">
-                      {row.tourist}
-                    </p>
-                  </div>
-                  <div>
-                    <p
-                      className="text-[11px] font-semibold uppercase tracking-wide"
-                      style={{ color: ACCENT }}
-                    >
-                      Local
-                    </p>
-                    <p className="mt-1 text-[15px] leading-snug text-white/90" dir="auto">
-                      {row.local}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+function OpenButton({ label, onField = false }: { label: string; onField?: boolean }) {
+  return (
+    <Link href="/app" className={`lv-btn${onField ? " lv-btn--onfield" : ""}`}>
+      <span className="lv-btn__flood" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+      <span className="lv-btn__label">{label}</span>
+      <svg className="lv-btn__arrow" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </Link>
+  );
+}
 
-      {/* Features */}
-      <section className="mx-auto max-w-5xl px-5 py-14">
-        <div className="grid gap-4 sm:grid-cols-2">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <h3 className="font-heading text-lg font-bold text-white">{f.title}</h3>
-              <p className="mt-2 text-[14px] leading-relaxed text-white/55">{f.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+export default function Landing() {
+  const first = CITY_STOPS[0];
+  const rootVars = {
+    "--g1": first.display[0],
+    "--g2": first.display[1],
+    "--g3": first.display[2],
+    "--field": first.field,
+    "--field-ink": first.ink,
+  } as CSSProperties;
 
-      {/* How it works */}
-      <section id="how" className="border-y border-white/10 bg-white/[0.02] py-14">
-        <div className="mx-auto max-w-5xl px-5">
-          <h2 className="text-center font-heading text-2xl font-bold text-white">How it works</h2>
-          <div className="mt-9 grid gap-6 sm:grid-cols-3">
-            {STEPS.map((s) => (
-              <div key={s.n} className="text-center">
-                <span
-                  className="mx-auto flex h-10 w-10 items-center justify-center rounded-full text-[16px] font-bold text-black"
-                  style={{ backgroundColor: ACCENT }}
-                >
-                  {s.n}
-                </span>
-                <h3 className="mt-3 font-heading text-[16px] font-bold text-white">{s.title}</h3>
-                <p className="mt-1 text-[14px] leading-relaxed text-white/55">{s.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+  return (
+    <div className={`lv ${archivo.variable}`} data-lv-root style={rootVars}>
+      <a className="lv-skip" href="#main">
+        Skip to content
+      </a>
 
-      {/* Pricing */}
-      <section className="mx-auto max-w-3xl px-5 py-14">
-        <h2 className="text-center font-heading text-2xl font-bold text-white">Simple pricing</h2>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-            <p className="font-heading text-lg font-bold text-white">Free</p>
-            <p className="mt-1 text-[28px] font-extrabold text-white">
-              $0<span className="text-[14px] font-medium text-white/40"> / forever</span>
-            </p>
-            <ul className="mt-4 flex flex-col gap-2 text-[14px] text-white/60">
-              <li>10 rewrites + 2 voice plays a day</li>
-              <li>All 11 dialects</li>
-              <li>No sign-up to start</li>
-            </ul>
-          </div>
-          <div
-            className="rounded-2xl border bg-white/[0.04] p-6"
-            style={{ borderColor: `${ACCENT}55` }}
-          >
-            <p className="font-heading text-lg font-bold text-white">Pro</p>
-            <p className="mt-1 text-[28px] font-extrabold text-white">
-              $3.99<span className="text-[14px] font-medium text-white/40"> / month</span>
-            </p>
-            <p className="text-[12px] text-white/40">or $23.99 / year</p>
-            <ul className="mt-4 flex flex-col gap-2 text-[14px] text-white/70">
-              <li>Unlimited rewrites and voice</li>
-              <li>Unlimited &ldquo;does this sound local?&rdquo; checks</li>
-              <li>Cancel anytime</li>
-            </ul>
-            <Link
-              href="/app"
-              className="mt-5 block rounded-full px-4 py-2.5 text-center text-[14px] font-bold text-black"
-              style={{ backgroundColor: ACCENT }}
-            >
-              Start free, upgrade in the app
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="mx-auto max-w-2xl px-5 pb-16">
-        <h2 className="text-center font-heading text-2xl font-bold text-white">Questions</h2>
-        <div className="mt-8 flex flex-col gap-3">
-          {FAQ.map((item) => (
-            <details
-              key={item.q}
-              className="group rounded-2xl border border-white/10 bg-white/[0.03] p-4"
-            >
-              <summary className="cursor-pointer list-none font-heading text-[15px] font-semibold text-white/90 [&::-webkit-details-marker]:hidden">
-                {item.q}
-              </summary>
-              <p className="mt-2 text-[14px] leading-relaxed text-white/55">{item.a}</p>
-            </details>
-          ))}
-        </div>
-        <div className="mt-10 text-center">
-          <Link
-            href="/app"
-            className="rounded-full px-6 py-3 text-[15px] font-bold text-black transition-transform hover:scale-[1.03] inline-block"
-            style={{ backgroundColor: ACCENT }}
-          >
-            Try it now
+      <header className="lv-header">
+        <Link href="/" className="lv-mark" aria-label="Street Vibe, home">
+          Street Vibe
+        </Link>
+        <nav className="lv-nav" aria-label="Primary">
+          <a href="#tour" className="lv-nav__link">
+            The tour
+          </a>
+          <a href="#pricing" className="lv-nav__link">
+            Pricing
+          </a>
+          <a href="#faq" className="lv-nav__link">
+            Questions
+          </a>
+          <Link href="/app" className="lv-pill">
+            Open the app
           </Link>
+        </nav>
+      </header>
+
+      <main id="main">
+        <div className="lv-voyage" data-lv-voyage>
+          <section className="lv-hero" data-lv-hero aria-labelledby="lv-h1">
+            <div className="lv-horizon" aria-hidden="true" />
+            <h1 id="lv-h1" className="lv-h1">
+              <span className="lv-h1__row">
+                <span style={{ "--i": 0 } as CSSProperties}>Talk like</span>{" "}
+                <span style={{ "--i": 1 } as CSSProperties}>a local,</span>
+              </span>{" "}
+              <span className="lv-h1__row">
+                <span style={{ "--i": 2 } as CSSProperties}>not a</span>{" "}
+                <span className="lv-strike" style={{ "--i": 3 } as CSSProperties}>
+                  tourist.
+                  <svg viewBox="0 0 260 60" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M4 36 C 44 18, 78 50, 124 30 S 204 20, 256 34" pathLength="1" />
+                  </svg>
+                </span>
+              </span>
+            </h1>
+            <div className="lv-hero__foot">
+              <p className="lv-lede">
+                Street Vibe rewrites your message the way someone who lives there would send it. Eleven street
+                dialects, each one read aloud by an AI voice in the accent.
+              </p>
+              <p className="lv-cue" aria-hidden="true">
+                Scroll to send one hello around the world
+              </p>
+              <div className="lv-hero__cta">
+                <OpenButton label="Open Street Vibe, it's free" />
+                <p className="lv-fine">No sign-up to try. 10 free rewrites a day.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="lv-stage" data-lv-stage id="tour" aria-labelledby="lv-tour-h">
+            <div className="lv-host" data-lv-host="stage" aria-hidden="true" />
+            <div className="lv-bigname" data-lv-bigname aria-hidden="true">
+              <span data-lv-bigname-text suppressHydrationWarning />
+            </div>
+            <span className="lv-measure" data-lv-measure aria-hidden="true" suppressHydrationWarning />
+
+            <div className="lv-stage__ui">
+              <div className="lv-stage__head">
+                <h2 id="lv-tour-h" className="lv-stage__title">
+                  One line, eleven streets
+                </h2>
+                <p className="lv-stage__sub">The same hello, the way each city would actually send it.</p>
+              </div>
+
+              <ol className="lv-stops">
+                {CITY_STOPS.map((s, i) => (
+                  <li
+                    key={s.dialect}
+                    className="lv-stop"
+                    data-lv-stop
+                    data-active={i === 0 ? "" : undefined}
+                    style={{ "--f": s.field, "--fi": s.ink, "--d1": s.display[0] } as CSSProperties}
+                  >
+                    <div className="lv-stop__meta">
+                      <span className="lv-stop__n">
+                        {pad2(i + 1)} / {pad2(CITY_STOPS.length)}
+                      </span>
+                      <h3>{s.city}</h3>
+                      <span>{s.speech}</span>
+                    </div>
+                    <div className="lv-thread">
+                      <p className="lv-bubble lv-bubble--plain">
+                        <span className="lv-bubble__tag">You type</span>
+                        {TOURIST_LINE}
+                      </p>
+                      <p className="lv-bubble lv-bubble--local">
+                        <span className="lv-bubble__tag">{s.city} says</span>
+                        <span lang={s.lang} dir={s.dir} className="lv-bubble__line">
+                          <Words text={s.local} />
+                        </span>
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              <nav className="lv-index" aria-label="Cities on the tour">
+                {CITY_STOPS.map((s, i) => (
+                  <button key={s.dialect} type="button" data-lv-goto={i} aria-current={i === 0 ? "true" : undefined}>
+                    <span>{s.city}</span>
+                  </button>
+                ))}
+              </nav>
+
+              <div className="lv-stage__foot">
+                <p className="lv-next" data-lv-next suppressHydrationWarning>
+                  Next stop: {CITY_STOPS[1].city}
+                </p>
+                <a href="#kit" className="lv-link">
+                  Skip the tour
+                </a>
+              </div>
+            </div>
+          </section>
+          <div className="lv-track" aria-hidden="true" />
         </div>
-      </section>
-    </PublicShell>
+
+        <section className="lv-sec lv-kit" id="kit" aria-labelledby="lv-kit-h">
+          <h2 id="lv-kit-h" className="lv-h2" data-lv-reveal>
+            Built for the group chat, not the classroom.
+          </h2>
+          <ul className="lv-rows">
+            {FEATURES.map((f, i) => (
+              <li key={f.title} data-lv-reveal style={{ "--d": i } as CSSProperties}>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="lv-sec lv-how" id="how" aria-labelledby="lv-how-h">
+          <h2 id="lv-how-h" className="lv-h2" data-lv-reveal>
+            Three moves. No phrasebook.
+          </h2>
+          <ol className="lv-steps">
+            {STEPS.map((s, i) => (
+              <li key={s.title} data-lv-reveal style={{ "--d": i } as CSSProperties}>
+                <h3>{s.title}</h3>
+                <p>{s.body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="lv-sec lv-pricing" id="pricing" aria-labelledby="lv-pricing-h">
+          <h2 id="lv-pricing-h" className="lv-h2" data-lv-reveal>
+            Free to try. Cheap to keep.
+          </h2>
+          <div className="lv-plans">
+            <article className="lv-plan lv-plan--free" data-lv-reveal>
+              <h3>Free</h3>
+              <p className="lv-price">
+                $0 <span>forever</span>
+              </p>
+              <ul>
+                <li>10 rewrites + 2 voice plays a day</li>
+                <li>All 11 dialects</li>
+                <li>No sign-up to start</li>
+              </ul>
+            </article>
+            <article className="lv-plan lv-plan--pro" data-lv-reveal style={{ "--d": 1 } as CSSProperties}>
+              <h3>Pro</h3>
+              <p className="lv-price">
+                $3.99 <span>a month</span>
+              </p>
+              <p className="lv-plan__alt">or $23.99 a year</p>
+              <ul>
+                <li>Unlimited rewrites and voice</li>
+                <li>Unlimited &ldquo;Does this sound local?&rdquo; checks</li>
+                <li>Cancel anytime</li>
+              </ul>
+              <OpenButton label="Start free, upgrade in the app" onField />
+            </article>
+          </div>
+        </section>
+
+        <section className="lv-sec lv-faq" id="faq" aria-labelledby="lv-faq-h">
+          <h2 id="lv-faq-h" className="lv-h2" data-lv-reveal>
+            Fair questions.
+          </h2>
+          <div className="lv-faq__list">
+            {FAQ.map((item, i) => (
+              <details key={item.q} data-lv-reveal style={{ "--d": i } as CSSProperties}>
+                <summary>{item.q}</summary>
+                <p>
+                  {item.a}
+                  {item.q === "Is my text stored?" ? (
+                    <>
+                      {" "}
+                      <Link href="/privacy" className="lv-link">
+                        Read the Privacy page
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <section className="lv-outro" data-lv-outro aria-labelledby="lv-outro-h">
+          <div className="lv-host" data-lv-host="outro" aria-hidden="true" />
+          <div className="lv-horizon" aria-hidden="true" />
+          <h2 id="lv-outro-h" className="lv-h1 lv-outro__title" data-lv-reveal>
+            Say it like you live there.
+          </h2>
+          <div className="lv-outro__cta" data-lv-reveal style={{ "--d": 1 } as CSSProperties}>
+            <OpenButton label="Open Street Vibe" />
+            <p className="lv-fine">Free, in your browser, no download.</p>
+          </div>
+        </section>
+      </main>
+
+      <footer className="lv-footer">
+        <span>© {new Date().getFullYear()} Street Vibe</span>
+        <Link href="/terms">Terms</Link>
+        <Link href="/privacy">Privacy</Link>
+        <Link href="/content-policy">Content Policy</Link>
+        <Link href="/app">Open the app</Link>
+      </footer>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD).replace(/</g, "\\u003c") }}
+      />
+      <LandingExperience stops={EXPERIENCE_STOPS} />
+    </div>
   );
 }
