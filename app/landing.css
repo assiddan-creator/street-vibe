@@ -135,8 +135,19 @@ html.lenis body {
   gap: 1rem;
   padding: 1rem var(--pad);
   padding-top: max(1rem, env(safe-area-inset-top));
-  background: linear-gradient(to bottom, rgba(6, 7, 11, 0.82), rgba(6, 7, 11, 0));
   pointer-events: none;
+}
+/* Copy scrolling under the bar dissolves instead of colliding with the nav. */
+.lv-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -1.2rem 0;
+  z-index: -1;
+  background: linear-gradient(to bottom, rgba(6, 7, 11, 0.92) 30%, rgba(6, 7, 11, 0));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent);
 }
 .lv-header > * {
   pointer-events: auto;
@@ -448,7 +459,7 @@ html.lenis body {
   position: absolute;
   z-index: -2;
   left: 50%;
-  top: 63%;
+  top: 67%;
   width: max(165vw, 150svh);
   aspect-ratio: 1;
   translate: -50% 0;
@@ -501,6 +512,10 @@ html.lenis body {
   .lv-horizon {
     top: 60%;
     width: 260vw;
+  }
+  .lv-hero::after {
+    height: 50%;
+    background: linear-gradient(to top, rgba(6, 7, 11, 0.94) 30%, rgba(6, 7, 11, 0) 100%);
   }
 }
 

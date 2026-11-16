@@ -681,7 +681,7 @@ export async function createGlobe(
     uDpr.value = dpr;
     // Horizon: a planet wide enough to cross the frame, its top a little under the middle.
     heroR = mobile ? Math.max(halfW * 2.3, halfH * 1.1) : Math.max(halfW * 1.16, halfH * 1.5);
-    heroPosV.set(0, centerForTop(heroR, -halfH * (mobile ? 0.2 : 0.26)), 0);
+    heroPosV.set(0, centerForTop(heroR, -halfH * (mobile ? 0.2 : 0.34)), 0);
     // Tour: the whole globe, right of the copy on wide screens and above it on phones.
     if (mobile) {
       tourR = Math.min(halfW * 0.74, halfH * 0.3);

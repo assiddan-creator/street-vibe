@@ -363,7 +363,7 @@ export default function Landing() {
           <h2 id="lv-outro-h" className="lv-h1 lv-outro__title" data-lv-reveal>
             Say it like you live there.
           </h2>
-          <div className="lv-outro__cta" data-lv-reveal style={{ "--d": 1 } as CSSProperties}>
+          <div className="lv-outro__cta">
             <OpenButton label="Open Street Vibe" />
             <p className="lv-fine">Free, in your browser, no download.</p>
           </div>
