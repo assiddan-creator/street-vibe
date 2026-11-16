@@ -169,7 +169,8 @@ void main() {
   vec3 base = vec3(0.016, 0.020, 0.034);
   vec3 rim = mix(uTintB, uTintA, smoothstep(-0.5, 0.7, n.y + n.x * 0.4));
   float key = pow(max(dot(n, normalize(vec3(-0.5, 0.7, 0.6))), 0.0), 3.0) * 0.035;
-  gl_FragColor = vec4(base + key + rim * f * 0.5, 1.0);
+  // Not fully opaque: the giant city name behind the planet stays readable through it.
+  gl_FragColor = vec4(base + key + rim * f * 0.42, 0.72 + f * 0.28);
 }`;
 
 const ATMO_FRAG = /* glsl */ `
@@ -272,6 +273,16 @@ void main() {
   gl_FragColor = vec4(uColor, a);
 }`;
 
+const RING_VERT = /* glsl */ `
+uniform float uBand;
+uniform float uRepeat;
+varying vec2 vUv;
+void main() {
+  vUv = vec2(uv.x * uRepeat, uv.y);
+  vec3 p = position * (1.0 + uv.y * uBand);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+}`;
+
 const RING_FRAG = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
@@ -343,8 +354,11 @@ function ringTexture(labels: string[], fontFamily: string): CanvasTexture {
   return tex;
 }
 
-/** Flat band around the globe with u running along the circle, so text follows the curve. */
-function ringGeometry(inner: number, outer: number, repeat: number): BufferGeometry {
+/**
+ * Unit circle with u running along it, so text follows the curve. Both edges sit on the circle;
+ * the vertex shader pushes the outer edge out by the band width, which changes with the pose.
+ */
+function ringGeometry(): BufferGeometry {
   const SEG = 256;
   const pos = new Float32Array((SEG + 1) * 2 * 3);
   const uv = new Float32Array((SEG + 1) * 2 * 2);
@@ -353,9 +367,9 @@ function ringGeometry(inner: number, outer: number, repeat: number): BufferGeome
     const a = (i / SEG) * Math.PI * 2;
     const c = Math.cos(a);
     const s = Math.sin(a);
-    pos.set([c * inner, s * inner, 0, c * outer, s * outer, 0], i * 6);
+    pos.set([c, s, 0, c, s, 0], i * 6);
     // u falls as the angle grows, so at the top of the circle the text reads left to right.
-    const u = (1 - i / SEG) * repeat;
+    const u = 1 - i / SEG;
     uv.set([u, 0, u, 1], i * 4);
     if (i < SEG) {
       const k = i * 2;
@@ -557,18 +571,27 @@ export async function createGlobe(
   const OUT = new Vector3(0, 0, 1);
 
   /* --- ring of greetings --- */
-  const RING_IN = 1;
-  const RING_OUT = 1.058;
+  // The strip is 4096 x 72, so one lap of it is undistorted when the band is this wide.
+  const RING_BAND = (Math.PI * 2 * 72) / 4096;
   const ringAlpha = { value: 0 };
+  const ringBand = { value: RING_BAND };
+  const ringRepeat = { value: 1 };
+  let ringFade = 0;
   const ringMat = new ShaderMaterial({
-    vertexShader: UV_VERT,
+    vertexShader: RING_VERT,
     fragmentShader: RING_FRAG,
-    uniforms: { uMap: { value: null as CanvasTexture | null }, uColor: { value: new Vector3(0.95, 0.95, 0.93) }, uAlpha: ringAlpha },
+    uniforms: {
+      uMap: { value: null as CanvasTexture | null },
+      uColor: { value: new Vector3(0.95, 0.95, 0.93) },
+      uAlpha: ringAlpha,
+      uBand: ringBand,
+      uRepeat: ringRepeat,
+    },
     transparent: true,
     depthWrite: false,
     side: DoubleSide,
   });
-  const ring = new Mesh(ringGeometry(RING_IN, RING_OUT, 2), ringMat);
+  const ring = new Mesh(ringGeometry(), ringMat);
   ring.renderOrder = 6;
   ring.visible = false;
   root.add(ring);
@@ -645,7 +668,8 @@ export async function createGlobe(
 
   function resize(w: number, h: number) {
     if (w < 2 || h < 2) return;
-    mobile = w / h < 0.8;
+    // Same breakpoint as the stylesheet, so the globe and the copy change layout together.
+    mobile = w < 760;
     const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.75 : 2);
     renderer.setPixelRatio(dpr);
     renderer.setSize(w, h, false);
@@ -656,12 +680,12 @@ export async function createGlobe(
     uProj.value = (h * dpr) / (2 * Math.tan((FOV * DEG) / 2));
     uDpr.value = dpr;
     // Horizon: a planet wide enough to cross the frame, its top a little under the middle.
-    heroR = mobile ? halfW * 2.3 : Math.max(halfW * 1.16, halfH * 1.5);
+    heroR = mobile ? Math.max(halfW * 2.3, halfH * 1.1) : Math.max(halfW * 1.16, halfH * 1.5);
     heroPosV.set(0, centerForTop(heroR, -halfH * (mobile ? 0.2 : 0.26)), 0);
     // Tour: the whole globe, right of the copy on wide screens and above it on phones.
     if (mobile) {
-      tourR = halfW * 0.74;
-      tourPosV.set(0, halfH * 0.2, 0);
+      tourR = Math.min(halfW * 0.74, halfH * 0.3);
+      tourPosV.set(0, halfH * 0.22, 0);
     } else {
       tourR = Math.min(halfH * 0.6, halfW * 0.4);
       tourPosV.set(halfW * 0.4, -halfH * 0.02, 0);
@@ -680,7 +704,8 @@ export async function createGlobe(
     root.rotation.set(frame.py * 0.05 * pose, frame.px * 0.09 * pose, 0);
 
     /* orientation */
-    euler.set(-0.62, (38 - time * 2.2) * DEG, 0, "XYZ");
+    // Starts over Europe and North Africa (six of the eleven cities) and drifts east.
+    euler.set(-0.62, (-14 - time * 2) * DEG, 0, "XYZ");
     heroQ.setFromEuler(euler);
     const i0 = Math.max(0, Math.min(count - 1, Math.floor(frame.pos)));
     const i1 = Math.min(count - 1, i0 + 1);
@@ -700,8 +725,8 @@ export async function createGlobe(
     /* flag waves */
     for (let i = 0; i < count; i++) {
       const on = frame.active === i;
-      const targetRad = frame.active < 0 ? 0.3 : on ? 1.02 : 0.13;
-      const targetStr = frame.active < 0 ? 0.9 : on ? 1 : 0.55;
+      const targetRad = frame.active < 0 ? 0.3 : on ? 0.96 : 0.1;
+      const targetStr = frame.active < 0 ? 0.9 : on ? 1 : 0.5;
       const before = rad[i];
       rad[i] += (targetRad - rad[i]) * (1 - Math.exp(-dt * (on ? 2.4 : 4)));
       str[i] += (targetStr - str[i]) * k;
@@ -744,10 +769,16 @@ export async function createGlobe(
     /* ring: hugs the limb of the planet in either pose */
     const dist = Math.hypot(root.position.x, root.position.y, CAM_Z);
     const limb = 1 / Math.sqrt(Math.max(0.05, 1 - (r / dist) * (r / dist)));
-    const gap = mobile ? 1.05 : 1.045 + 0.085 * pose;
-    ring.scale.setScalar(limb * gap);
+    // The horizon is several times the size of the touring globe, so the strip laps it more
+    // times there to keep the words a readable size. The swap happens while the ring is faded.
+    const touring = pose > 0.5;
+    const laps = touring ? 1 : mobile ? 2 : 4;
+    ringRepeat.value = laps;
+    ringBand.value = RING_BAND / laps;
+    ring.scale.setScalar(limb * (touring ? 1.1 : 1.03));
     ring.rotation.z = time * 0.03;
-    ringAlpha.value += ((ring.visible ? 0.9 : 0) - ringAlpha.value) * k * 0.5;
+    ringFade += ((ring.visible ? 1 : 0) - ringFade) * k * 0.5;
+    ringAlpha.value = 0.92 * ringFade * smooth(0.04, 0.3, Math.abs(pose - 0.5));
 
     stars.position.set(-frame.px * 0.5, frame.py * 0.3, 0);
     renderer.render(scene, camera);

@@ -70,6 +70,7 @@ export function LandingExperience({ stops }: { stops: ExperienceStop[] }) {
     const nameWrap = q("[data-lv-bigname]");
     const nameText = q("[data-lv-bigname-text]");
     const nameMeasure = q("[data-lv-measure]");
+    const stopsEl = q(".lv-stops");
 
     root.classList.add("lv-motion");
 
@@ -107,8 +108,10 @@ export function LandingExperience({ stops }: { stops: ExperienceStop[] }) {
       const w100 = nameMeasure.getBoundingClientRect().width || 1;
       const narrow = window.innerWidth < 760;
       const avail = nameWrap.clientWidth;
-      const maxH = vh * (narrow ? 0.17 : 0.33);
-      nameText.style.fontSize = `${Math.min((avail / w100) * 100, maxH / 0.74)}px`;
+      // As tall as the gap above the bubbles allows, so the name never runs under the copy.
+      const gap = stopsEl ? stopsEl.offsetTop - nameWrap.offsetTop - 12 : vh * 0.3;
+      const maxH = narrow ? vh * 0.17 : Math.max(64, Math.min(gap, vh * 0.42));
+      nameText.style.fontSize = `${Math.min((avail / w100) * 100, maxH / 0.8)}px`;
     }
 
     function setIndex(i: number) {
@@ -190,14 +193,16 @@ export function LandingExperience({ stops }: { stops: ExperienceStop[] }) {
       const voyageOn = vr.bottom > 0;
       const outroOn = or.top < vh * 1.15 && !voyageOn;
       const inTour = voyageOn && heroP > 0.6;
-      const cycle = Math.floor(time / 2.6) % N;
+      const cycle = Math.floor(time / 3.4) % N;
 
       setIndex(Math.round(raw));
       setPalette(inTour ? index : cycle);
       moveCanvas(outroOn ? "outro" : "stage");
 
-      const arrive = smooth(0.5, 1, heroP);
+      // The stage copy waits until the hero's own copy has cleared the frame.
+      const arrive = smooth(0.7, 1, heroP);
       stage!.style.setProperty("--arrive", arrive.toFixed(3));
+      stage!.style.setProperty("--arrive-name", smooth(0.86, 1, heroP).toFixed(3));
       stage!.toggleAttribute("data-on", arrive > 0.01);
       stage!.toggleAttribute("data-live", arrive > 0.85);
 
