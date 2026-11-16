@@ -185,7 +185,7 @@ export default function Landing() {
                 <span className="lv-strike" style={{ "--i": 3 } as CSSProperties}>
                   tourist.
                   <svg viewBox="0 0 260 60" preserveAspectRatio="none" aria-hidden="true">
-                    <path d="M4 36 C 44 18, 78 50, 124 30 S 204 20, 256 34" pathLength="1" />
+                    <path d="M4 36 C 44 18, 78 50, 124 30 S 204 20, 256 34" />
                   </svg>
                 </span>
               </span>

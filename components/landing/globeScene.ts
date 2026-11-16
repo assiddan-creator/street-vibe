@@ -687,8 +687,8 @@ export async function createGlobe(
       tourR = Math.min(halfW * 0.74, halfH * 0.3);
       tourPosV.set(0, halfH * 0.22, 0);
     } else {
-      tourR = Math.min(halfH * 0.6, halfW * 0.4);
-      tourPosV.set(halfW * 0.4, -halfH * 0.02, 0);
+      tourR = Math.min(halfH * 0.56, halfW * 0.36);
+      tourPosV.set(halfW * 0.3, -halfH * 0.02, 0);
     }
   }
 
@@ -775,7 +775,7 @@ export async function createGlobe(
     const laps = touring ? 1 : mobile ? 2 : 4;
     ringRepeat.value = laps;
     ringBand.value = RING_BAND / laps;
-    ring.scale.setScalar(limb * (touring ? 1.1 : 1.03));
+    ring.scale.setScalar(limb * (touring ? 1.07 : 1.03));
     ring.rotation.z = time * 0.03;
     ringFade += ((ring.visible ? 1 : 0) - ringFade) * k * 0.5;
     ringAlpha.value = 0.92 * ringFade * smooth(0.04, 0.3, Math.abs(pose - 0.5));
